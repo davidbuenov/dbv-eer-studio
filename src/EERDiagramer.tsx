@@ -9,91 +9,8 @@
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { BookOpen, Code, Share2, HelpCircle, X, Maximize2, ZoomIn, ZoomOut, Info, Square, SquareDashed, Diamond, Zap, Circle, Trash2, GitBranch, Layers } from 'lucide-react';
-
-/**
- * DEFINICIÓN DE TIPOS
- */
-type NodeType = 'entity' | 'weak_entity' | 'relationship' | 'identifying_relationship' | 'attribute' | 'key_attribute' | 'multivalued_attribute' | 'derived_attribute' | 'specialization' | 'union';
-
-interface NodeData {
-  id: string;
-  type: NodeType;
-  label: string;
-  x: number;
-  y: number;
-  meta?: string; // Para 'd', 'o', 'u' en especializaciones
-  lineIndex: number; // Para saber qué línea actualizar
-}
-
-interface LinkData {
-  source: string;
-  target: string;
-  label?: string; // Cardinalidad o Rol
-  style?: 'double' | 'solid'; // Para participación total
-}
-
-export interface EERDiagramerHandle {
-  getCode: () => string;
-  setCode: (c: string) => void;
-}
-
-const SAMPLE_CODE = `// Ejemplo con coordenadas persistentes
-// Arrastra los nodos y verás cómo cambian los números (x, y)
-
-// Entidades
-ent EMPLEADO (400, 300)
-ent DEPARTAMENTO (700, 300)
-ent PROYECTO (700, 500)
-weak_ent DEPENDIENTE (100, 300)
-
-// Atributos Empleado
-key_att Dni -> EMPLEADO (350, 220)
-att Nombre -> EMPLEADO (450, 220)
-derived_att Edad -> EMPLEADO (400, 180)
-
-// Relaciones
-rel TRABAJA_PARA (550, 300)
-link EMPLEADO TRABAJA_PARA "N"
-link DEPARTAMENTO TRABAJA_PARA "1"
-
-rel CONTROLA (700, 400)
-link DEPARTAMENTO CONTROLA "1"
-link PROYECTO CONTROLA "N"
-
-// Entidad Débil y Relación Identificativa
-ident_rel TIENE_DEP (250, 300)
-link EMPLEADO TIENE_DEP "1"
-link DEPENDIENTE TIENE_DEP "N" [total]
-
-// Jerarquía (EER Cap 4)
-spec d -> EMPLEADO (400, 420)
-ent SECRETARIA (280, 550)
-ent INGENIERO (400, 550)
-ent TECNICO (520, 550)
-
-link d SECRETARIA
-link d INGENIERO
-link d TECNICO
-
-// Unión / Categoría
-// Para categorías, definimos las superclases primero
-ent PERSONA (100, 650)
-ent BANCO (300, 650)
-ent EMPRESA (500, 650)
-
-union u (300, 750)
-link PERSONA u
-link BANCO u
-link EMPRESA u
-
-ent PROPIETARIO (300, 850)
-link u PROPIETARIO [total]
-`;
-
-/**
- * UTILS
- */
-const COORD_REGEX = /\(\s*(-?\d+),\s*(-?\d+)\s*\)/;
+import type { NodeData, LinkData, EERDiagramerHandle, NodeType } from './types';
+import { SAMPLE_CODE, COORD_REGEX, CANVAS_CONFIG, NODE_STYLES } from './constants';
 
 /**
  * PARSER: Convierte el código DSL en estructuras de datos visuales
@@ -121,16 +38,15 @@ const parseCode = (code: string) => {
   const existingIds = new Set<string>(); // Para rastrear IDs y evitar duplicados
   
   let angle = 0;
-  const radius = 250;
-  const center = { x: 400, y: 300 };
+  const { CENTER_X, CENTER_Y, SPIRAL_RADIUS, SPIRAL_INCREMENT, SPIRAL_GROWTH } = CANVAS_CONFIG;
 
   // Helper para posición por defecto (espiral) si no hay coords
   const getDefaultPos = () => {
-    angle += 0.6;
-    const r = radius + (angle * 15);
+    angle += SPIRAL_INCREMENT;
+    const r = SPIRAL_RADIUS + (angle * SPIRAL_GROWTH);
     return {
-      x: Math.round(center.x + Math.cos(angle) * r),
-      y: Math.round(center.y + Math.sin(angle) * r)
+      x: Math.round(CENTER_X + Math.cos(angle) * r),
+      y: Math.round(CENTER_Y + Math.sin(angle) * r)
     };
   };
 
@@ -590,40 +506,37 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
    * - specialization/union: Círculo con letra (d, o, u)
    */
   const renderNodeShape = (node: NodeData) => {
-    const strokeColor = '#334155';
-    const strokeWidth = 2;
-    const fillColor = '#ffffff';
-    const textColor = '#0f172a';
+    const { STROKE_COLOR, STROKE_WIDTH, FILL_COLOR, TEXT_COLOR } = NODE_STYLES;
 
     switch (node.type) {
       case 'entity':
         return (
           <g>
-            <rect x="-50" y="-25" width="100" height="50" fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} rx="2" className="drop-shadow-sm" />
-            <text x="0" y="5" textAnchor="middle" fill={textColor} fontSize="12" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
+            <rect x="-50" y="-25" width="100" height="50" fill={FILL_COLOR} stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} rx="2" className="drop-shadow-sm" />
+            <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="12" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
           </g>
         );
       case 'weak_entity':
         return (
           <g>
-            <rect x="-50" y="-25" width="100" height="50" fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} rx="2" className="drop-shadow-sm"/>
-            <rect x="-44" y="-19" width="88" height="38" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} rx="1" />
-            <text x="0" y="5" textAnchor="middle" fill={textColor} fontSize="12" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
+            <rect x="-50" y="-25" width="100" height="50" fill={FILL_COLOR} stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} rx="2" className="drop-shadow-sm"/>
+            <rect x="-44" y="-19" width="88" height="38" fill="none" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} rx="1" />
+            <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="12" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
           </g>
         );
       case 'relationship':
         return (
           <g>
-            <polygon points="0,-40 60,0 0,40 -60,0" fill="#f8fafc" stroke={strokeColor} strokeWidth={strokeWidth} className="drop-shadow-sm"/>
-            <text x="0" y="5" textAnchor="middle" fill={textColor} fontSize="11" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
+            <polygon points="0,-40 60,0 0,40 -60,0" fill="#f8fafc" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} className="drop-shadow-sm"/>
+            <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="11" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
           </g>
         );
       case 'identifying_relationship':
         return (
           <g>
-            <polygon points="0,-40 60,0 0,40 -60,0" fill="#f8fafc" stroke={strokeColor} strokeWidth={strokeWidth} className="drop-shadow-sm"/>
-            <polygon points="0,-32 48,0 0,32 -48,0" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} />
-            <text x="0" y="5" textAnchor="middle" fill={textColor} fontSize="11" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
+            <polygon points="0,-40 60,0 0,40 -60,0" fill="#f8fafc" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} className="drop-shadow-sm"/>
+            <polygon points="0,-32 48,0 0,32 -48,0" fill="none" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} />
+            <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="11" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
           </g>
         );
       case 'attribute':
@@ -636,9 +549,9 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         const isDerived = node.type === 'derived_attribute';
         return (
           <g>
-            <ellipse cx="0" cy="0" rx="45" ry="25" fill="#f1f5f9" stroke={strokeColor} strokeWidth={strokeWidth} strokeDasharray={isDerived ? "4" : "0"} className="drop-shadow-sm"/>
-            {isMulti && <ellipse cx="0" cy="0" rx="38" ry="18" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} />}
-            <text x="0" y="4" textAnchor="middle" fill={textColor} fontSize="11" textDecoration={isKey ? "underline" : "none"} style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
+            <ellipse cx="0" cy="0" rx="45" ry="25" fill="#f1f5f9" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} strokeDasharray={isDerived ? "4" : "0"} className="drop-shadow-sm"/>
+            {isMulti && <ellipse cx="0" cy="0" rx="38" ry="18" fill="none" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} />}
+            <text x="0" y="4" textAnchor="middle" fill={TEXT_COLOR} fontSize="11" textDecoration={isKey ? "underline" : "none"} style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
           </g>
         );
       }
@@ -646,7 +559,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
       case 'union':
         return (
           <g>
-            <circle cx="0" cy="0" r="18" fill="#fff" stroke={strokeColor} strokeWidth={strokeWidth} className="drop-shadow-sm"/>
+            <circle cx="0" cy="0" r="18" fill="#fff" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} className="drop-shadow-sm"/>
             <text x="0" y="5" textAnchor="middle" fontWeight="bold" fontSize="14" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
           </g>
         );
