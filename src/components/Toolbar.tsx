@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Square, SquareDashed, Diamond, Zap, Circle, GitBranch, Layers } from 'lucide-react';
 
 interface ToolbarProps {
@@ -6,8 +6,8 @@ interface ToolbarProps {
   onToolSelect: (tool: string | null) => void;
 }
 
-export function Toolbar({ selectedTool, onToolSelect }: ToolbarProps) {
-  const toolButtons = [
+function ToolbarComponent({ selectedTool, onToolSelect }: ToolbarProps) {
+  const toolButtons = useMemo(() => [
     {
       id: 'entity',
       label: 'Entidad',
@@ -64,7 +64,7 @@ export function Toolbar({ selectedTool, onToolSelect }: ToolbarProps) {
       title: 'Unión/Categoría',
       group: 'hierarchy'
     }
-  ];
+  ], []);
 
   const renderButtonGroup = (groupId: string, buttons: typeof toolButtons) => {
     const groupButtons = buttons.filter(b => b.group === groupId);
@@ -116,3 +116,11 @@ export function Toolbar({ selectedTool, onToolSelect }: ToolbarProps) {
     </div>
   );
 }
+
+export const Toolbar = React.memo(ToolbarComponent, (prevProps, nextProps) => {
+  // Retorna true si NO debería re-renderizar (props son iguales)
+  return (
+    prevProps.selectedTool === nextProps.selectedTool &&
+    prevProps.onToolSelect === nextProps.onToolSelect
+  );
+});

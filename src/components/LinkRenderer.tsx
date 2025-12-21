@@ -1,3 +1,4 @@
+import React from 'react';
 import type { NodeData, LinkData } from '../types';
 
 interface LinkRendererProps {
@@ -15,8 +16,10 @@ interface LinkRendererProps {
  * - Etiquetas centradas con cardinalidades (1, N, M, etc.)
  * 
  * El símbolo de subconjunto se orienta hacia el nodo padre (especialización/unión).
+ * 
+ * Optimizado con React.memo para evitar re-renders innecesarios cuando las props no cambian.
  */
-export function LinkRenderer({ link, nodes }: LinkRendererProps) {
+function LinkRendererComponent({ link, nodes }: LinkRendererProps) {
   const sourceNode = nodes.find(n => n.id === link.source);
   const targetNode = nodes.find(n => n.id === link.target);
   
@@ -90,3 +93,15 @@ export function LinkRenderer({ link, nodes }: LinkRendererProps) {
     </g>
   );
 }
+
+export const LinkRenderer = React.memo(LinkRendererComponent, (prevProps, nextProps) => {
+  // Retorna true si NO debería re-renderizar (props son iguales)
+  return (
+    prevProps.link.source === nextProps.link.source &&
+    prevProps.link.target === nextProps.link.target &&
+    prevProps.link.style === nextProps.link.style &&
+    prevProps.link.label === nextProps.link.label &&
+    prevProps.nodes.length === nextProps.nodes.length &&
+    prevProps.nodes === nextProps.nodes
+  );
+});

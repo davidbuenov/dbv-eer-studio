@@ -7,7 +7,7 @@
  * This software is provided as-is, without warranty of any kind.
  */
 
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { BookOpen, Code, Share2, HelpCircle, Info } from 'lucide-react';
 import type { EERDiagramerHandle } from './types';
 import { SAMPLE_CODE } from './constants';
@@ -136,19 +136,8 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     setCode: (c: string) => setCode(c),
   }));
 
-  /**
-   * Maneja clicks en el canvas cuando hay una herramienta seleccionada
-   * 
-   * @description
-   * Flujo de inserción de elementos:
-   * 1. Convierte coordenadas de pantalla a coordenadas del canvas (considerando zoom/pan)
-   * 2. Guarda las coordenadas para uso posterior
-   * 3. Prepara los estados iniciales según el tipo de herramienta
-   * 4. Abre el modal apropiado para configurar propiedades
-   * 
-   * Cada tipo de elemento tiene su propio flujo de configuración.
-   */
-  const handleCanvasClickInternal = (e: React.MouseEvent) => {
+  // Memoizar handleCanvasClickInternal para evitar recrearla en cada render
+  const handleCanvasClickInternal = useCallback((e: React.MouseEvent) => {
     if (!selectedTool || draggedNodeId) return;
     
     // Usar el hook para obtener coordenadas
@@ -203,7 +192,20 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
       setShowPropertiesModal(true);
       return;
     }
-  };
+  }, [selectedTool, draggedNodeId, toolbarCanvasClick, setElementType, setElementName, setShowPropertiesModal, resetPropertiesModal, setElementType2, setSelectedEntity, setSpecType, setSpecSuperclass, setSpecSubclasses, setUnionName, setUnionSuperclasses, setUnionCategory]);
+
+  /**
+   * Maneja clicks en el canvas cuando hay una herramienta seleccionada
+   * 
+   * @description
+   * Flujo de inserción de elementos:
+   * 1. Convierte coordenadas de pantalla a coordenadas del canvas (considerando zoom/pan)
+   * 2. Guarda las coordenadas para uso posterior
+   * 3. Prepara los estados iniciales según el tipo de herramienta
+   * 4. Abre el modal apropiado para configurar propiedades
+   * 
+   * Cada tipo de elemento tiene su propio flujo de configuración.
+   */
 
   /**
    * Genera código DSL a partir de las propiedades configuradas en el modal
@@ -219,7 +221,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
    * 
    * Valida que todos los campos requeridos estén completos antes de generar.
    */
-  const handleConfirmProperties = () => {
+  const handleConfirmProperties = useCallback(() => {
     if (!elementType) return;
 
     let newLines = '';
@@ -313,7 +315,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     setShowPropertiesModal(false);
     resetTool();
     resetPropertiesModal();
-  };
+  }, [elementType, elementName, selectedEntity1, selectedEntity2, cardinalityE1, cardinalityE2, customCard1, customCard2, totalE1, totalE2, elementType2, selectedEntity, specType, specSuperclass, specSubclasses, unionName, unionSuperclasses, unionCategory, code, setCode, resetTool, resetPropertiesModal, clickX, clickY, setShowPropertiesModal]);
 
   const handleExport = () => {
     if (svgRef.current) {

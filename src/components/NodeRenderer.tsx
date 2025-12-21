@@ -1,3 +1,4 @@
+import React from 'react';
 import type { NodeData } from '../types';
 import { NODE_STYLES } from '../constants';
 
@@ -20,8 +21,10 @@ interface NodeRendererProps {
  * - derived_attribute: Elipse con borde discontinuo
  * - multivalued_attribute: Elipse doble
  * - specialization/union: Círculo con letra (d, o, u)
+ * 
+ * Optimizado con React.memo para evitar re-renders innecesarios cuando las props no cambian.
  */
-export function NodeRenderer({ node, isDragged, onMouseDown }: NodeRendererProps) {
+function NodeRendererComponent({ node, isDragged, onMouseDown }: NodeRendererProps) {
   const { STROKE_COLOR, STROKE_WIDTH, FILL_COLOR, TEXT_COLOR } = NODE_STYLES;
 
   const commonProps = {
@@ -92,3 +95,16 @@ export function NodeRenderer({ node, isDragged, onMouseDown }: NodeRendererProps
     </g>
   );
 }
+
+export const NodeRenderer = React.memo(NodeRendererComponent, (prevProps, nextProps) => {
+  // Retorna true si NO debería re-renderizar (props son iguales)
+  return (
+    prevProps.node.id === nextProps.node.id &&
+    prevProps.node.type === nextProps.node.type &&
+    prevProps.node.label === nextProps.node.label &&
+    prevProps.node.x === nextProps.node.x &&
+    prevProps.node.y === nextProps.node.y &&
+    prevProps.isDragged === nextProps.isDragged &&
+    prevProps.onMouseDown === nextProps.onMouseDown
+  );
+});
