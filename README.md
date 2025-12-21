@@ -8,15 +8,27 @@ EER Studio es una aplicación web interactiva para crear y editar diagramas Enti
 
 ## ✨ Características
 
+### Edición Visual e Interactiva
+- 🎨 **Barra de herramientas visual** - inserta elementos con un simple clic en el canvas
+- 🖱️ **Modales de configuración** - define propiedades de entidades, relaciones y atributos mediante formularios intuitivos
+- 🎯 **Inserción por coordenadas** - haz clic donde quieras colocar un elemento y configúralo visualmente
+- 🔄 **Edición bidireccional** - arrastra nodos en el canvas y el código se actualiza automáticamente
+- 🗑️ **Botón limpiar con confirmación** - limpia todo el código con modal de seguridad
+
+### Código y Diagramas
 - 📝 **Editor de código DSL** con sintaxis simple para definir entidades, relaciones y atributos
 - 🎯 **Visualización en tiempo real** del diagrama EER
-- 🔄 **Edición bidireccional**: arrastra nodos en el canvas y el código se actualiza automáticamente
 - 💾 **Guardar/Abrir archivos `.eer`** con File System Access API (navegadores modernos) y fallback compatible
-- 🤖 **Prompt integrado para IA** - genera código EER usando ChatGPT, Claude o Gemini
 - 📤 **Exportar a SVG** - descarga tus diagramas en formato vectorial
-- 🎨 **Interfaz moderna** diseñada con Tailwind CSS
-- 📚 **Guía de sintaxis integrada** con ejemplos y referencia completa
 - 🔍 **Zoom y paneo** para trabajar con diagramas grandes
+
+### IA y Recursos
+- 🤖 **Prompt integrado para IA** - genera código EER usando ChatGPT, Claude o Gemini
+- 📚 **Guía de sintaxis integrada** con ejemplos y referencia completa
+- 📁 **Ejemplos incluidos** - archivos `.eer` de muestra en la carpeta `ejemplos/`
+
+### Diseño y Compatibilidad
+- 🎨 **Interfaz moderna** diseñada con Tailwind CSS
 - 🌐 **Compatible con navegadores modernos**
 
 ## 🌐 Demo en vivo y ejemplos
@@ -32,6 +44,9 @@ Además, el repositorio incluye una carpeta `ejemplos/` con varios ficheros de e
 Los siguientes ficheros ya están disponibles en la carpeta `ejemplos/`:
 
 - `ejemplos/202511ER_Hotel.eer` — Caso de estudio: **HOTELES ROYAL UMA** (habitaciones, servicios, personal y reservas). Ábrelo en la app para ver un diagrama completo.
+- `ejemplos/Prompt_para_crear_gems.md` — Prompt optimizado para usar con IAs (ChatGPT, Claude, Gemini) y generar código EER Studio desde descripciones en lenguaje natural.
+
+> 💡 **Tip**: Usa el prompt incluido en la carpeta `ejemplos/` para que la IA genere diagramas EER perfectamente formateados para esta herramienta.
 
 
 
@@ -140,7 +155,19 @@ Este proyecto no envía datos a servidores externos. Los archivos `.eer` solo se
 
 ## 📖 Uso
 
-### Sintaxis Básica del DSL
+### Modo Visual: Inserción con Barra de Herramientas
+
+1. **Selecciona una herramienta** en la barra superior (Entidad, Relación, Atributo, etc.)
+2. **Haz clic en el canvas** donde quieras colocar el elemento
+3. **Completa el modal** con las propiedades:
+   - **Entidades**: nombre
+   - **Relaciones**: nombre, entidades a conectar, cardinalidades (1, N, M), participación total
+   - **Atributos**: nombre, tipo (simple, clave, derivado, multivaluado), entidad a conectar
+   - **Especialización**: tipo (disjunta/solapada), superclase, subclases
+   - **Unión**: nombre, superclases, categoría
+4. **Confirma** - el código se genera automáticamente con las coordenadas del clic
+
+### Modo Código: Sintaxis Básica del DSL
 
 ```javascript
 // Entidades
@@ -164,13 +191,29 @@ ident_rel TIENE_DEP (250, 300)
 link EMPLEADO TIENE_DEP "1"
 link DEPENDIENTE TIENE_DEP "N" [total]
 
-// Jerarquías
+// Jerarquías (Especialización/Generalización)
 spec d -> EMPLEADO (400, 420)
 ent SECRETARIA (280, 550)
 ent INGENIERO (520, 550)
 link d SECRETARIA
 link d INGENIERO
+
+// Uniones/Categorías
+union u (300, 750)
+ent PERSONA (100, 650)
+ent BANCO (300, 650)
+link PERSONA u
+link BANCO u
+ent PROPIETARIO (300, 850)
+link u PROPIETARIO [total]
 ```
+
+### Edición Interactiva
+
+- **Arrastra nodos**: Las coordenadas en el código se actualizan automáticamente
+- **Edita el código**: El diagrama se regenera en tiempo real
+- **Limpia todo**: Usa el botón "Limpiar" (con confirmación de seguridad)
+- **Zoom/Pan**: Controles en la esquina inferior derecha del canvas
 
 ### Generación con IA
 
