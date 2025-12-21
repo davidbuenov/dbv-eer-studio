@@ -8,9 +8,9 @@
  */
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { BookOpen, Code, Share2, HelpCircle, Maximize2, ZoomIn, ZoomOut, Info, Square, SquareDashed, Diamond, Zap, Circle, Trash2, GitBranch, Layers } from 'lucide-react';
-import type { NodeData, EERDiagramerHandle } from './types';
-import { SAMPLE_CODE, NODE_STYLES } from './constants';
+import { BookOpen, Code, Share2, HelpCircle, Info, Square, SquareDashed, Diamond, Zap, Circle, Trash2, GitBranch, Layers } from 'lucide-react';
+import type { EERDiagramerHandle } from './types';
+import { SAMPLE_CODE } from './constants';
 import { 
   generateEntityCode, 
   generateAttributeCode, 
@@ -28,6 +28,7 @@ import { ModalCredits } from './components/ModalCredits';
 import { ModalHelp } from './components/ModalHelp';
 import { ModalClearConfirm } from './components/ModalClearConfirm';
 import { ModalProperties } from './components/ModalProperties';
+import { Canvas } from './components/Canvas';
 
 function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   // ==========================================
@@ -59,9 +60,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   const {
     draggedNodeId,
     scale,
-    setScale,
     offset,
-    setOffset,
     svgRef,
     handleMouseDown,
     handleMouseMove,
@@ -314,161 +313,6 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     resetPropertiesModal();
   };
 
-  /**
-   * Renderiza la forma SVG apropiada para cada tipo de nodo
-   * 
-   * @description
-   * Mapeo de tipos de nodo a representaciones visuales según notación EER:
-   * - entity: Rectángulo simple
-   * - weak_entity: Rectángulo doble
-   * - relationship: Rombo (diamante)
-   * - identifying_relationship: Rombo doble
-   * - attribute: Elipse
-   * - key_attribute: Elipse con texto subrayado
-   * - derived_attribute: Elipse con borde discontinuo
-   * - multivalued_attribute: Elipse doble
-   * - specialization/union: Círculo con letra (d, o, u)
-   */
-  const renderNodeShape = (node: NodeData) => {
-    const { STROKE_COLOR, STROKE_WIDTH, FILL_COLOR, TEXT_COLOR } = NODE_STYLES;
-
-    switch (node.type) {
-      case 'entity':
-        return (
-          <g>
-            <rect x="-50" y="-25" width="100" height="50" fill={FILL_COLOR} stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} rx="2" className="drop-shadow-sm" />
-            <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="12" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
-          </g>
-        );
-      case 'weak_entity':
-        return (
-          <g>
-            <rect x="-50" y="-25" width="100" height="50" fill={FILL_COLOR} stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} rx="2" className="drop-shadow-sm"/>
-            <rect x="-44" y="-19" width="88" height="38" fill="none" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} rx="1" />
-            <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="12" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
-          </g>
-        );
-      case 'relationship':
-        return (
-          <g>
-            <polygon points="0,-40 60,0 0,40 -60,0" fill="#f8fafc" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} className="drop-shadow-sm"/>
-            <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="11" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
-          </g>
-        );
-      case 'identifying_relationship':
-        return (
-          <g>
-            <polygon points="0,-40 60,0 0,40 -60,0" fill="#f8fafc" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} className="drop-shadow-sm"/>
-            <polygon points="0,-32 48,0 0,32 -48,0" fill="none" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} />
-            <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="11" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
-          </g>
-        );
-      case 'attribute':
-      case 'key_attribute':
-      case 'multivalued_attribute':
-      case 'derived_attribute':
-      {
-        const isKey = node.type === 'key_attribute';
-        const isMulti = node.type === 'multivalued_attribute';
-        const isDerived = node.type === 'derived_attribute';
-        return (
-          <g>
-            <ellipse cx="0" cy="0" rx="45" ry="25" fill="#f1f5f9" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} strokeDasharray={isDerived ? "4" : "0"} className="drop-shadow-sm"/>
-            {isMulti && <ellipse cx="0" cy="0" rx="38" ry="18" fill="none" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} />}
-            <text x="0" y="4" textAnchor="middle" fill={TEXT_COLOR} fontSize="11" textDecoration={isKey ? "underline" : "none"} style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
-          </g>
-        );
-      }
-      case 'specialization':
-      case 'union':
-        return (
-          <g>
-            <circle cx="0" cy="0" r="18" fill="#fff" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} className="drop-shadow-sm"/>
-            <text x="0" y="5" textAnchor="middle" fontWeight="bold" fontSize="14" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
-          </g>
-        );
-      default:
-        return null;
-    }
-  };
-
-  /**
-   * Renderiza todas las conexiones entre nodos
-   * 
-   * @description
-   * Características de los enlaces:
-   * - Línea simple para participación parcial
-   * - Línea doble para participación total ([total])
-   * - Símbolo de subconjunto (⊂) para jerarquías especialización/unión
-   * - Etiquetas centradas con cardinalidades (1, N, M, etc.)
-   * 
-   * El símbolo de subconjunto se orienta hacia el nodo padre (especialización/unión).
-   */
-  const renderLinks = () => {
-    return links.map((link, i) => {
-      const sourceNode = nodes.find(n => n.id === link.source);
-      const targetNode = nodes.find(n => n.id === link.target);
-      if (!sourceNode || !targetNode) return null;
-
-      // CORRECCIÓN FINAL:
-      // 1. Detectar si el origen es una especialización/unión y el destino es una entidad (subclase/categoría).
-      // 2. El símbolo de subconjunto debe abrirse hacia el ORIGEN (la especialización).
-      
-      const isSourceSpec = sourceNode.type === 'specialization' || sourceNode.type === 'union';
-      const isTargetEntity = targetNode.type === 'entity' || targetNode.type === 'weak_entity';
-      const showSubsetSymbol = isSourceSpec && isTargetEntity;
-      
-      const midX = (sourceNode.x + targetNode.x) / 2;
-      const midY = (sourceNode.y + targetNode.y) / 2;
-      
-      // Calcular ángulo para rotar el símbolo correctamente
-      const angle = Math.atan2(targetNode.y - sourceNode.y, targetNode.x - sourceNode.x) * 180 / Math.PI;
-
-      return (
-        <g key={i}>
-          <line
-            x1={sourceNode.x}
-            y1={sourceNode.y}
-            x2={targetNode.x}
-            y2={targetNode.y}
-            stroke="#64748b"
-            strokeWidth={link.style === 'double' ? 4 : 1.5}
-            strokeLinecap="round"
-          />
-          {link.style === 'double' && (
-             <line
-             x1={sourceNode.x}
-             y1={sourceNode.y}
-             x2={targetNode.x}
-             y2={targetNode.y}
-             stroke="#ffffff"
-             strokeWidth={2}
-             strokeLinecap="round"
-           />
-          )}
-
-          {showSubsetSymbol && (
-            <path 
-              d={`M ${midX-8} ${midY-5} Q ${midX} ${midY+8} ${midX+8} ${midY-5}`}
-              fill="none"
-              stroke="#64748b"
-              strokeWidth="2"
-              // Rotación ajustada: angle - 90 asegura que la copa se abra hacia el nodo Origen (la especialización)
-              transform={`rotate(${angle - 90}, ${midX}, ${midY})`}
-            />
-          )}
-
-          {link.label && (
-            <g transform={`translate(${midX}, ${midY})`}>
-              <rect x="-10" y="-10" width="20" height="20" fill="white" opacity="0.9" rx="4" />
-              <text x="0" y="5" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#0f172a" style={{ pointerEvents: 'none', userSelect: 'none' }}>{link.label}</text>
-            </g>
-          )}
-        </g>
-      );
-    });
-  };
-
   const handleExport = () => {
     if (svgRef.current) {
       const data = new XMLSerializer().serializeToString(svgRef.current);
@@ -652,47 +496,20 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
           />
         </div>
 
-        <div className={`relative flex-1 bg-slate-50 overflow-hidden ${selectedTool ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
-             onMouseDown={handleCanvasMouseDown}
-             onMouseMove={handleMouseMove}
-             onMouseUp={handleMouseUp}
-             onMouseLeave={handleMouseUp}
-             onClick={handleCanvasClickInternal}
-        >
-          <div className="absolute bottom-4 right-4 flex gap-2 rounded-lg bg-white p-1 shadow-lg border border-slate-200 z-20" onMouseDown={e => e.stopPropagation()}>
-            <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomOut className="h-5 w-5" /></button>
-            <span className="flex items-center px-2 text-xs font-medium text-slate-500 min-w-[3rem] justify-center">{Math.round(scale * 100)}%</span>
-            <button onClick={() => setScale(s => Math.min(3, s + 0.1))} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomIn className="h-5 w-5" /></button>
-            <div className="w-px bg-slate-200 my-1 mx-1"></div>
-            <button onClick={() => { setOffset({x:0, y:0}); setScale(0.8); }} className="p-2 hover:bg-slate-100 rounded text-slate-600"><Maximize2 className="h-5 w-5" /></button>
-          </div>
-
-          <svg 
-            ref={svgRef}
-            className="h-full w-full touch-none"
-          >
-            <g transform={`translate(${offset.x}, ${offset.y}) scale(${scale})`}>
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e2e8f0" strokeWidth="1"/>
-                </pattern>
-              </defs>
-              <rect x={-50000} y={-50000} width={100000} height={100000} fill="url(#grid)" />
-
-              {renderLinks()}
-              {nodes.map(node => (
-                <g 
-                  key={node.id} 
-                  transform={`translate(${node.x}, ${node.y})`}
-                  onMouseDown={(e) => handleMouseDown(e, node.id)}
-                  style={{ cursor: 'grab' }}
-                >
-                  {renderNodeShape(node)}
-                </g>
-              ))}
-            </g>
-          </svg>
-        </div>
+        <Canvas
+          svgRef={svgRef}
+          nodes={nodes}
+          links={links}
+          scale={scale}
+          offset={offset}
+          selectedTool={selectedTool}
+          draggedNodeId={draggedNodeId}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onClick={handleCanvasClickInternal}
+          onMouseDown={handleCanvasMouseDown}
+          onNodeMouseDown={handleMouseDown}
+        />
       </div>
 
       {/* Modales */}
