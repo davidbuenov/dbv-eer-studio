@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { BookOpen, Code, Share2, HelpCircle, X, Maximize2, ZoomIn, ZoomOut, Info } from 'lucide-react';
+import { BookOpen, Code, Share2, HelpCircle, X, Maximize2, ZoomIn, ZoomOut, Info, Square, SquareDashed, Diamond, Zap, Circle, Trash2, GitBranch, Layers } from 'lucide-react';
 
 /**
  * DEFINICIÓN DE TIPOS
@@ -96,7 +96,23 @@ link u PROPIETARIO [total]
 const COORD_REGEX = /\(\s*(-?\d+),\s*(-?\d+)\s*\)/;
 
 /**
- * PARSER: Convierte el texto a datos, extrayendo coordenadas si existen
+ * PARSER: Convierte el código DSL en estructuras de datos visuales
+ * 
+ * @description
+ * Analiza el código línea por línea y extrae:
+ * - Nodos (entidades, relaciones, atributos, especializaciones, uniones)
+ * - Enlaces (conexiones entre nodos con cardinalidad y participación)
+ * - Coordenadas (x, y) opcionales para posicionamiento manual
+ * 
+ * Si no hay coordenadas, usa un algoritmo de espiral para distribución automática.
+ * Mantiene el índice de línea original para permitir actualización bidireccional.
+ * 
+ * @param code - Código DSL del diagrama EER
+ * @returns Objeto con arrays de nodos y enlaces
+ * 
+ * @example
+ * parseCode("ent EMPLEADO (100, 200)\natt Nombre -> EMPLEADO")
+ * // Returns: { nodes: [...], links: [...] }
  */
 const parseCode = (code: string) => {
   const lines = code.split('\n');
@@ -232,18 +248,52 @@ const parseCode = (code: string) => {
 };
 
 function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
+  // ==========================================
+  // ESTADO DEL COMPONENTE
+  // ==========================================
+  
+  // Estado del código y diagrama
   const [code, setCode] = useState(SAMPLE_CODE);
   const [nodes, setNodes] = useState<NodeData[]>([]);
   const [links, setLinks] = useState<LinkData[]>([]);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  
+  // Estados de UI y modales
   const [showHelp, setShowHelp] = useState(false);
   const [showFileMenu, setShowFileMenu] = useState(false);
   const [showCredits, setShowCredits] = useState(false);
   const [showAIPrompt, setShowAIPrompt] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [scale, setScale] = useState(0.8);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [lastFileHandle, setLastFileHandle] = useState<unknown | null>(null);
+  
+  // Estados de la barra de herramientas
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
+  const [showPropertiesModal, setShowPropertiesModal] = useState(false);
+  
+  // Propiedades del elemento actual (modal)
+  const [elementType, setElementType] = useState<string | null>(null);
+  const [elementName, setElementName] = useState('');
+  const [elementType2, setElementType2] = useState('simple'); // Para atributos: simple, key, derived, multivalued
+  const [selectedEntity, setSelectedEntity] = useState(''); // Para atributos
+  const [selectedEntity1, setSelectedEntity1] = useState(''); // Para relaciones
+  const [selectedEntity2, setSelectedEntity2] = useState(''); // Para relaciones
+  const [cardinalityE1, setCardinalityE1] = useState('1'); // Cardinalidad entidad 1
+  const [cardinalityE2, setCardinalityE2] = useState('N'); // Cardinalidad entidad 2
+  const [customCard1, setCustomCard1] = useState(''); // Cardinalidad personalizada E1
+  const [customCard2, setCustomCard2] = useState(''); // Cardinalidad personalizada E2
+  const [totalE1, setTotalE1] = useState(false); // Participación total entidad 1
+  const [totalE2, setTotalE2] = useState(false); // Participación total entidad 2
+  const [clickX, setClickX] = useState(0); // Coordenada X del último click
+  const [clickY, setClickY] = useState(0); // Coordenada Y del último click
+  const [specType, setSpecType] = useState('d'); // Tipo de especialización: d (disjunta) o o (solapada)
+  const [specSuperclass, setSpecSuperclass] = useState(''); // Superclase para especialización
+  const [specSubclasses, setSpecSubclasses] = useState<string[]>([]); // Subclases para especialización
+  const [unionName, setUnionName] = useState(''); // Nombre de la unión
+  const [unionSuperclasses, setUnionSuperclasses] = useState<string[]>([]); // Superclases para unión
+  const [unionCategory, setUnionCategory] = useState(''); // Categoría para unión
   
   const svgRef = useRef<SVGSVGElement>(null);
   const codeRef = useRef(code);
@@ -267,6 +317,18 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     return () => clearTimeout(timer);
   }, [code]);
 
+  /**
+   * Actualiza las coordenadas de un nodo en el código fuente
+   * 
+   * @description
+   * Función clave para la edición bidireccional:
+   * 1. Localiza el nodo por ID
+   * 2. Encuentra su línea original en el código
+   * 3. Actualiza o añade las coordenadas (x, y)
+   * 4. Regenera el código completo
+   * 
+   * Esto permite que mover nodos visualmente actualice el código automáticamente.
+   */
   const updateCodePosition = (nodeId: string, newX: number, newY: number) => {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return;
@@ -326,6 +388,207 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     setIsDraggingCanvas(false);
   };
 
+  /**
+   * Maneja clicks en el canvas cuando hay una herramienta seleccionada
+   * 
+   * @description
+   * Flujo de inserción de elementos:
+   * 1. Convierte coordenadas de pantalla a coordenadas del canvas (considerando zoom/pan)
+   * 2. Guarda las coordenadas para uso posterior
+   * 3. Prepara los estados iniciales según el tipo de herramienta
+   * 4. Abre el modal apropiado para configurar propiedades
+   * 
+   * Cada tipo de elemento tiene su propio flujo de configuración.
+   */
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    if (!selectedTool || draggedNodeId) return;
+    
+    const svg = svgRef.current;
+    if (!svg) return;
+    const CTM = svg.getScreenCTM();
+    if (!CTM) return;
+    
+    const x = (e.clientX - CTM.e) / CTM.a / scale - offset.x / scale;
+    const y = (e.clientY - CTM.f) / CTM.d / scale - offset.y / scale;
+
+    // Guardar coordenadas para usarlas en el modal si es necesario
+    setClickX(Math.round(x));
+    setClickY(Math.round(y));
+
+    const timestamp = Date.now() % 1000;
+
+    // Para entidades, mostrar modal para pedir nombre
+    if (['entity', 'weak_entity'].includes(selectedTool!)) {
+      setElementType(selectedTool);
+      setElementName(selectedTool === 'entity' ? `ENTIDAD_${timestamp}` : `ENTIDAD_DEBIL_${timestamp}`);
+      setShowPropertiesModal(true);
+      return;
+    }
+
+    // Para relaciones, mostrar modal para configurar entidades y cardinalidades
+    if (['relationship', 'ident_rel'].includes(selectedTool!)) {
+      setElementType(selectedTool);
+      setElementName(selectedTool === 'relationship' ? `RELACION_${timestamp}` : `RELACION_IDENT_${timestamp}`);
+      setSelectedEntity1('');
+      setSelectedEntity2('');
+      setCardinalityE1('1');
+      setCardinalityE2('N');
+      setCustomCard1('');
+      setCustomCard2('');
+      setTotalE1(false);
+      setTotalE2(false);
+      setShowPropertiesModal(true);
+      return;
+    }
+
+    // Para atributos, mostrar modal
+    if (['attribute', 'key_attr', 'derived_attr', 'multivalued_attr'].includes(selectedTool!)) {
+      setElementType(selectedTool);
+      setElementName(`Atributo_${timestamp}`);
+      setElementType2(selectedTool === 'key_attr' ? 'key' : selectedTool === 'derived_attr' ? 'derived' : selectedTool === 'multivalued_attr' ? 'multivalued' : 'simple');
+      setSelectedEntity('');
+      setShowPropertiesModal(true);
+      return;
+    }
+
+    // Para especializaciones
+    if (selectedTool === 'specialization') {
+      setElementType('specialization');
+      setSpecType('d');
+      setSpecSuperclass('');
+      setSpecSubclasses([]);
+      setShowPropertiesModal(true);
+      return;
+    }
+
+    // Para uniones
+    if (selectedTool === 'union') {
+      setElementType('union');
+      setUnionName('u');
+      setUnionSuperclasses([]);
+      setUnionCategory('');
+      setShowPropertiesModal(true);
+      return;
+    }
+  };
+
+  /**
+   * Genera código DSL a partir de las propiedades configuradas en el modal
+   * 
+   * @description
+   * Función de generación de código que convierte la configuración visual en texto DSL:
+   * 
+   * - Entidades: `ent NOMBRE (x, y)` o `weak_ent NOMBRE (x, y)`
+   * - Atributos: `att NOMBRE -> ENTIDAD (x, y)` con prefijos según tipo
+   * - Relaciones: `rel NOMBRE (x, y)` + múltiples `link` para cardinalidades
+   * - Especializaciones: `spec tipo -> SUPERCLASE` + `link tipo SUBCLASE`
+   * - Uniones: `union nombre` + múltiples `link` para superclases y categoría
+   * 
+   * Valida que todos los campos requeridos estén completos antes de generar.
+   */
+  const handleConfirmProperties = () => {
+    if (!elementType) return;
+
+    let newLines = '';
+
+    // Para entidades
+    if (['entity', 'weak_entity'].includes(elementType)) {
+      if (!elementName) {
+        alert('Por favor, introduce el nombre de la entidad');
+        return;
+      }
+      const prefix = elementType === 'entity' ? 'ent' : 'weak_ent';
+      newLines = `${prefix} ${elementName} (${clickX}, ${clickY})`;
+    }
+
+    // Para atributos
+    if (['attribute', 'key_attr', 'derived_attr', 'multivalued_attr'].includes(elementType)) {
+      if (!elementName || !selectedEntity) {
+        alert('Por favor, completa el nombre y selecciona una entidad');
+        return;
+      }
+      const prefix = elementType === 'key_attr' ? 'key_att' : elementType === 'derived_attr' ? 'derived_att' : elementType === 'multivalued_attr' ? 'multivalued_att' : 'att';
+      // Añadir coordenadas al atributo para posicionarlo donde se hizo click
+      newLines = `${prefix} ${elementName} -> ${selectedEntity} (${clickX}, ${clickY})`;
+    }
+
+    // Para relaciones
+    if (['relationship', 'ident_rel'].includes(elementType)) {
+      if (!elementName || !selectedEntity1 || !selectedEntity2) {
+        alert('Por favor, completa el nombre y selecciona ambas entidades');
+        return;
+      }
+      
+      const prefix = elementType === 'relationship' ? 'rel' : 'ident_rel';
+      const card1 = cardinalityE1 === 'custom' ? customCard1 : cardinalityE1;
+      const card2 = cardinalityE2 === 'custom' ? customCard2 : cardinalityE2;
+      
+      // Línea de la relación con coordenadas
+      newLines = `${prefix} ${elementName} (${clickX}, ${clickY})\n`;
+      // Link entidad 1
+      newLines += `link ${selectedEntity1} ${elementName} "${card1}"${totalE1 ? ' [total]' : ''}\n`;
+      // Link entidad 2
+      newLines += `link ${selectedEntity2} ${elementName} "${card2}"${totalE2 ? ' [total]' : ''}`;
+    }
+
+    // Para especializaciones
+    if (elementType === 'specialization') {
+      if (!specSuperclass || specSubclasses.length === 0) {
+        alert('Por favor, selecciona una superclase y al menos una subclase');
+        return;
+      }
+      
+      // Línea de la especialización
+      newLines = `spec ${specType} -> ${specSuperclass}\n`;
+      // Links para cada subclase
+      specSubclasses.forEach((subclass, index) => {
+        newLines += `link ${specType} ${subclass}${index < specSubclasses.length - 1 ? '\n' : ''}`;
+      });
+    }
+
+    // Para uniones
+    if (elementType === 'union') {
+      if (!unionName || unionSuperclasses.length === 0 || !unionCategory) {
+        alert('Por favor, completa el nombre de la unión, selecciona superclases y una categoría');
+        return;
+      }
+      
+      // Línea de la unión
+      newLines = `union ${unionName}\n`;
+      // Links para cada superclase
+      unionSuperclasses.forEach(superclass => {
+        newLines += `link ${superclass} ${unionName}\n`;
+      });
+      // Link a la categoría
+      newLines += `link ${unionName} ${unionCategory}`;
+    }
+
+    if (newLines) {
+      const newCode = code + '\n' + newLines;
+      setCode(newCode);
+    }
+
+    setShowPropertiesModal(false);
+    setSelectedTool(null);
+    setElementName('');
+    setSelectedEntity('');
+  };
+
+  /**
+   * Renderiza la forma SVG apropiada para cada tipo de nodo
+   * 
+   * @description
+   * Mapeo de tipos de nodo a representaciones visuales según notación EER:
+   * - entity: Rectángulo simple
+   * - weak_entity: Rectángulo doble
+   * - relationship: Rombo (diamante)
+   * - identifying_relationship: Rombo doble
+   * - attribute: Elipse
+   * - key_attribute: Elipse con texto subrayado
+   * - derived_attribute: Elipse con borde discontinuo
+   * - multivalued_attribute: Elipse doble
+   * - specialization/union: Círculo con letra (d, o, u)
+   */
   const renderNodeShape = (node: NodeData) => {
     const strokeColor = '#334155';
     const strokeWidth = 2;
@@ -392,6 +655,18 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     }
   };
 
+  /**
+   * Renderiza todas las conexiones entre nodos
+   * 
+   * @description
+   * Características de los enlaces:
+   * - Línea simple para participación parcial
+   * - Línea doble para participación total ([total])
+   * - Símbolo de subconjunto (⊂) para jerarquías especialización/unión
+   * - Etiquetas centradas con cardinalidades (1, N, M, etc.)
+   * 
+   * El símbolo de subconjunto se orienta hacia el nodo padre (especialización/unión).
+   */
   const renderLinks = () => {
     return links.map((link, i) => {
       const sourceNode = nodes.find(n => n.id === link.source);
@@ -598,6 +873,107 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         </div>
       </header>
 
+      {/* Toolbar */}
+      <div className="flex items-center gap-1 border-b border-slate-200 bg-white px-4 py-2 shadow-sm">
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mr-2">Insertar:</span>
+        <button
+          onClick={() => setSelectedTool(selectedTool === 'entity' ? null : 'entity')}
+          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            selectedTool === 'entity'
+              ? 'bg-indigo-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+          title="Entidad fuerte (click en canvas)"
+        >
+          <Square className="h-4 w-4" /> Entidad
+        </button>
+        <button
+          onClick={() => setSelectedTool(selectedTool === 'weak_entity' ? null : 'weak_entity')}
+          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            selectedTool === 'weak_entity'
+              ? 'bg-indigo-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+          title="Entidad débil (click en canvas)"
+        >
+          <SquareDashed className="h-4 w-4" /> Entidad Débil
+        </button>
+        <div className="w-px bg-slate-200 mx-1 h-6"></div>
+        <button
+          onClick={() => setSelectedTool(selectedTool === 'relationship' ? null : 'relationship')}
+          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            selectedTool === 'relationship'
+              ? 'bg-indigo-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+          title="Relación fuerte (click en canvas)"
+        >
+          <Diamond className="h-4 w-4" /> Relación
+        </button>
+        <button
+          onClick={() => setSelectedTool(selectedTool === 'ident_rel' ? null : 'ident_rel')}
+          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            selectedTool === 'ident_rel'
+              ? 'bg-indigo-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+          title="Relación identificativa (click en canvas)"
+        >
+          <Zap className="h-4 w-4" /> Rel. Identif.
+        </button>
+        <div className="w-px bg-slate-200 mx-1 h-6"></div>
+        <button
+          onClick={() => setSelectedTool(selectedTool === 'attribute' ? null : 'attribute')}
+          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            selectedTool === 'attribute'
+              ? 'bg-indigo-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+          title="Atributo simple (click en canvas)"
+        >
+          <Circle className="h-4 w-4" /> Atributo
+        </button>
+        <button
+          onClick={() => setSelectedTool(selectedTool === 'key_attr' ? null : 'key_attr')}
+          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            selectedTool === 'key_attr'
+              ? 'bg-indigo-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+          title="Atributo clave (click en canvas)"
+        >
+          <Zap className="h-4 w-4" /> Atrib. Clave
+        </button>
+        <div className="w-px bg-slate-200 mx-1 h-6"></div>
+        <button
+          onClick={() => setSelectedTool(selectedTool === 'specialization' ? null : 'specialization')}
+          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            selectedTool === 'specialization'
+              ? 'bg-indigo-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+          title="Especialización/Generalización"
+        >
+          <GitBranch className="h-4 w-4" /> Especialización
+        </button>
+        <button
+          onClick={() => setSelectedTool(selectedTool === 'union' ? null : 'union')}
+          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            selectedTool === 'union'
+              ? 'bg-indigo-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+          title="Unión/Categoría"
+        >
+          <Layers className="h-4 w-4" /> Unión
+        </button>
+        {selectedTool && (
+          <div className="ml-auto text-xs text-indigo-600 font-medium">
+            Herramienta activa: {selectedTool === 'entity' ? 'Entidad' : selectedTool === 'weak_entity' ? 'Entidad Débil' : selectedTool === 'relationship' ? 'Relación' : selectedTool === 'ident_rel' ? 'Rel. Identificativa' : selectedTool === 'attribute' ? 'Atributo' : selectedTool === 'key_attr' ? 'Atrib. Clave' : selectedTool === 'specialization' ? 'Especialización' : 'Unión'} - Click en canvas
+          </div>
+        )}
+      </div>
+
       <div className="flex flex-1 overflow-hidden">
         
         <div className="flex w-1/3 min-w-[300px] flex-col border-r border-slate-200 bg-white shadow-lg z-20">
@@ -605,7 +981,22 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
               <Code className="h-3 w-3" /> Definición
             </span>
-            <div className="text-[10px] text-slate-400">Las coordenadas se actualizan al mover nodos</div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (!code.trim()) {
+                    setCode('');
+                  } else {
+                    setShowClearConfirm(true);
+                  }
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors"
+                title="Limpiar todo el código"
+              >
+                <Trash2 className="h-3 w-3" /> Limpiar
+              </button>
+              <div className="text-[10px] text-slate-400">Las coordenadas se actualizan al mover nodos</div>
+            </div>
           </div>
           <textarea
             value={code}
@@ -615,11 +1006,12 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
           />
         </div>
 
-        <div className="relative flex-1 bg-slate-50 overflow-hidden cursor-grab active:cursor-grabbing"
+        <div className={`relative flex-1 bg-slate-50 overflow-hidden ${selectedTool ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
              onMouseDown={() => setIsDraggingCanvas(true)}
              onMouseMove={handleMouseMove}
              onMouseUp={handleMouseUp}
              onMouseLeave={handleMouseUp}
+             onClick={handleCanvasClick}
         >
           <div className="absolute bottom-4 right-4 flex gap-2 rounded-lg bg-white p-1 shadow-lg border border-slate-200 z-20" onMouseDown={e => e.stopPropagation()}>
             <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomOut className="h-5 w-5" /></button>
@@ -927,6 +1319,368 @@ Genera el código EER Studio para el siguiente problema. Identifica correctament
             </div>
             <div className="mt-6 border-t border-slate-100 pt-4 text-center flex-shrink-0">
               <button onClick={() => setShowHelp(false)} className="rounded-md bg-indigo-600 px-6 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition-colors">Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Propiedades */}
+      {showPropertiesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl border border-indigo-100">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-slate-800">
+                {['entity', 'weak_entity'].includes(elementType || '') ? 'Propiedades de la Entidad' : 
+                 ['relationship', 'ident_rel'].includes(elementType || '') ? 'Propiedades de la Relación' :
+                 elementType === 'specialization' ? 'Especialización/Generalización' :
+                 elementType === 'union' ? 'Unión/Categoría' :
+                 'Propiedades del Atributo'}
+              </h2>
+              <button onClick={() => setShowPropertiesModal(false)} className="rounded-full p-1 hover:bg-slate-100 transition-colors">
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Nombre (para entidades, atributos y relaciones) */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {['entity', 'weak_entity'].includes(elementType || '') ? 'Nombre de la Entidad' : 
+                   ['relationship', 'ident_rel'].includes(elementType || '') ? 'Nombre de la Relación' :
+                   'Nombre del Atributo'}
+                </label>
+                <input
+                  type="text"
+                  value={elementName}
+                  onChange={(e) => setElementName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                  placeholder={['entity', 'weak_entity'].includes(elementType || '') ? 'ej: EMPLEADO, CLIENTE' : 
+                              ['relationship', 'ident_rel'].includes(elementType || '') ? 'ej: TRABAJA_EN, PERTENECE_A' :
+                              'ej: Nombre, DNI, Teléfono'}
+                />
+              </div>
+
+              {/* Configuración de relaciones */}
+              {['relationship', 'ident_rel'].includes(elementType || '') && (
+                <>
+                  {/* Primera Entidad */}
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <h3 className="text-xs font-bold text-slate-600 uppercase mb-3">Primera Entidad</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Entidad</label>
+                        <select
+                          value={selectedEntity1}
+                          onChange={(e) => setSelectedEntity1(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                        >
+                          <option value="">-- Selecciona --</option>
+                          {nodes
+                            .filter(n => ['entity', 'weak_entity'].includes(n.type))
+                            .map(n => (
+                              <option key={n.id} value={n.label}>{n.label}</option>
+                            ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Cardinalidad</label>
+                        <select
+                          value={cardinalityE1}
+                          onChange={(e) => setCardinalityE1(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                        >
+                          <option value="1">1</option>
+                          <option value="N">N</option>
+                          <option value="M">M</option>
+                          <option value="custom">Personalizado</option>
+                        </select>
+                      </div>
+                      {cardinalityE1 === 'custom' && (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Cardinalidad Personalizada</label>
+                          <input
+                            type="text"
+                            value={customCard1}
+                            onChange={(e) => setCustomCard1(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="ej: (0..N), (1..4)"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={totalE1}
+                          onChange={(e) => setTotalE1(e.target.checked)}
+                          className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                        />
+                        <label className="text-sm text-slate-700">Participación Total</label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Segunda Entidad */}
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <h3 className="text-xs font-bold text-slate-600 uppercase mb-3">Segunda Entidad</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Entidad</label>
+                        <select
+                          value={selectedEntity2}
+                          onChange={(e) => setSelectedEntity2(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                        >
+                          <option value="">-- Selecciona --</option>
+                          {nodes
+                            .filter(n => ['entity', 'weak_entity'].includes(n.type))
+                            .map(n => (
+                              <option key={n.id} value={n.label}>{n.label}</option>
+                            ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Cardinalidad</label>
+                        <select
+                          value={cardinalityE2}
+                          onChange={(e) => setCardinalityE2(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                        >
+                          <option value="1">1</option>
+                          <option value="N">N</option>
+                          <option value="M">M</option>
+                          <option value="custom">Personalizado</option>
+                        </select>
+                      </div>
+                      {cardinalityE2 === 'custom' && (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Cardinalidad Personalizada</label>
+                          <input
+                            type="text"
+                            value={customCard2}
+                            onChange={(e) => setCustomCard2(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="ej: (0..N), (1..4)"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={totalE2}
+                          onChange={(e) => setTotalE2(e.target.checked)}
+                          className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                        />
+                        <label className="text-sm text-slate-700">Participación Total</label>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Tipo de atributo (solo para atributos) */}
+              {['attribute', 'key_attr', 'derived_attr', 'multivalued_attr'].includes(elementType || '') && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Atributo</label>
+                    <select
+                      value={elementType2}
+                      onChange={(e) => setElementType2(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value="simple">Simple</option>
+                      <option value="key">Clave (identificador)</option>
+                      <option value="derived">Derivado</option>
+                      <option value="multivalued">Multivaluado</option>
+                    </select>
+                  </div>
+
+                  {/* Seleccionar Entidad (solo para atributos) */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Asociar a Entidad</label>
+                    <select
+                      value={selectedEntity}
+                      onChange={(e) => setSelectedEntity(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value="">-- Selecciona una entidad --</option>
+                      {nodes
+                        .filter(n => ['entity', 'weak_entity'].includes(n.type))
+                        .map(n => (
+                          <option key={n.id} value={n.label}>{n.label}</option>
+                        ))}
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {/* Configuración de especialización */}
+              {elementType === 'specialization' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Especialización</label>
+                    <select
+                      value={specType}
+                      onChange={(e) => setSpecType(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value="d">Disjunta (d)</option>
+                      <option value="o">Solapada (o)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Superclase</label>
+                    <select
+                      value={specSuperclass}
+                      onChange={(e) => setSpecSuperclass(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value="">-- Selecciona superclase --</option>
+                      {nodes
+                        .filter(n => ['entity', 'weak_entity'].includes(n.type))
+                        .map(n => (
+                          <option key={n.id} value={n.label}>{n.label}</option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Subclases (selecciona múltiples)</label>
+                    <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 max-h-48 overflow-y-auto space-y-2">
+                      {nodes
+                        .filter(n => ['entity', 'weak_entity'].includes(n.type) && n.label !== specSuperclass)
+                        .map(n => (
+                          <label key={n.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                            <input
+                              type="checkbox"
+                              checked={specSubclasses.includes(n.label)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSpecSubclasses([...specSubclasses, n.label]);
+                                } else {
+                                  setSpecSubclasses(specSubclasses.filter(s => s !== n.label));
+                                }
+                              }}
+                              className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                            />
+                            <span className="text-sm text-slate-700">{n.label}</span>
+                          </label>
+                        ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Configuración de unión */}
+              {elementType === 'union' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la Unión</label>
+                    <input
+                      type="text"
+                      value={unionName}
+                      onChange={(e) => setUnionName(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                      placeholder="ej: u, u1, u2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Superclases (selecciona múltiples)</label>
+                    <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 max-h-48 overflow-y-auto space-y-2">
+                      {nodes
+                        .filter(n => ['entity', 'weak_entity'].includes(n.type))
+                        .map(n => (
+                          <label key={n.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                            <input
+                              type="checkbox"
+                              checked={unionSuperclasses.includes(n.label)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setUnionSuperclasses([...unionSuperclasses, n.label]);
+                                } else {
+                                  setUnionSuperclasses(unionSuperclasses.filter(s => s !== n.label));
+                                }
+                              }}
+                              className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                            />
+                            <span className="text-sm text-slate-700">{n.label}</span>
+                          </label>
+                        ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
+                    <select
+                      value={unionCategory}
+                      onChange={(e) => setUnionCategory(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value="">-- Selecciona categoría --</option>
+                      {nodes
+                        .filter(n => ['entity', 'weak_entity'].includes(n.type))
+                        .map(n => (
+                          <option key={n.id} value={n.label}>{n.label}</option>
+                        ))}
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {/* Botones */}
+              <div className="flex gap-3 pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => setShowPropertiesModal(false)}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmProperties}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+                >
+                  Añadir
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación para Limpiar */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl border border-red-100">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-800">Confirmar Limpieza</h2>
+              <button onClick={() => setShowClearConfirm(false)} className="rounded-full p-1 hover:bg-slate-100 transition-colors">
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-slate-600">
+                ¿Estás seguro de que deseas borrar toda la definición? Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setCode('');
+                  setShowClearConfirm(false);
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+              >
+                Borrar Todo
+              </button>
             </div>
           </div>
         </div>
