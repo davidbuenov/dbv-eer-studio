@@ -46,7 +46,11 @@ flowchart TD
 - 🖱️ **Modales de configuración** - define propiedades de entidades, relaciones y atributos mediante formularios intuitivos
 - 🎯 **Inserción por coordenadas** - haz clic donde quieras colocar un elemento y configúralo visualmente
 - 🔄 **Edición bidireccional** - arrastra nodos en el canvas y el código se actualiza automáticamente
-- 🗑️ **Botón limpiar con confirmación** - limpia todo el código con modal de seguridad
+- 🗑️ **Eliminación de nodos** - selecciona cualquier nodo (clic) y pulsa Delete para eliminarlo con confirmación
+- 📐 **Panel redimensionable** - ajusta el tamaño del editor de código arrastrando la línea divisoria
+- 🔍 **Zoom avanzado** - controles +/−, reset, y ajuste automático al contenido (fit-to-content)
+- 🧹 **Limpiar con confirmación** - limpia todo el código con modal de seguridad
+- 📋 **Dropdowns ordenados alfabéticamente** - encuentra entidades fácilmente en los formularios
 
 ### Código y Diagramas
 - 📝 **Editor de código DSL** con sintaxis simple para definir entidades, relaciones y atributos
@@ -63,6 +67,7 @@ flowchart TD
 ### Diseño y Compatibilidad
 - 🎨 **Interfaz moderna** diseñada con Tailwind CSS
 - 🌐 **Compatible con navegadores modernos**
+- ⚡ **Sin alertas del sistema** - toda la interacción mediante modales personalizados
 
 ## 🌐 Demo en vivo y ejemplos
 
