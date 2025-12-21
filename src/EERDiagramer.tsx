@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { BookOpen, Code, Share2, HelpCircle, X, Maximize2, ZoomIn, ZoomOut, Info, Square, SquareDashed, Diamond, Zap, Circle, Trash2, GitBranch, Layers } from 'lucide-react';
+import { BookOpen, Code, Share2, HelpCircle, Maximize2, ZoomIn, ZoomOut, Info, Square, SquareDashed, Diamond, Zap, Circle, Trash2, GitBranch, Layers } from 'lucide-react';
 import type { NodeData, EERDiagramerHandle } from './types';
 import { SAMPLE_CODE, NODE_STYLES } from './constants';
 import { 
@@ -23,6 +23,11 @@ import { useFileOperations } from './hooks/useFileOperations';
 import { useCanvasInteraction } from './hooks/useCanvasInteraction';
 import { useToolbar } from './hooks/useToolbar';
 import { useModalState } from './hooks/useModalState';
+import { ModalAIPrompt } from './components/ModalAIPrompt';
+import { ModalCredits } from './components/ModalCredits';
+import { ModalHelp } from './components/ModalHelp';
+import { ModalClearConfirm } from './components/ModalClearConfirm';
+import { ModalProperties } from './components/ModalProperties';
 
 function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   // ==========================================
@@ -690,642 +695,78 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         </div>
       </div>
 
-      {showAIPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 flex-shrink-0">
-              <h2 className="text-lg font-bold text-slate-800">🤖 Prompt para tu IA</h2>
-              <button onClick={() => setShowAIPrompt(false)} className="rounded-full p-1 hover:bg-slate-100"><X className="h-5 w-5 text-slate-500" /></button>
-            </div>
-            <div className="overflow-y-auto p-4 text-sm text-slate-700 space-y-4">
-              <p className="text-slate-600">
-                Usa este prompt con <strong>ChatGPT, Claude, Gemini</strong> u otra IA para generar código EER automáticamente.
-              </p>
-              
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-500 uppercase">Copiar este prompt</span>
-                  <button 
-                    onClick={() => {
-                      const promptText = `Actúa como un experto en diseño de bases de datos y generador de código para la herramienta "EER Studio". Tu tarea es analizar una descripción en lenguaje natural de un problema de requisitos de datos y convertirla en el código DSL (Domain Specific Language) específico que utiliza EER Studio para generar diagramas.
-
-### Reglas de Sintaxis de EER Studio:
-
-1. **Entidades:**
-   - Fuertes: \`ent NOMBRE_ENTIDAD\`
-   - Débiles: \`weak_ent NOMBRE_ENTIDAD\`
-   - (Opcional) Puedes añadir coordenadas: \`ent USUARIO (100, 200)\`
-
-2. **Atributos:**
-   - Simple: \`att NombreAtributo -> ENTIDAD\`
-   - Clave (identificador): \`key_att NombreAtributo -> ENTIDAD\`
-   - Derivado: \`derived_att NombreAtributo -> ENTIDAD\`
-   - Multivaluado: \`multivalued_att NombreAtributo -> ENTIDAD\`
-
-3. **Relaciones:**
-   - Normal: \`rel NOMBRE_RELACION\`
-   - Identificativa (para entidades débiles): \`ident_rel NOMBRE_RELACION\`
-
-4. **Conexiones (Links) y Cardinalidad:**
-   - Sintaxis: \`link ENTIDAD RELACION "CARDINALIDAD"\`
-   - Cardinalidades: "1", "N", "M"
-   - Participación Total: \`link EMPLEADO TRABAJA_EN "N" [total]\`
-
-5. **Jerarquías (Especialización/Generalización):**
-   - Definir especialización: \`spec TIPO -> SUPERCLASE\`
-     - TIPO: 'd' (disjunta) o 'o' (solapada)
-   - Conectar subclases: \`link TIPO SUBCLASE\`
-   - Ejemplo:
-     \`\`\`
-     spec d -> EMPLEADO
-     link d SECRETARIA
-     link d INGENIERO
-     \`\`\`
-
-6. **Uniones (Categorías):**
-   - Definir unión: \`union u\`
-   - Conectar superclases: \`link SUPERCLASE u\`
-   - Conectar categoría: \`link u CATEGORIA\`
-
-### Ejemplo:
-
-**Input:** "Un empleado trabaja en un departamento. El empleado tiene DNI (clave) y Nombre. El departamento tiene un Nombre."
-
-**Output:**
-\`\`\`
-// Entidades
-ent EMPLEADO
-ent DEPARTAMENTO
-
-// Atributos
-key_att DNI -> EMPLEADO
-att Nombre -> EMPLEADO
-att Nombre -> DEPARTAMENTO
-
-// Relaciones
-rel TRABAJA_EN
-link EMPLEADO TRABAJA_EN "N" [total]
-link DEPARTAMENTO TRABAJA_EN "1"
-\`\`\`
-
-### Tu Tarea:
-
-Genera el código EER Studio para el siguiente problema. Identifica correctamente claves, cardinalidades, jerarquías y entidades débiles. Puedes sugerir coordenadas aproximadas para evitar superposiciones.
-
-**Problema a modelar:**
-[AQUÍ PEGA TU PROBLEMA DE BASE DE DATOS]`;
-                      navigator.clipboard.writeText(promptText);
-                    }}
-                    className="rounded-md bg-indigo-600 px-3 py-1 text-xs text-white hover:bg-indigo-700"
-                  >
-                    Copiar
-                  </button>
-                </div>
-                <pre className="text-xs overflow-x-auto whitespace-pre-wrap font-mono bg-white p-3 rounded border border-slate-200 max-h-96">
-{`Actúa como un experto en diseño de bases de datos y generador de código para la herramienta "EER Studio". Tu tarea es analizar una descripción en lenguaje natural de un problema de requisitos de datos y convertirla en el código DSL (Domain Specific Language) específico que utiliza EER Studio para generar diagramas.
-
-### Reglas de Sintaxis de EER Studio:
-
-1. **Entidades:**
-   - Fuertes: \`ent NOMBRE_ENTIDAD\`
-   - Débiles: \`weak_ent NOMBRE_ENTIDAD\`
-   - (Opcional) Puedes añadir coordenadas: \`ent USUARIO (100, 200)\`
-
-2. **Atributos:**
-   - Simple: \`att NombreAtributo -> ENTIDAD\`
-   - Clave (identificador): \`key_att NombreAtributo -> ENTIDAD\`
-   - Derivado: \`derived_att NombreAtributo -> ENTIDAD\`
-   - Multivaluado: \`multivalued_att NombreAtributo -> ENTIDAD\`
-
-3. **Relaciones:**
-   - Normal: \`rel NOMBRE_RELACION\`
-   - Identificativa (para entidades débiles): \`ident_rel NOMBRE_RELACION\`
-
-4. **Conexiones (Links) y Cardinalidad:**
-   - Sintaxis: \`link ENTIDAD RELACION "CARDINALIDAD"\`
-   - Cardinalidades: "1", "N", "M"
-   - Participación Total: \`link EMPLEADO TRABAJA_EN "N" [total]\`
-
-5. **Jerarquías (Especialización/Generalización):**
-   - Definir especialización: \`spec TIPO -> SUPERCLASE\`
-     - TIPO: 'd' (disjunta) o 'o' (solapada)
-   - Conectar subclases: \`link TIPO SUBCLASE\`
-   - Ejemplo:
-     \`\`\`
-     spec d -> EMPLEADO
-     link d SECRETARIA
-     link d INGENIERO
-     \`\`\`
-
-6. **Uniones (Categorías):**
-   - Definir unión: \`union u\`
-   - Conectar superclases: \`link SUPERCLASE u\`
-   - Conectar categoría: \`link u CATEGORIA\`
-
-### Ejemplo:
-
-**Input:** "Un empleado trabaja en un departamento. El empleado tiene DNI (clave) y Nombre. El departamento tiene un Nombre."
-
-**Output:**
-\`\`\`
-// Entidades
-ent EMPLEADO
-ent DEPARTAMENTO
-
-// Atributos
-key_att DNI -> EMPLEADO
-att Nombre -> EMPLEADO
-att Nombre -> DEPARTAMENTO
-
-// Relaciones
-rel TRABAJA_EN
-link EMPLEADO TRABAJA_EN "N" [total]
-link DEPARTAMENTO TRABAJA_EN "1"
-\`\`\`
-
-### Tu Tarea:
-
-Genera el código EER Studio para el siguiente problema. Identifica correctamente claves, cardinalidades, jerarquías y entidades débiles. Puedes sugerir coordenadas aproximadas para evitar superposiciones.
-
-**Problema a modelar:**
-[AQUÍ PEGA TU PROBLEMA DE BASE DE DATOS]`}
-                </pre>
-              </div>
-
-              <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
-                <h3 className="font-semibold text-indigo-900 mb-2">📋 Instrucciones:</h3>
-                <ol className="text-sm space-y-1 list-decimal list-inside text-slate-700">
-                  <li>Haz clic en "Copiar" para copiar el prompt</li>
-                  <li>Pégalo en ChatGPT, Claude, Gemini o tu IA favorita</li>
-                  <li>Reemplaza <code className="bg-white px-1 rounded text-xs">[AQUÍ PEGA TU PROBLEMA DE BASE DE DATOS]</code> con tu enunciado</li>
-                  <li>Copia el código generado por la IA</li>
-                  <li>Pégalo en el panel izquierdo de EER Studio</li>
-                </ol>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showCredits && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl bg-gradient-to-br from-indigo-50 to-white p-8 shadow-2xl border border-indigo-100">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-indigo-900">Créditos</h2>
-              <button onClick={() => setShowCredits(false)} className="rounded-full p-1 hover:bg-indigo-100 transition-colors">
-                <X className="h-5 w-5 text-slate-500" />
-              </button>
-            </div>
-            
-            <div className="space-y-6 text-slate-700">
-              <div className="text-center">
-                <BookOpen className="h-16 w-16 text-indigo-600 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-indigo-900 mb-2">EER Studio</h3>
-                <p className="text-sm text-slate-600">Editor de Diagramas Entidad-Relación Extendido</p>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 border border-indigo-100">
-                <p className="text-sm leading-relaxed">
-                  <strong className="text-indigo-900">Desarrollado por:</strong><br />
-                  <a href="https://davidbuenov.com/" target="_blank" rel="noopener noreferrer" className="text-lg font-semibold text-indigo-700 hover:text-indigo-900 hover:underline transition-colors">
-                    David Bueno Vallejo
-                  </a>
-                  <br />
-                  <a href="https://github.com/davidbuenov/eer-studio" target="_blank" rel="noopener noreferrer" className="text-xs mt-2 inline-block text-slate-500 hover:text-slate-700 hover:underline transition-colors">
-                    Repositorio GitHub · https://github.com/davidbuenov/eer-studio
-                  </a>
-                </p>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 border border-indigo-100">
-                <p className="text-sm leading-relaxed">
-                  <strong className="text-indigo-900">Asistencia de IA:</strong><br />
-                  Este proyecto fue desarrollado con la ayuda de <strong>Gemini</strong> y <strong>GitHub Copilot</strong>,
-                  herramientas de inteligencia artificial que facilitaron el desarrollo y la implementación de funcionalidades.
-                </p>
-              </div>
-
-              <div className="text-center pt-4 border-t border-indigo-100">
-                <p className="text-xs text-slate-500">
-                  © 2025 David Bueno Vallejo<br />
-                  Todos los derechos reservados
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 flex-shrink-0">
-              <h2 className="text-lg font-bold text-slate-800">Guía de Sintaxis EER</h2>
-              <button onClick={() => setShowHelp(false)} className="rounded-full p-1 hover:bg-slate-100"><X className="h-5 w-5 text-slate-500" /></button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-600 overflow-y-auto p-2">
-              <div>
-                <h3 className="mb-2 font-bold text-indigo-600">Entidades y Relaciones</h3>
-                <ul className="space-y-2">
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">ent NOMBRE (x, y)</code> <span>Entidad. Coords opcionales.</span></li>
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">weak_ent NOMBRE</code> <span>Entidad débil.</span></li>
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">rel NOMBRE</code> <span>Relación.</span></li>
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">ident_rel NOMBRE</code> <span>Relación identificativa.</span></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="mb-2 font-bold text-indigo-600">Atributos</h3>
-                <ul className="space-y-2">
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">att NOMBRE -&gt; ENTIDAD</code> <span>Atributo simple.</span></li>
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">key_att NOMBRE -&gt; ENTIDAD</code> <span>Atributo clave.</span></li>
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">derived_att NOMBRE</code> <span>Derivado.</span></li>
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">multivalued_attribute</code> <span>Multivaluado.</span></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="mb-2 font-bold text-indigo-600">Conexiones</h3>
-                <ul className="space-y-2">
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">link A B "1"</code> <span>Conexión simple.</span></li>
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">link A B "N" [total]</code> <span>Participación total.</span></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="mb-2 font-bold text-indigo-600">EER (Avanzado)</h3>
-                <ul className="space-y-2">
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">spec d -&gt; SUPERCLASE</code> <span>Especialización.</span></li>
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">link d SUBCLASE</code> <span>Conecta subclase.</span></li>
-                  <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">union u</code> <span>Categoría de Unión.</span></li>
-                </ul>
-              </div>
-            </div>
-            <div className="mt-6 border-t border-slate-100 pt-4 text-center flex-shrink-0">
-              <button onClick={() => setShowHelp(false)} className="rounded-md bg-indigo-600 px-6 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition-colors">Entendido</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Propiedades */}
-      {showPropertiesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl border border-indigo-100">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-slate-800">
-                {['entity', 'weak_entity'].includes(elementType || '') ? 'Propiedades de la Entidad' : 
-                 ['relationship', 'ident_rel'].includes(elementType || '') ? 'Propiedades de la Relación' :
-                 elementType === 'specialization' ? 'Especialización/Generalización' :
-                 elementType === 'union' ? 'Unión/Categoría' :
-                 'Propiedades del Atributo'}
-              </h2>
-              <button onClick={() => setShowPropertiesModal(false)} className="rounded-full p-1 hover:bg-slate-100 transition-colors">
-                <X className="h-5 w-5 text-slate-500" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Nombre (para entidades, atributos y relaciones) */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  {['entity', 'weak_entity'].includes(elementType || '') ? 'Nombre de la Entidad' : 
-                   ['relationship', 'ident_rel'].includes(elementType || '') ? 'Nombre de la Relación' :
-                   'Nombre del Atributo'}
-                </label>
-                <input
-                  type="text"
-                  value={elementName}
-                  onChange={(e) => setElementName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                  placeholder={['entity', 'weak_entity'].includes(elementType || '') ? 'ej: EMPLEADO, CLIENTE' : 
-                              ['relationship', 'ident_rel'].includes(elementType || '') ? 'ej: TRABAJA_EN, PERTENECE_A' :
-                              'ej: Nombre, DNI, Teléfono'}
-                />
-              </div>
-
-              {/* Configuración de relaciones */}
-              {['relationship', 'ident_rel'].includes(elementType || '') && (
-                <>
-                  {/* Primera Entidad */}
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                    <h3 className="text-xs font-bold text-slate-600 uppercase mb-3">Primera Entidad</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Entidad</label>
-                        <select
-                          value={selectedEntity1}
-                          onChange={(e) => setSelectedEntity1(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                        >
-                          <option value="">-- Selecciona --</option>
-                          {nodes
-                            .filter(n => ['entity', 'weak_entity'].includes(n.type))
-                            .map(n => (
-                              <option key={n.id} value={n.label}>{n.label}</option>
-                            ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Cardinalidad</label>
-                        <select
-                          value={cardinalityE1}
-                          onChange={(e) => setCardinalityE1(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                        >
-                          <option value="1">1</option>
-                          <option value="N">N</option>
-                          <option value="M">M</option>
-                          <option value="custom">Personalizado</option>
-                        </select>
-                      </div>
-                      {cardinalityE1 === 'custom' && (
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Cardinalidad Personalizada</label>
-                          <input
-                            type="text"
-                            value={customCard1}
-                            onChange={(e) => setCustomCard1(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                            placeholder="ej: (0..N), (1..4)"
-                          />
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={totalE1}
-                          onChange={(e) => setTotalE1(e.target.checked)}
-                          className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
-                        />
-                        <label className="text-sm text-slate-700">Participación Total</label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Segunda Entidad */}
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                    <h3 className="text-xs font-bold text-slate-600 uppercase mb-3">Segunda Entidad</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Entidad</label>
-                        <select
-                          value={selectedEntity2}
-                          onChange={(e) => setSelectedEntity2(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                        >
-                          <option value="">-- Selecciona --</option>
-                          {nodes
-                            .filter(n => ['entity', 'weak_entity'].includes(n.type))
-                            .map(n => (
-                              <option key={n.id} value={n.label}>{n.label}</option>
-                            ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Cardinalidad</label>
-                        <select
-                          value={cardinalityE2}
-                          onChange={(e) => setCardinalityE2(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                        >
-                          <option value="1">1</option>
-                          <option value="N">N</option>
-                          <option value="M">M</option>
-                          <option value="custom">Personalizado</option>
-                        </select>
-                      </div>
-                      {cardinalityE2 === 'custom' && (
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Cardinalidad Personalizada</label>
-                          <input
-                            type="text"
-                            value={customCard2}
-                            onChange={(e) => setCustomCard2(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                            placeholder="ej: (0..N), (1..4)"
-                          />
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={totalE2}
-                          onChange={(e) => setTotalE2(e.target.checked)}
-                          className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
-                        />
-                        <label className="text-sm text-slate-700">Participación Total</label>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Tipo de atributo (solo para atributos) */}
-              {['attribute', 'key_attr', 'derived_attr', 'multivalued_attr'].includes(elementType || '') && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Atributo</label>
-                    <select
-                      value={elementType2}
-                      onChange={(e) => setElementType2(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                    >
-                      <option value="simple">Simple</option>
-                      <option value="key">Clave (identificador)</option>
-                      <option value="derived">Derivado</option>
-                      <option value="multivalued">Multivaluado</option>
-                    </select>
-                  </div>
-
-                  {/* Seleccionar Entidad (solo para atributos) */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Asociar a Entidad</label>
-                    <select
-                      value={selectedEntity}
-                      onChange={(e) => setSelectedEntity(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                    >
-                      <option value="">-- Selecciona una entidad --</option>
-                      {nodes
-                        .filter(n => ['entity', 'weak_entity'].includes(n.type))
-                        .map(n => (
-                          <option key={n.id} value={n.label}>{n.label}</option>
-                        ))}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {/* Configuración de especialización */}
-              {elementType === 'specialization' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Especialización</label>
-                    <select
-                      value={specType}
-                      onChange={(e) => setSpecType(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                    >
-                      <option value="d">Disjunta (d)</option>
-                      <option value="o">Solapada (o)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Superclase</label>
-                    <select
-                      value={specSuperclass}
-                      onChange={(e) => setSpecSuperclass(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                    >
-                      <option value="">-- Selecciona superclase --</option>
-                      {nodes
-                        .filter(n => ['entity', 'weak_entity'].includes(n.type))
-                        .map(n => (
-                          <option key={n.id} value={n.label}>{n.label}</option>
-                        ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Subclases (selecciona múltiples)</label>
-                    <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 max-h-48 overflow-y-auto space-y-2">
-                      {nodes
-                        .filter(n => ['entity', 'weak_entity'].includes(n.type) && n.label !== specSuperclass)
-                        .map(n => (
-                          <label key={n.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
-                            <input
-                              type="checkbox"
-                              checked={specSubclasses.includes(n.label)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSpecSubclasses([...specSubclasses, n.label]);
-                                } else {
-                                  setSpecSubclasses(specSubclasses.filter(s => s !== n.label));
-                                }
-                              }}
-                              className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
-                            />
-                            <span className="text-sm text-slate-700">{n.label}</span>
-                          </label>
-                        ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Configuración de unión */}
-              {elementType === 'union' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la Unión</label>
-                    <input
-                      type="text"
-                      value={unionName}
-                      onChange={(e) => setUnionName(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                      placeholder="ej: u, u1, u2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Superclases (selecciona múltiples)</label>
-                    <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 max-h-48 overflow-y-auto space-y-2">
-                      {nodes
-                        .filter(n => ['entity', 'weak_entity'].includes(n.type))
-                        .map(n => (
-                          <label key={n.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
-                            <input
-                              type="checkbox"
-                              checked={unionSuperclasses.includes(n.label)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setUnionSuperclasses([...unionSuperclasses, n.label]);
-                                } else {
-                                  setUnionSuperclasses(unionSuperclasses.filter(s => s !== n.label));
-                                }
-                              }}
-                              className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
-                            />
-                            <span className="text-sm text-slate-700">{n.label}</span>
-                          </label>
-                        ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
-                    <select
-                      value={unionCategory}
-                      onChange={(e) => setUnionCategory(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-indigo-500 focus:border-transparent"
-                    >
-                      <option value="">-- Selecciona categoría --</option>
-                      {nodes
-                        .filter(n => ['entity', 'weak_entity'].includes(n.type))
-                        .map(n => (
-                          <option key={n.id} value={n.label}>{n.label}</option>
-                        ))}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {/* Botones */}
-              <div className="flex gap-3 pt-4 border-t border-slate-100">
-                <button
-                  onClick={() => setShowPropertiesModal(false)}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleConfirmProperties}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
-                >
-                  Añadir
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Confirmación para Limpiar */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl border border-red-100">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Confirmar Limpieza</h2>
-              <button onClick={() => setShowClearConfirm(false)} className="rounded-full p-1 hover:bg-slate-100 transition-colors">
-                <X className="h-5 w-5 text-slate-500" />
-              </button>
-            </div>
-
-            <div className="mb-6">
-              <p className="text-sm text-slate-600">
-                ¿Estás seguro de que deseas borrar toda la definición? Esta acción no se puede deshacer.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowClearConfirm(false)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  setCode('');
-                  setShowClearConfirm(false);
-                }}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
-              >
-                Borrar Todo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modales */}
+      <ModalAIPrompt 
+        isOpen={showAIPrompt} 
+        onClose={() => setShowAIPrompt(false)} 
+      />
+      
+      <ModalCredits 
+        isOpen={showCredits} 
+        onClose={() => setShowCredits(false)} 
+      />
+      
+      <ModalHelp 
+        isOpen={showHelp} 
+        onClose={() => setShowHelp(false)} 
+      />
+      
+      <ModalClearConfirm 
+        isOpen={showClearConfirm} 
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={() => setCode('')}
+      />
+      
+      <ModalProperties
+        isOpen={showPropertiesModal}
+        onClose={() => setShowPropertiesModal(false)}
+        nodes={nodes}
+        modalState={{
+          elementType,
+          elementName,
+          elementType2,
+          selectedEntity,
+          selectedEntity1,
+          selectedEntity2,
+          cardinalityE1,
+          cardinalityE2,
+          customCard1,
+          customCard2,
+          totalE1,
+          totalE2,
+          specType,
+          specSuperclass,
+          specSubclasses,
+          unionName,
+          unionSuperclasses,
+          unionCategory,
+          showHelp: false,
+          showCredits: false,
+          showAIPrompt: false,
+          showClearConfirm: false,
+          showPropertiesModal: false
+        }}
+        setters={{
+          setElementName,
+          setElementType2,
+          setSelectedEntity,
+          setSelectedEntity1,
+          setSelectedEntity2,
+          setCardinalityE1,
+          setCardinalityE2,
+          setCustomCard1,
+          setCustomCard2,
+          setTotalE1,
+          setTotalE2,
+          setSpecType,
+          setSpecSuperclass,
+          setSpecSubclasses,
+          setUnionName,
+          setUnionSuperclasses,
+          setUnionCategory
+        }}
+        onConfirm={handleConfirmProperties}
+      />
     </div>
   );
 }
