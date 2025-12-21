@@ -9,159 +9,17 @@
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { BookOpen, Code, Share2, HelpCircle, X, Maximize2, ZoomIn, ZoomOut, Info, Square, SquareDashed, Diamond, Zap, Circle, Trash2, GitBranch, Layers } from 'lucide-react';
-import type { NodeData, LinkData, EERDiagramerHandle, NodeType } from './types';
-import { SAMPLE_CODE, COORD_REGEX, CANVAS_CONFIG, NODE_STYLES } from './constants';
-
-/**
- * PARSER: Convierte el código DSL en estructuras de datos visuales
- * 
- * @description
- * Analiza el código línea por línea y extrae:
- * - Nodos (entidades, relaciones, atributos, especializaciones, uniones)
- * - Enlaces (conexiones entre nodos con cardinalidad y participación)
- * - Coordenadas (x, y) opcionales para posicionamiento manual
- * 
- * Si no hay coordenadas, usa un algoritmo de espiral para distribución automática.
- * Mantiene el índice de línea original para permitir actualización bidireccional.
- * 
- * @param code - Código DSL del diagrama EER
- * @returns Objeto con arrays de nodos y enlaces
- * 
- * @example
- * parseCode("ent EMPLEADO (100, 200)\natt Nombre -> EMPLEADO")
- * // Returns: { nodes: [...], links: [...] }
- */
-const parseCode = (code: string) => {
-  const lines = code.split('\n');
-  const newNodes: NodeData[] = [];
-  const newLinks: LinkData[] = [];
-  const existingIds = new Set<string>(); // Para rastrear IDs y evitar duplicados
-  
-  let angle = 0;
-  const { CENTER_X, CENTER_Y, SPIRAL_RADIUS, SPIRAL_INCREMENT, SPIRAL_GROWTH } = CANVAS_CONFIG;
-
-  // Helper para posición por defecto (espiral) si no hay coords
-  const getDefaultPos = () => {
-    angle += SPIRAL_INCREMENT;
-    const r = SPIRAL_RADIUS + (angle * SPIRAL_GROWTH);
-    return {
-      x: Math.round(CENTER_X + Math.cos(angle) * r),
-      y: Math.round(CENTER_Y + Math.sin(angle) * r)
-    };
-  };
-
-  lines.forEach((line, index) => {
-    const cleanLine = line.trim();
-    if (!cleanLine || cleanLine.startsWith('//')) return;
-
-    // Extraer coordenadas si existen
-    let x: number | null = null;
-    let y: number | null = null;
-    const coordMatch = cleanLine.match(COORD_REGEX);
-    if (coordMatch) {
-      x = parseInt(coordMatch[1], 10);
-      y = parseInt(coordMatch[2], 10);
-    }
-
-    // Quitar coordenadas para procesar el comando limpio
-    const lineWithoutCoords = cleanLine.replace(COORD_REGEX, '').trim();
-    const parts = lineWithoutCoords.split(/\s+/);
-    const command = parts[0].toLowerCase();
-
-    // Comandos de Nodos
-    if (['ent', 'weak_ent', 'rel', 'ident_rel', 'att', 'key_att', 'derived_att', 'multivalued_attribute'].includes(command)) {
-      const label = parts[1];
-      
-      // Generar ID único. 
-      const isAttribute = ['att', 'key_att', 'derived_att', 'multivalued_attribute'].includes(command);
-      let id = label;
-      
-      if (isAttribute || existingIds.has(id)) {
-        id = `${label}_${index}`;
-      }
-      existingIds.add(id);
-      
-      let finalX = x;
-      let finalY = y;
-      
-      if (finalX === null || finalY === null) {
-        const def = getDefaultPos();
-        finalX = def.x;
-        finalY = def.y;
-      }
-
-      let type: NodeType = 'entity';
-      if (command === 'weak_ent') type = 'weak_entity';
-      if (command === 'rel') type = 'relationship';
-      if (command === 'ident_rel') type = 'identifying_relationship';
-      if (command === 'att') type = 'attribute';
-      if (command === 'key_att') type = 'key_attribute';
-      if (command === 'derived_att') type = 'derived_attribute';
-      if (command === 'multivalued_attribute') type = 'multivalued_attribute';
-
-      newNodes.push({ id, type, label, x: finalX, y: finalY, lineIndex: index });
-
-      // Atajo para atributo: att Nombre -> Entidad
-      if (parts[2] === '->' && parts[3]) {
-        newLinks.push({ source: parts[3], target: id, label: '', style: 'solid' });
-      }
-    }
-    // Especialización / Unión
-    else if (['spec', 'union'].includes(command)) {
-      const meta = parts[1] || (command === 'union' ? 'u' : 'd'); 
-      
-      let id = parts[1] || `spec_${index}`;
-      if (existingIds.has(id)) {
-        id = `${id}_${index}`;
-      }
-      existingIds.add(id);
-
-      let finalX = x;
-      let finalY = y;
-
-      if (finalX === null || finalY === null) {
-        const def = getDefaultPos();
-        finalX = def.x;
-        finalY = def.y;
-      }
-
-      newNodes.push({ 
-        id, 
-        type: command === 'union' ? 'union' : 'specialization', 
-        label: meta, 
-        x: finalX, 
-        y: finalY, 
-        meta,
-        lineIndex: index
-      });
-
-      if (parts[2] === '->' && parts[3]) {
-        // Conexión doble a la superclase
-        newLinks.push({ source: parts[3], target: id, label: '', style: 'double' });
-      }
-    }
-    // Conexiones
-    else if (command === 'link') {
-      const source = parts[1];
-      const target = parts[2];
-      let label = '';
-      let style: 'solid' | 'double' = 'solid';
-
-      const labelMatch = lineWithoutCoords.match(/"([^"]+)"/);
-      if (labelMatch) label = labelMatch[1];
-
-      if (lineWithoutCoords.includes('[total]') || lineWithoutCoords.includes('[double]')) {
-        style = 'double';
-      }
-
-      if (source && target) {
-        newLinks.push({ source, target, label, style });
-      }
-    }
-  });
-
-  return { nodes: newNodes, links: newLinks };
-};
+import type { NodeData, LinkData, EERDiagramerHandle } from './types';
+import { SAMPLE_CODE, NODE_STYLES } from './constants';
+import { parseCode } from './utils/parser';
+import { updateNodePosition, screenToCanvasCoordinates } from './utils/coordinates';
+import { 
+  generateEntityCode, 
+  generateAttributeCode, 
+  generateRelationshipCode, 
+  generateSpecializationCode, 
+  generateUnionCode 
+} from './utils/codeGenerator';
 
 function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   // ==========================================
@@ -235,36 +93,13 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
 
   /**
    * Actualiza las coordenadas de un nodo en el código fuente
-   * 
-   * @description
-   * Función clave para la edición bidireccional:
-   * 1. Localiza el nodo por ID
-   * 2. Encuentra su línea original en el código
-   * 3. Actualiza o añade las coordenadas (x, y)
-   * 4. Regenera el código completo
-   * 
-   * Esto permite que mover nodos visualmente actualice el código automáticamente.
    */
   const updateCodePosition = (nodeId: string, newX: number, newY: number) => {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return;
 
-    const lines = codeRef.current.split('\n');
-    const lineIndex = node.lineIndex;
-    
-    if (lineIndex >= 0 && lineIndex < lines.length) {
-      let line = lines[lineIndex];
-      if (COORD_REGEX.test(line)) {
-        line = line.replace(COORD_REGEX, '');
-      }
-      line = line.trimEnd();
-      const newLine = `${line} (${Math.round(newX)}, ${Math.round(newY)})`;
-      
-      lines[lineIndex] = newLine;
-      const newCode = lines.join('\n');
-      
-      setCode(newCode);
-    }
+    const newCode = updateNodePosition(codeRef.current, node, newX, newY);
+    setCode(newCode);
   };
 
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
@@ -276,11 +111,14 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     if (draggedNodeId) {
       const svg = svgRef.current;
       if (!svg) return;
-      const CTM = svg.getScreenCTM();
-      if (!CTM) return;
       
-      const x = (e.clientX - CTM.e) / CTM.a / scale - offset.x / scale;
-      const y = (e.clientY - CTM.f) / CTM.d / scale - offset.y / scale;
+      const { x, y } = screenToCanvasCoordinates(
+        e.clientX,
+        e.clientY,
+        svg,
+        scale,
+        offset
+      );
 
       setNodes(prev => prev.map(n => 
         n.id === draggedNodeId ? { ...n, x, y } : n
@@ -321,11 +159,14 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     
     const svg = svgRef.current;
     if (!svg) return;
-    const CTM = svg.getScreenCTM();
-    if (!CTM) return;
     
-    const x = (e.clientX - CTM.e) / CTM.a / scale - offset.x / scale;
-    const y = (e.clientY - CTM.f) / CTM.d / scale - offset.y / scale;
+    const { x, y } = screenToCanvasCoordinates(
+      e.clientX,
+      e.clientY,
+      svg,
+      scale,
+      offset
+    );
 
     // Guardar coordenadas para usarlas en el modal si es necesario
     setClickX(Math.round(x));
@@ -413,8 +254,12 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         alert('Por favor, introduce el nombre de la entidad');
         return;
       }
-      const prefix = elementType === 'entity' ? 'ent' : 'weak_ent';
-      newLines = `${prefix} ${elementName} (${clickX}, ${clickY})`;
+      newLines = generateEntityCode({
+        name: elementName,
+        x: clickX,
+        y: clickY,
+        isWeak: elementType === 'weak_entity'
+      });
     }
 
     // Para atributos
@@ -423,9 +268,13 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         alert('Por favor, completa el nombre y selecciona una entidad');
         return;
       }
-      const prefix = elementType === 'key_attr' ? 'key_att' : elementType === 'derived_attr' ? 'derived_att' : elementType === 'multivalued_attr' ? 'multivalued_att' : 'att';
-      // Añadir coordenadas al atributo para posicionarlo donde se hizo click
-      newLines = `${prefix} ${elementName} -> ${selectedEntity} (${clickX}, ${clickY})`;
+      newLines = generateAttributeCode({
+        name: elementName,
+        entity: selectedEntity,
+        x: clickX,
+        y: clickY,
+        type: elementType2 as 'simple' | 'key' | 'derived' | 'multivalued'
+      });
     }
 
     // Para relaciones
@@ -435,16 +284,21 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         return;
       }
       
-      const prefix = elementType === 'relationship' ? 'rel' : 'ident_rel';
       const card1 = cardinalityE1 === 'custom' ? customCard1 : cardinalityE1;
       const card2 = cardinalityE2 === 'custom' ? customCard2 : cardinalityE2;
       
-      // Línea de la relación con coordenadas
-      newLines = `${prefix} ${elementName} (${clickX}, ${clickY})\n`;
-      // Link entidad 1
-      newLines += `link ${selectedEntity1} ${elementName} "${card1}"${totalE1 ? ' [total]' : ''}\n`;
-      // Link entidad 2
-      newLines += `link ${selectedEntity2} ${elementName} "${card2}"${totalE2 ? ' [total]' : ''}`;
+      newLines = generateRelationshipCode({
+        name: elementName,
+        x: clickX,
+        y: clickY,
+        isIdentifying: elementType === 'ident_rel',
+        entity1: selectedEntity1,
+        entity2: selectedEntity2,
+        cardinality1: card1,
+        cardinality2: card2,
+        isTotal1: totalE1,
+        isTotal2: totalE2
+      });
     }
 
     // Para especializaciones
@@ -454,11 +308,10 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         return;
       }
       
-      // Línea de la especialización
-      newLines = `spec ${specType} -> ${specSuperclass}\n`;
-      // Links para cada subclase
-      specSubclasses.forEach((subclass, index) => {
-        newLines += `link ${specType} ${subclass}${index < specSubclasses.length - 1 ? '\n' : ''}`;
+      newLines = generateSpecializationCode({
+        type: specType as 'd' | 'o',
+        superclass: specSuperclass,
+        subclasses: specSubclasses
       });
     }
 
@@ -469,14 +322,11 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         return;
       }
       
-      // Línea de la unión
-      newLines = `union ${unionName}\n`;
-      // Links para cada superclase
-      unionSuperclasses.forEach(superclass => {
-        newLines += `link ${superclass} ${unionName}\n`;
+      newLines = generateUnionCode({
+        name: unionName,
+        superclasses: unionSuperclasses,
+        category: unionCategory
       });
-      // Link a la categoría
-      newLines += `link ${unionName} ${unionCategory}`;
     }
 
     if (newLines) {
