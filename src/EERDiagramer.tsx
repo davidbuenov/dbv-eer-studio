@@ -9,10 +9,8 @@
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { BookOpen, Code, Share2, HelpCircle, X, Maximize2, ZoomIn, ZoomOut, Info, Square, SquareDashed, Diamond, Zap, Circle, Trash2, GitBranch, Layers } from 'lucide-react';
-import type { NodeData, LinkData, EERDiagramerHandle } from './types';
+import type { NodeData, EERDiagramerHandle } from './types';
 import { SAMPLE_CODE, NODE_STYLES } from './constants';
-import { parseCode } from './utils/parser';
-import { updateNodePosition, screenToCanvasCoordinates } from './utils/coordinates';
 import { 
   generateEntityCode, 
   generateAttributeCode, 
@@ -20,127 +18,117 @@ import {
   generateSpecializationCode, 
   generateUnionCode 
 } from './utils/codeGenerator';
+import { useEERParser } from './hooks/useEERParser';
+import { useFileOperations } from './hooks/useFileOperations';
+import { useCanvasInteraction } from './hooks/useCanvasInteraction';
+import { useToolbar } from './hooks/useToolbar';
+import { useModalState } from './hooks/useModalState';
 
 function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   // ==========================================
   // ESTADO DEL COMPONENTE
   // ==========================================
   
-  // Estado del código y diagrama
+  // Estado del código
   const [code, setCode] = useState(SAMPLE_CODE);
-  const [nodes, setNodes] = useState<NodeData[]>([]);
-  const [links, setLinks] = useState<LinkData[]>([]);
-  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
-  
-  // Estados de UI y modales
-  const [showHelp, setShowHelp] = useState(false);
-  const [showFileMenu, setShowFileMenu] = useState(false);
-  const [showCredits, setShowCredits] = useState(false);
-  const [showAIPrompt, setShowAIPrompt] = useState(false);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [scale, setScale] = useState(0.8);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
-  const [lastFileHandle, setLastFileHandle] = useState<unknown | null>(null);
-  
-  // Estados de la barra de herramientas
-  const [selectedTool, setSelectedTool] = useState<string | null>(null);
-  const [showPropertiesModal, setShowPropertiesModal] = useState(false);
-  
-  // Propiedades del elemento actual (modal)
-  const [elementType, setElementType] = useState<string | null>(null);
-  const [elementName, setElementName] = useState('');
-  const [elementType2, setElementType2] = useState('simple'); // Para atributos: simple, key, derived, multivalued
-  const [selectedEntity, setSelectedEntity] = useState(''); // Para atributos
-  const [selectedEntity1, setSelectedEntity1] = useState(''); // Para relaciones
-  const [selectedEntity2, setSelectedEntity2] = useState(''); // Para relaciones
-  const [cardinalityE1, setCardinalityE1] = useState('1'); // Cardinalidad entidad 1
-  const [cardinalityE2, setCardinalityE2] = useState('N'); // Cardinalidad entidad 2
-  const [customCard1, setCustomCard1] = useState(''); // Cardinalidad personalizada E1
-  const [customCard2, setCustomCard2] = useState(''); // Cardinalidad personalizada E2
-  const [totalE1, setTotalE1] = useState(false); // Participación total entidad 1
-  const [totalE2, setTotalE2] = useState(false); // Participación total entidad 2
-  const [clickX, setClickX] = useState(0); // Coordenada X del último click
-  const [clickY, setClickY] = useState(0); // Coordenada Y del último click
-  const [specType, setSpecType] = useState('d'); // Tipo de especialización: d (disjunta) o o (solapada)
-  const [specSuperclass, setSpecSuperclass] = useState(''); // Superclase para especialización
-  const [specSubclasses, setSpecSubclasses] = useState<string[]>([]); // Subclases para especialización
-  const [unionName, setUnionName] = useState(''); // Nombre de la unión
-  const [unionSuperclasses, setUnionSuperclasses] = useState<string[]>([]); // Superclases para unión
-  const [unionCategory, setUnionCategory] = useState(''); // Categoría para unión
-  
-  const svgRef = useRef<SVGSVGElement>(null);
   const codeRef = useRef(code);
-
+  
+  // Actualizar codeRef cuando cambia el código
   useEffect(() => {
     codeRef.current = code;
   }, [code]);
+  
+  // Parser hook - parsea el código y genera nodos y enlaces
+  const { nodes, links, setNodes } = useEERParser(code);
+  
+  // File operations hook - maneja open, save, save as
+  const {
+    showFileMenu,
+    setShowFileMenu,
+    handleOpenFile,
+    handleSaveFile,
+    handleSaveAsFile
+  } = useFileOperations();
+  
+  // Canvas interaction hook - maneja drag & drop, zoom, pan
+  const {
+    draggedNodeId,
+    scale,
+    setScale,
+    offset,
+    setOffset,
+    svgRef,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleCanvasMouseDown
+  } = useCanvasInteraction({ nodes, setNodes, code, setCode });
+  
+  // Toolbar hook - maneja el estado de la barra de herramientas
+  const {
+    selectedTool,
+    setSelectedTool,
+    clickX,
+    clickY,
+    handleCanvasClick: toolbarCanvasClick,
+    resetTool
+  } = useToolbar(svgRef, scale, offset, draggedNodeId);
+  
+  // Modal state hook - maneja todos los estados de modales
+  const {
+    showHelp,
+    setShowHelp,
+    showCredits,
+    setShowCredits,
+    showAIPrompt,
+    setShowAIPrompt,
+    showClearConfirm,
+    setShowClearConfirm,
+    showPropertiesModal,
+    setShowPropertiesModal,
+    elementType,
+    setElementType,
+    elementName,
+    setElementName,
+    elementType2,
+    setElementType2,
+    selectedEntity,
+    setSelectedEntity,
+    selectedEntity1,
+    setSelectedEntity1,
+    selectedEntity2,
+    setSelectedEntity2,
+    cardinalityE1,
+    setCardinalityE1,
+    cardinalityE2,
+    setCardinalityE2,
+    customCard1,
+    setCustomCard1,
+    customCard2,
+    setCustomCard2,
+    totalE1,
+    setTotalE1,
+    totalE2,
+    setTotalE2,
+    specType,
+    setSpecType,
+    specSuperclass,
+    setSpecSuperclass,
+    specSubclasses,
+    setSpecSubclasses,
+    unionName,
+    setUnionName,
+    unionSuperclasses,
+    setUnionSuperclasses,
+    unionCategory,
+    setUnionCategory,
+    resetPropertiesModal
+  } = useModalState();
 
   useImperativeHandle(ref, () => ({
     getCode: () => codeRef.current,
     setCode: (c: string) => setCode(c),
   }));
-
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const { nodes: parsedNodes, links: parsedLinks } = parseCode(code);
-      setNodes(parsedNodes);
-      setLinks(parsedLinks);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [code]);
-
-  /**
-   * Actualiza las coordenadas de un nodo en el código fuente
-   */
-  const updateCodePosition = (nodeId: string, newX: number, newY: number) => {
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return;
-
-    const newCode = updateNodePosition(codeRef.current, node, newX, newY);
-    setCode(newCode);
-  };
-
-  const handleMouseDown = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setDraggedNodeId(id);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (draggedNodeId) {
-      const svg = svgRef.current;
-      if (!svg) return;
-      
-      const { x, y } = screenToCanvasCoordinates(
-        e.clientX,
-        e.clientY,
-        svg,
-        scale,
-        offset
-      );
-
-      setNodes(prev => prev.map(n => 
-        n.id === draggedNodeId ? { ...n, x, y } : n
-      ));
-    } else if (isDraggingCanvas) {
-      setOffset(prev => ({
-        x: prev.x + e.movementX,
-        y: prev.y + e.movementY
-      }));
-    }
-  };
-
-  const handleMouseUp = () => {
-    if (draggedNodeId) {
-      const node = nodes.find(n => n.id === draggedNodeId);
-      if (node) {
-        updateCodePosition(node.id, node.x, node.y);
-      }
-      setDraggedNodeId(null);
-    }
-    setIsDraggingCanvas(false);
-  };
 
   /**
    * Maneja clicks en el canvas cuando hay una herramienta seleccionada
@@ -154,23 +142,12 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
    * 
    * Cada tipo de elemento tiene su propio flujo de configuración.
    */
-  const handleCanvasClick = (e: React.MouseEvent) => {
+  const handleCanvasClickInternal = (e: React.MouseEvent) => {
     if (!selectedTool || draggedNodeId) return;
     
-    const svg = svgRef.current;
-    if (!svg) return;
-    
-    const { x, y } = screenToCanvasCoordinates(
-      e.clientX,
-      e.clientY,
-      svg,
-      scale,
-      offset
-    );
-
-    // Guardar coordenadas para usarlas en el modal si es necesario
-    setClickX(Math.round(x));
-    setClickY(Math.round(y));
+    // Usar el hook para obtener coordenadas
+    const coords = toolbarCanvasClick(e);
+    if (!coords) return;
 
     const timestamp = Date.now() % 1000;
 
@@ -186,14 +163,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     if (['relationship', 'ident_rel'].includes(selectedTool!)) {
       setElementType(selectedTool);
       setElementName(selectedTool === 'relationship' ? `RELACION_${timestamp}` : `RELACION_IDENT_${timestamp}`);
-      setSelectedEntity1('');
-      setSelectedEntity2('');
-      setCardinalityE1('1');
-      setCardinalityE2('N');
-      setCustomCard1('');
-      setCustomCard2('');
-      setTotalE1(false);
-      setTotalE2(false);
+      resetPropertiesModal();
       setShowPropertiesModal(true);
       return;
     }
@@ -335,9 +305,8 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     }
 
     setShowPropertiesModal(false);
-    setSelectedTool(null);
-    setElementName('');
-    setSelectedEntity('');
+    resetTool();
+    resetPropertiesModal();
   };
 
   /**
@@ -509,98 +478,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     }
   };
 
-  // File menu actions (Open, Save, Save As)
-  const handleOpenFile = async () => {
-    try {
-      const picker = (window as unknown as { showOpenFilePicker?: (opts: unknown) => Promise<FileSystemFileHandle[]> }).showOpenFilePicker;
-      const handles = picker ? await picker({
-        types: [{ description: 'EER Files', accept: { 'text/plain': ['.eer'] } }],
-        multiple: false,
-      }) : [];
-      const handle = handles && handles[0];
-      if (handle) {
-        const file = await (handle as unknown as { getFile: () => Promise<File> }).getFile();
-        const text = await file.text();
-        setCode(text);
-        setLastFileHandle(handle);
-      } else {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.eer,text/plain';
-        input.onchange = async () => {
-          const f = (input.files && input.files[0]) || null;
-          if (!f) return;
-          const text = await f.text();
-          setCode(text);
-        };
-        input.click();
-      }
-    } finally {
-      setShowFileMenu(false);
-    }
-  };
-
-  const saveToHandle = async (handle: unknown, content: string) => {
-    const writable = await (handle as unknown as { createWritable: () => Promise<{ write: (data: string) => Promise<void>; close: () => Promise<void>; }> }).createWritable();
-    await writable.write(content);
-    await writable.close();
-  };
-
-  const handleSaveFile = async () => {
-    try {
-      if (lastFileHandle) {
-        await saveToHandle(lastFileHandle, codeRef.current);
-      } else {
-        const savePicker = (window as unknown as { showSaveFilePicker?: (opts: unknown) => Promise<FileSystemFileHandle> }).showSaveFilePicker;
-        if (savePicker) {
-          const fileHandle = await savePicker({
-            types: [{ description: 'EER Files', accept: { 'text/plain': ['.eer'] } }],
-            suggestedName: 'diagram.eer',
-          });
-          await saveToHandle(fileHandle, codeRef.current);
-          setLastFileHandle(fileHandle);
-        } else {
-          const blob = new Blob([codeRef.current], { type: 'text/plain' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'diagram.eer';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }
-      }
-    } finally {
-      setShowFileMenu(false);
-    }
-  };
-
-  const handleSaveAsFile = async () => {
-    try {
-      const savePicker = (window as unknown as { showSaveFilePicker?: (opts: unknown) => Promise<FileSystemFileHandle> }).showSaveFilePicker;
-      if (savePicker) {
-        const fileHandle = await savePicker({
-          types: [{ description: 'EER Files', accept: { 'text/plain': ['.eer'] } }],
-          suggestedName: 'diagram.eer',
-        });
-        await saveToHandle(fileHandle, codeRef.current);
-        setLastFileHandle(fileHandle);
-      } else {
-        const blob = new Blob([codeRef.current], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'diagram.eer';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-    } finally {
-      setShowFileMenu(false);
-    }
-  };
+  // File menu actions (Open, Save, Save As) - Ahora manejadas por useFileOperations hook
 
   return (
     <div className="flex h-screen w-full flex-col bg-slate-50 text-slate-900 font-sans overflow-hidden">
@@ -613,9 +491,9 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             <button onClick={() => setShowFileMenu(s => !s)} className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 border border-slate-200">File</button>
             {showFileMenu && (
               <div className="absolute left-0 mt-1 w-40 rounded-md border border-slate-200 bg-white shadow-lg z-40">
-                <button onClick={handleOpenFile} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-100">Open</button>
-                <button onClick={handleSaveFile} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-100">Save</button>
-                <button onClick={handleSaveAsFile} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-100">Save as</button>
+                <button onClick={() => handleOpenFile(setCode)} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-100">Open</button>
+                <button onClick={() => handleSaveFile(codeRef.current)} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-100">Save</button>
+                <button onClick={() => handleSaveAsFile(codeRef.current)} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-100">Save as</button>
               </div>
             )}
           </div>
@@ -770,11 +648,11 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         </div>
 
         <div className={`relative flex-1 bg-slate-50 overflow-hidden ${selectedTool ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
-             onMouseDown={() => setIsDraggingCanvas(true)}
+             onMouseDown={handleCanvasMouseDown}
              onMouseMove={handleMouseMove}
              onMouseUp={handleMouseUp}
              onMouseLeave={handleMouseUp}
-             onClick={handleCanvasClick}
+             onClick={handleCanvasClickInternal}
         >
           <div className="absolute bottom-4 right-4 flex gap-2 rounded-lg bg-white p-1 shadow-lg border border-slate-200 z-20" onMouseDown={e => e.stopPropagation()}>
             <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-2 hover:bg-slate-100 rounded text-slate-600"><ZoomOut className="h-5 w-5" /></button>
