@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { BookOpen, Code, Share2, HelpCircle, Info, Square, SquareDashed, Diamond, Zap, Circle, Trash2, GitBranch, Layers } from 'lucide-react';
+import { BookOpen, Code, Share2, HelpCircle, Info } from 'lucide-react';
 import type { EERDiagramerHandle } from './types';
 import { SAMPLE_CODE } from './constants';
 import { 
@@ -29,6 +29,8 @@ import { ModalHelp } from './components/ModalHelp';
 import { ModalClearConfirm } from './components/ModalClearConfirm';
 import { ModalProperties } from './components/ModalProperties';
 import { Canvas } from './components/Canvas';
+import { Toolbar } from './components/Toolbar';
+import { CodePanel } from './components/CodePanel';
 
 function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   // ==========================================
@@ -363,138 +365,16 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         </div>
       </header>
 
-      {/* Toolbar */}
-      <div className="flex items-center gap-1 border-b border-slate-200 bg-white px-4 py-2 shadow-sm">
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mr-2">Insertar:</span>
-        <button
-          onClick={() => setSelectedTool(selectedTool === 'entity' ? null : 'entity')}
-          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            selectedTool === 'entity'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-          title="Entidad fuerte (click en canvas)"
-        >
-          <Square className="h-4 w-4" /> Entidad
-        </button>
-        <button
-          onClick={() => setSelectedTool(selectedTool === 'weak_entity' ? null : 'weak_entity')}
-          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            selectedTool === 'weak_entity'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-          title="Entidad débil (click en canvas)"
-        >
-          <SquareDashed className="h-4 w-4" /> Entidad Débil
-        </button>
-        <div className="w-px bg-slate-200 mx-1 h-6"></div>
-        <button
-          onClick={() => setSelectedTool(selectedTool === 'relationship' ? null : 'relationship')}
-          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            selectedTool === 'relationship'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-          title="Relación fuerte (click en canvas)"
-        >
-          <Diamond className="h-4 w-4" /> Relación
-        </button>
-        <button
-          onClick={() => setSelectedTool(selectedTool === 'ident_rel' ? null : 'ident_rel')}
-          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            selectedTool === 'ident_rel'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-          title="Relación identificativa (click en canvas)"
-        >
-          <Zap className="h-4 w-4" /> Rel. Identif.
-        </button>
-        <div className="w-px bg-slate-200 mx-1 h-6"></div>
-        <button
-          onClick={() => setSelectedTool(selectedTool === 'attribute' ? null : 'attribute')}
-          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            selectedTool === 'attribute'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-          title="Atributo simple (click en canvas)"
-        >
-          <Circle className="h-4 w-4" /> Atributo
-        </button>
-        <button
-          onClick={() => setSelectedTool(selectedTool === 'key_attr' ? null : 'key_attr')}
-          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            selectedTool === 'key_attr'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-          title="Atributo clave (click en canvas)"
-        >
-          <Zap className="h-4 w-4" /> Atrib. Clave
-        </button>
-        <div className="w-px bg-slate-200 mx-1 h-6"></div>
-        <button
-          onClick={() => setSelectedTool(selectedTool === 'specialization' ? null : 'specialization')}
-          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            selectedTool === 'specialization'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-          title="Especialización/Generalización"
-        >
-          <GitBranch className="h-4 w-4" /> Especialización
-        </button>
-        <button
-          onClick={() => setSelectedTool(selectedTool === 'union' ? null : 'union')}
-          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            selectedTool === 'union'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-          title="Unión/Categoría"
-        >
-          <Layers className="h-4 w-4" /> Unión
-        </button>
-        {selectedTool && (
-          <div className="ml-auto text-xs text-indigo-600 font-medium">
-            Herramienta activa: {selectedTool === 'entity' ? 'Entidad' : selectedTool === 'weak_entity' ? 'Entidad Débil' : selectedTool === 'relationship' ? 'Relación' : selectedTool === 'ident_rel' ? 'Rel. Identificativa' : selectedTool === 'attribute' ? 'Atributo' : selectedTool === 'key_attr' ? 'Atrib. Clave' : selectedTool === 'specialization' ? 'Especialización' : 'Unión'} - Click en canvas
-          </div>
-        )}
-      </div>
+      <Toolbar selectedTool={selectedTool} onToolSelect={setSelectedTool} />
 
       <div className="flex flex-1 overflow-hidden">
         
-        <div className="flex w-1/3 min-w-[300px] flex-col border-r border-slate-200 bg-white shadow-lg z-20">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2 bg-slate-50">
-            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-              <Code className="h-3 w-3" /> Definición
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (!code.trim()) {
-                    setCode('');
-                  } else {
-                    setShowClearConfirm(true);
-                  }
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors"
-                title="Limpiar todo el código"
-              >
-                <Trash2 className="h-3 w-3" /> Limpiar
-              </button>
-              <div className="text-[10px] text-slate-400">Las coordenadas se actualizan al mover nodos</div>
-            </div>
-          </div>
-          <textarea
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            className="flex-1 resize-none bg-slate-50 p-4 font-mono text-xs md:text-sm leading-relaxed text-slate-700 focus:outline-none selection:bg-indigo-100"
-            spellCheck={false}
-          />
-        </div>
+        <CodePanel 
+          code={code}
+          onCodeChange={setCode}
+          onClear={() => setShowClearConfirm(true)}
+          showClearConfirm={showClearConfirm}
+        />
 
         <Canvas
           svgRef={svgRef}
