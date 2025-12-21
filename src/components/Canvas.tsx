@@ -1,6 +1,7 @@
 import type { NodeData, LinkData } from '../types';
 import { NodeRenderer } from './NodeRenderer';
 import { LinkRenderer } from './LinkRenderer';
+import { Plus, Minus, RotateCcw, Maximize2 } from 'lucide-react';
 
 interface CanvasProps {
   svgRef: React.RefObject<SVGSVGElement | null>;
@@ -10,11 +11,17 @@ interface CanvasProps {
   offset: { x: number; y: number };
   selectedTool: string | null;
   draggedNodeId: string | null;
+  selectedNodeId: string | null;
   onMouseMove: (e: React.MouseEvent) => void;
   onMouseUp: () => void;
   onClick: (e: React.MouseEvent) => void;
   onMouseDown: () => void;
   onNodeMouseDown: (e: React.MouseEvent, id: string) => void;
+  onNodeClick: (id: string) => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetZoom: () => void;
+  onFitToContent: () => void;
 }
 
 /**
@@ -37,15 +44,21 @@ export function Canvas({
   offset,
   selectedTool,
   draggedNodeId,
+  selectedNodeId,
   onMouseMove,
   onMouseUp,
   onClick,
   onMouseDown,
-  onNodeMouseDown
+  onNodeMouseDown,
+  onNodeClick,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
+  onFitToContent
 }: CanvasProps) {
   return (
     <div 
-      className={`relative flex-1 bg-slate-50 overflow-hidden ${selectedTool ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
+      className={`relative h-full w-full bg-slate-50 overflow-hidden ${selectedTool ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
@@ -54,7 +67,6 @@ export function Canvas({
     >
       <svg
         ref={svgRef}
-        viewBox="-3000 -3000 6000 6000"
         className="h-full w-full"
       >
         {/* Aplicar transformación de zoom y pan */}
@@ -70,7 +82,9 @@ export function Canvas({
               key={node.id}
               node={node}
               isDragged={draggedNodeId === node.id}
+              isSelected={selectedNodeId === node.id}
               onMouseDown={onNodeMouseDown}
+              onClick={onNodeClick}
             />
           ))}
         </g>
@@ -78,7 +92,13 @@ export function Canvas({
 
       {/* Controles de zoom y pan */}
       <div className="absolute bottom-4 right-4 flex gap-2 rounded-lg bg-white p-1 shadow-lg border border-slate-200 z-20" onMouseDown={e => e.stopPropagation()}>
-        <ZoomControls scale={scale} />
+        <ZoomControls 
+          scale={scale} 
+          onZoomIn={onZoomIn} 
+          onZoomOut={onZoomOut} 
+          onResetZoom={onResetZoom}
+          onFitToContent={onFitToContent}
+        />
       </div>
     </div>
   );
@@ -90,15 +110,51 @@ export function Canvas({
  */
 interface ZoomControlsProps {
   scale: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetZoom: () => void;
+  onFitToContent: () => void;
 }
 
-function ZoomControls({ scale }: ZoomControlsProps) {
+function ZoomControls({ scale, onZoomIn, onZoomOut, onResetZoom, onFitToContent }: ZoomControlsProps) {
   // Los handlers se pasan a través del padre para mantener control centralizado
   return (
     <>
+      <button
+        type="button"
+        className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+        onClick={onZoomOut}
+        title="Alejar"
+      >
+        <Minus className="h-3 w-3" />
+      </button>
       <span className="flex items-center px-2 text-xs font-medium text-slate-500 min-w-[3rem] justify-center">
         {Math.round(scale * 100)}%
       </span>
+      <button
+        type="button"
+        className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+        onClick={onZoomIn}
+        title="Acercar"
+      >
+        <Plus className="h-3 w-3" />
+      </button>
+      <button
+        type="button"
+        className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+        onClick={onResetZoom}
+        title="Reiniciar zoom"
+      >
+        <RotateCcw className="h-3 w-3" />
+      </button>
+      <button
+        type="button"
+        className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+        onClick={onFitToContent}
+        title="Ajustar al contenido"
+      >
+        <Maximize2 className="h-3 w-3" />
+      </button>
     </>
   );
 }

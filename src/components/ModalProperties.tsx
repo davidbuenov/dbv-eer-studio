@@ -49,7 +49,9 @@ export function ModalProperties({
 }: ModalPropertiesProps) {
   if (!isOpen) return null;
 
-  const entities = nodes.filter(n => ['entity', 'weak_entity'].includes(n.type));
+  const entities = nodes
+    .filter(n => ['entity', 'weak_entity'].includes(n.type))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

@@ -1,16 +1,14 @@
-import React from 'react';
 import { Code, Trash2 } from 'lucide-react';
 
 interface CodePanelProps {
   code: string;
   onCodeChange: (code: string) => void;
   onClear: () => void;
-  showClearConfirm: boolean;
 }
 
-export function CodePanel({ code, onCodeChange, onClear, showClearConfirm }: CodePanelProps) {
+export function CodePanel({ code, onCodeChange, onClear }: CodePanelProps) {
   return (
-    <div className="flex w-1/3 min-w-[300px] flex-col border-r border-slate-200 bg-white shadow-lg z-20">
+    <div className="flex flex-col h-full border-r border-slate-200 bg-white shadow-lg z-20 w-full">
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2 bg-slate-50">
         <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
           <Code className="h-3 w-3" /> Definición

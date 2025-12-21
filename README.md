@@ -6,6 +6,39 @@
 
 EER Studio es una aplicación web interactiva para crear y editar diagramas Entidad-Relación Extendido mediante un lenguaje específico de dominio (DSL) simple e intuitivo. Los cambios en el código se reflejan automáticamente en el diagrama visual, y viceversa: ¡arrastra los nodos y el código se actualiza con las nuevas coordenadas!
 
+## 🛠️ Resumen de la refactorización 2025
+
+- Refactor completado en 7 fases (dic 2025) con separación total de responsabilidades.
+- Componentes creados: Canvas + Node/LinkRenderer, Toolbar, CodePanel y 5 modales reutilizables.
+- Hooks dedicados para parser, archivos, canvas, toolbar y modales.
+- EERDiagramer.tsx reducido de 749 → 445 líneas; renderers y toolbar optimizados con `React.memo` y handlers con `useCallback`.
+
+## 🏗️ Arquitectura
+
+![Arquitectura](assets/arquitectura.svg)
+
+```mermaid
+flowchart TD
+   subgraph Client [EER Studio SPA]
+      App[EERDiagramer estado]
+      UI[Toolbar, CodePanel, Modals]
+      Canvas[Canvas, NodeRenderer, LinkRenderer]
+      Hooks[Hooks: parser, archivos, canvas, toolbar, modal]
+      Utils[Utils, Types, Constants]
+      Build[Vite + Tailwind]
+   end
+
+   subgraph Delivery [Entrega]
+      GH[GitHub Pages]
+   end
+
+   App --> Canvas
+   App --> UI
+   App --> Hooks
+   Hooks --> Utils
+   Build --> GH
+```
+
 ## ✨ Características
 
 ### Edición Visual e Interactiva

@@ -18,6 +18,7 @@ import {
   generateSpecializationCode, 
   generateUnionCode 
 } from './utils/codeGenerator';
+import { deleteNodeFromCode } from './utils/deleteNode';
 import { useEERParser } from './hooks/useEERParser';
 import { useFileOperations } from './hooks/useFileOperations';
 import { useCanvasInteraction } from './hooks/useCanvasInteraction';
@@ -27,6 +28,7 @@ import { ModalAIPrompt } from './components/ModalAIPrompt';
 import { ModalCredits } from './components/ModalCredits';
 import { ModalHelp } from './components/ModalHelp';
 import { ModalClearConfirm } from './components/ModalClearConfirm';
+import { ModalDeleteConfirm } from './components/ModalDeleteConfirm';
 import { ModalProperties } from './components/ModalProperties';
 import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
@@ -40,6 +42,13 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   // Estado del código
   const [code, setCode] = useState(SAMPLE_CODE);
   const codeRef = useRef(code);
+  
+  // Estado de selección y eliminación
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // Estado del ancho del panel de código
+  const [codePanelWidth, setCodePanelWidth] = useState(400);
   
   // Actualizar codeRef cuando cambia el código
   useEffect(() => {
@@ -62,7 +71,9 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   const {
     draggedNodeId,
     scale,
+    setScale,
     offset,
+    setOffset,
     svgRef,
     handleMouseDown,
     handleMouseMove,
@@ -135,6 +146,18 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     getCode: () => codeRef.current,
     setCode: (c: string) => setCode(c),
   }));
+
+  // Manejar tecla Delete para eliminar nodo seleccionado
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId && !showPropertiesModal) {
+        setShowDeleteConfirm(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId, showPropertiesModal]);
 
   // Memoizar handleCanvasClickInternal para evitar recrearla en cada render
   const handleCanvasClickInternal = useCallback((e: React.MouseEvent) => {
@@ -228,10 +251,8 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
 
     // Para entidades
     if (['entity', 'weak_entity'].includes(elementType)) {
-      if (!elementName) {
-        alert('Por favor, introduce el nombre de la entidad');
-        return;
-      }
+      if (!elementName) return;
+      
       newLines = generateEntityCode({
         name: elementName,
         x: clickX,
@@ -242,10 +263,8 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
 
     // Para atributos
     if (['attribute', 'key_attr', 'derived_attr', 'multivalued_attr'].includes(elementType)) {
-      if (!elementName || !selectedEntity) {
-        alert('Por favor, completa el nombre y selecciona una entidad');
-        return;
-      }
+      if (!elementName || !selectedEntity) return;
+      
       newLines = generateAttributeCode({
         name: elementName,
         entity: selectedEntity,
@@ -257,10 +276,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
 
     // Para relaciones
     if (['relationship', 'ident_rel'].includes(elementType)) {
-      if (!elementName || !selectedEntity1 || !selectedEntity2) {
-        alert('Por favor, completa el nombre y selecciona ambas entidades');
-        return;
-      }
+      if (!elementName || !selectedEntity1 || !selectedEntity2) return;
       
       const card1 = cardinalityE1 === 'custom' ? customCard1 : cardinalityE1;
       const card2 = cardinalityE2 === 'custom' ? customCard2 : cardinalityE2;
@@ -281,10 +297,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
 
     // Para especializaciones
     if (elementType === 'specialization') {
-      if (!specSuperclass || specSubclasses.length === 0) {
-        alert('Por favor, selecciona una superclase y al menos una subclase');
-        return;
-      }
+      if (!specSuperclass || specSubclasses.length === 0) return;
       
       newLines = generateSpecializationCode({
         type: specType as 'd' | 'o',
@@ -295,10 +308,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
 
     // Para uniones
     if (elementType === 'union') {
-      if (!unionName || unionSuperclasses.length === 0 || !unionCategory) {
-        alert('Por favor, completa el nombre de la unión, selecciona superclases y una categoría');
-        return;
-      }
+      if (!unionName || unionSuperclasses.length === 0 || !unionCategory) return;
       
       newLines = generateUnionCode({
         name: unionName,
@@ -330,6 +340,58 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
       document.body.removeChild(link);
     }
   };
+
+  // Controles de zoom
+  const handleZoomIn = useCallback(() => {
+    setScale((s) => Math.min(2, Math.round((s + 0.1) * 100) / 100));
+  }, [setScale]);
+
+  const handleZoomOut = useCallback(() => {
+    setScale((s) => Math.max(0.2, Math.round((s - 0.1) * 100) / 100));
+  }, [setScale]);
+
+  const handleResetZoom = useCallback(() => {
+    setScale(0.8);
+    setOffset({ x: 0, y: 0 });
+  }, [setScale, setOffset]);
+
+  const handleDeleteNode = useCallback(() => {
+    if (!selectedNodeId) return;
+    
+    const nodeToDelete = nodes.find(n => n.id === selectedNodeId);
+    if (!nodeToDelete) return;
+
+    const newCode = deleteNodeFromCode(code, nodeToDelete.label);
+    setCode(newCode);
+    setSelectedNodeId(null);
+  }, [selectedNodeId, nodes, code]);
+
+  const handleFitToContent = useCallback(() => {
+    if (!nodes || nodes.length === 0 || !svgRef.current) return;
+
+    const minX = Math.min(...nodes.map(n => n.x));
+    const maxX = Math.max(...nodes.map(n => n.x));
+    const minY = Math.min(...nodes.map(n => n.y));
+    const maxY = Math.max(...nodes.map(n => n.y));
+
+    const contentWidth = maxX - minX + 200; // Add padding
+    const contentHeight = maxY - minY + 200;
+
+    const svgRect = svgRef.current.getBoundingClientRect();
+    const scaleX = svgRect.width / contentWidth;
+    const scaleY = svgRect.height / contentHeight;
+    const newScale = Math.min(scaleX, scaleY, 2); // Cap at 2x
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    // Center content in viewport
+    setScale(newScale);
+    setOffset({
+      x: svgRect.width / 2 - centerX * newScale,
+      y: svgRect.height / 2 - centerY * newScale
+    });
+  }, [nodes, svgRef, setScale, setOffset]);
 
   // File menu actions (Open, Save, Save As) - Ahora manejadas por useFileOperations hook
 
@@ -371,27 +433,71 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
 
       <div className="flex flex-1 overflow-hidden">
         
-        <CodePanel 
-          code={code}
-          onCodeChange={setCode}
-          onClear={() => setShowClearConfirm(true)}
-          showClearConfirm={showClearConfirm}
+        <div style={{ width: `${codePanelWidth}px`, flexShrink: 0 }}>
+          <CodePanel 
+            code={code}
+            onCodeChange={setCode}
+            onClear={() => setShowClearConfirm(true)}
+          />
+        </div>
+
+        <div 
+          className="w-1 bg-slate-300 hover:bg-indigo-500 cursor-col-resize transition-colors hover:shadow-md flex-shrink-0"
+          style={{ userSelect: 'none' }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            let isResizing = true;
+            const startX = e.clientX;
+            const startWidth = codePanelWidth;
+            const container = (e.currentTarget.parentElement) as HTMLDivElement;
+            const containerRect = container.getBoundingClientRect();
+
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+
+            const handleMouseMove = (moveEvent: MouseEvent) => {
+              if (!isResizing) return;
+              
+              const delta = moveEvent.clientX - startX;
+              const newWidth = Math.max(200, Math.min(startWidth + delta, containerRect.width - 300));
+              setCodePanelWidth(newWidth);
+            };
+
+            const handleMouseUp = () => {
+              isResizing = false;
+              document.body.style.cursor = 'default';
+              document.body.style.userSelect = 'auto';
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
         />
 
-        <Canvas
-          svgRef={svgRef}
-          nodes={nodes}
-          links={links}
-          scale={scale}
-          offset={offset}
-          selectedTool={selectedTool}
-          draggedNodeId={draggedNodeId}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onClick={handleCanvasClickInternal}
-          onMouseDown={handleCanvasMouseDown}
-          onNodeMouseDown={handleMouseDown}
-        />
+        <div className="flex-1 overflow-hidden h-full">
+          <Canvas
+            svgRef={svgRef}
+            nodes={nodes}
+            links={links}
+            scale={scale}
+            offset={offset}
+            selectedTool={selectedTool}
+            draggedNodeId={draggedNodeId}
+            selectedNodeId={selectedNodeId}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onClick={handleCanvasClickInternal}
+            onMouseDown={handleCanvasMouseDown}
+            onNodeMouseDown={handleMouseDown}
+            onNodeClick={(id) => setSelectedNodeId(id)}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onResetZoom={handleResetZoom}
+            onFitToContent={handleFitToContent}
+          />
+        </div>
       </div>
 
       {/* Modales */}
@@ -414,6 +520,13 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         isOpen={showClearConfirm} 
         onClose={() => setShowClearConfirm(false)}
         onConfirm={() => setCode('')}
+      />
+      
+      <ModalDeleteConfirm 
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteNode}
+        node={nodes.find(n => n.id === selectedNodeId) || null}
       />
       
       <ModalProperties

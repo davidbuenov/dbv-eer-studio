@@ -5,7 +5,9 @@ import { NODE_STYLES } from '../constants';
 interface NodeRendererProps {
   node: NodeData;
   isDragged: boolean;
+  isSelected: boolean;
   onMouseDown: (e: React.MouseEvent, id: string) => void;
+  onClick: (id: string) => void;
 }
 
 /**
@@ -24,13 +26,20 @@ interface NodeRendererProps {
  * 
  * Optimizado con React.memo para evitar re-renders innecesarios cuando las props no cambian.
  */
-function NodeRendererComponent({ node, isDragged, onMouseDown }: NodeRendererProps) {
+function NodeRendererComponent({ node, isDragged, isSelected, onMouseDown, onClick }: NodeRendererProps) {
   const { STROKE_COLOR, STROKE_WIDTH, FILL_COLOR, TEXT_COLOR } = NODE_STYLES;
 
   const commonProps = {
     onMouseDown: (e: React.MouseEvent) => onMouseDown(e, node.id),
+    onClick: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onClick(node.id);
+    },
     style: { cursor: 'move' }
   };
+
+  const strokeColor = isSelected ? '#6366f1' : STROKE_COLOR;
+  const strokeWidth = isSelected ? STROKE_WIDTH * 2 : STROKE_WIDTH;
 
   return (
     <g
@@ -41,30 +50,30 @@ function NodeRendererComponent({ node, isDragged, onMouseDown }: NodeRendererPro
     >
       {node.type === 'entity' && (
         <>
-          <rect x="-50" y="-25" width="100" height="50" fill={FILL_COLOR} stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} rx="2" className="drop-shadow-sm" />
+          <rect x="-50" y="-25" width="100" height="50" fill={FILL_COLOR} stroke={strokeColor} strokeWidth={strokeWidth} rx="2" className="drop-shadow-sm" />
           <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="12" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
         </>
       )}
 
       {node.type === 'weak_entity' && (
         <>
-          <rect x="-50" y="-25" width="100" height="50" fill={FILL_COLOR} stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} rx="2" className="drop-shadow-sm"/>
-          <rect x="-44" y="-19" width="88" height="38" fill="none" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} rx="1" />
+          <rect x="-50" y="-25" width="100" height="50" fill={FILL_COLOR} stroke={strokeColor} strokeWidth={strokeWidth} rx="2" className="drop-shadow-sm"/>
+          <rect x="-44" y="-19" width="88" height="38" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} rx="1" />
           <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="12" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
         </>
       )}
 
       {node.type === 'relationship' && (
         <>
-          <polygon points="0,-40 60,0 0,40 -60,0" fill="#f8fafc" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} className="drop-shadow-sm"/>
+          <polygon points="0,-40 60,0 0,40 -60,0" fill="#f8fafc" stroke={strokeColor} strokeWidth={strokeWidth} className="drop-shadow-sm"/>
           <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="11" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
         </>
       )}
 
       {node.type === 'identifying_relationship' && (
         <>
-          <polygon points="0,-40 60,0 0,40 -60,0" fill="#f8fafc" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} className="drop-shadow-sm"/>
-          <polygon points="0,-32 48,0 0,32 -48,0" fill="none" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} />
+          <polygon points="0,-40 60,0 0,40 -60,0" fill="#f8fafc" stroke={strokeColor} strokeWidth={strokeWidth} className="drop-shadow-sm"/>
+          <polygon points="0,-32 48,0 0,32 -48,0" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} />
           <text x="0" y="5" textAnchor="middle" fill={TEXT_COLOR} fontSize="11" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
         </>
       )}
@@ -88,7 +97,7 @@ function NodeRendererComponent({ node, isDragged, onMouseDown }: NodeRendererPro
 
       {(node.type === 'specialization' || node.type === 'union') && (
         <>
-          <circle cx="0" cy="0" r="18" fill="#fff" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} className="drop-shadow-sm"/>
+          <circle cx="0" cy="0" r="18" fill="#fff" stroke={strokeColor} strokeWidth={strokeWidth} className="drop-shadow-sm"/>
           <text x="0" y="5" textAnchor="middle" fontWeight="bold" fontSize="14" style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
         </>
       )}
@@ -105,6 +114,6 @@ export const NodeRenderer = React.memo(NodeRendererComponent, (prevProps, nextPr
     prevProps.node.x === nextProps.node.x &&
     prevProps.node.y === nextProps.node.y &&
     prevProps.isDragged === nextProps.isDragged &&
-    prevProps.onMouseDown === nextProps.onMouseDown
+    prevProps.isSelected === nextProps.isSelected
   );
 });
