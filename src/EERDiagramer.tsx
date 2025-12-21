@@ -33,6 +33,7 @@ import { ModalProperties } from './components/ModalProperties';
 import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
 import { CodePanel } from './components/CodePanel';
+import { ResizableDivider } from './components/ResizableDivider';
 
 function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   // ==========================================
@@ -441,39 +442,10 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
           />
         </div>
 
-        <div 
-          className="w-1 bg-slate-300 hover:bg-indigo-500 cursor-col-resize transition-colors hover:shadow-md flex-shrink-0"
-          style={{ userSelect: 'none' }}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            let isResizing = true;
-            const startX = e.clientX;
-            const startWidth = codePanelWidth;
-            const container = (e.currentTarget.parentElement) as HTMLDivElement;
-            const containerRect = container.getBoundingClientRect();
-
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-
-            const handleMouseMove = (moveEvent: MouseEvent) => {
-              if (!isResizing) return;
-              
-              const delta = moveEvent.clientX - startX;
-              const newWidth = Math.max(200, Math.min(startWidth + delta, containerRect.width - 300));
-              setCodePanelWidth(newWidth);
-            };
-
-            const handleMouseUp = () => {
-              isResizing = false;
-              document.body.style.cursor = 'default';
-              document.body.style.userSelect = 'auto';
-              document.removeEventListener('mousemove', handleMouseMove);
-              document.removeEventListener('mouseup', handleMouseUp);
-            };
-
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-          }}
+        <ResizableDivider 
+          onResize={setCodePanelWidth}
+          minLeftWidth={200}
+          minRightWidth={300}
         />
 
         <div className="flex-1 overflow-hidden h-full">
