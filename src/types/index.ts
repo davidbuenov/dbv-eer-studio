@@ -24,6 +24,7 @@ export interface NodeData {
   y: number;
   meta?: string; // Para 'd', 'o', 'u' en especializaciones/uniones
   lineIndex: number; // Índice de línea en el código fuente
+  parentEntity?: string; // ID de la entidad padre para atributos
 }
 
 /**

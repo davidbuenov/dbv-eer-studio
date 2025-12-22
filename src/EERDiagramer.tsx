@@ -435,10 +435,11 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
       <div className="flex flex-1 overflow-hidden">
         
         <div style={{ width: `${codePanelWidth}px`, flexShrink: 0 }}>
-          <CodePanel 
+          <CodePanel
             code={code}
             onCodeChange={setCode}
             onClear={() => setShowClearConfirm(true)}
+            onEditStart={() => setSelectedNodeId(null)}
           />
         </div>
 

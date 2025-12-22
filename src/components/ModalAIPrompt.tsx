@@ -17,66 +17,64 @@ export function ModalAIPrompt({ isOpen, onClose }: ModalAIPromptProps) {
 
 ### Reglas de Sintaxis de EER Studio:
 
-1. **Entidades:**
-   - Fuertes: \`ent NOMBRE_ENTIDAD\`
-   - Débiles: \`weak_ent NOMBRE_ENTIDAD\`
-   - (Opcional) Puedes añadir coordenadas: \`ent USUARIO (100, 200)\`
+**IMPORTANTE:** Todos los elementos (entidades, atributos, relaciones, jerarquías) pueden llevar coordenadas opcionales: \`ELEMENTO NOMBRE (x, y)\`
+**Longitud:** Usa nombres de entidades/atributos/relaciones con ≤15 caracteres para que quepan en las elipses/rectángulos.
 
-2. **Atributos:**
-   - Simple: \`att NombreAtributo -> ENTIDAD\`
-   - Clave (identificador): \`key_att NombreAtributo -> ENTIDAD\`
-   - Derivado: \`derived_att NombreAtributo -> ENTIDAD\`
-   - Multivaluado: \`multivalued_att NombreAtributo -> ENTIDAD\`
+1) Entidades
+- Fuerte: \`ent EMPLEADO (100, 200)\`
+- Débil: \`weak_ent CONTRATO (150, 350)\`
 
-3. **Relaciones:**
-   - Normal: \`rel NOMBRE_RELACION\`
-   - Identificativa (para entidades débiles): \`ident_rel NOMBRE_RELACION\`
+2) Atributos
+- Simple: \`att Nombre -> EMPLEADO (120, 80)\` (alejado de la entidad)
+- Clave: \`key_att DNI -> EMPLEADO (50, 80)\`
+- Derivado: \`derived_att Edad -> EMPLEADO (190, 80)\`
+- Multivaluado: \`multivalued_att Telefono -> EMPLEADO (260, 80)\`
 
-4. **Conexiones (Links) y Cardinalidad:**
-   - Sintaxis: \`link ENTIDAD RELACION "CARDINALIDAD"\`
-   - Cardinalidades: "1", "N", "M"
-   - Participación Total: \`link EMPLEADO TRABAJA_EN "N" [total]\`
+3) Relaciones
+- Normal: \`rel TRABAJA_EN (250, 200)\` (centrada entre entidades)
+- Identificativa: \`ident_rel POSEE (200, 350)\` (para entidad débil)
 
-5. **Jerarquías (Especialización/Generalización):**
-   - Definir especialización: \`spec TIPO -> SUPERCLASE\`
-     - TIPO: 'd' (disjunta) o 'o' (solapada)
-   - Conectar subclases: \`link TIPO SUBCLASE\`
-   - Ejemplo:
-     \`\`\`
-     spec d -> EMPLEADO
-     link d SECRETARIA
-     link d INGENIERO
-     \`\`\`
+4) Conexiones
+- Sintaxis: \`link ENTIDAD RELACION "CARDINALIDAD" [opcional:total]\`
+- Ejemplo: \`link EMPLEADO TRABAJA_EN "N" [total]\`
 
-6. **Uniones (Categorías):**
-   - Definir unión: \`union u\`
-   - Conectar superclases: \`link SUPERCLASE u\`
-   - Conectar categoría: \`link u CATEGORIA\`
+5) Jerarquías
+- Definir especialización: \`spec TIPO -> SUPERCLASE\` (TIPO: 'd' disjunta, 'o' solapada)
+- Conectar subclases: \`link TIPO SUBCLASE\`
 
-### Ejemplo:
+6) Uniones (categorías)
+- Definir unión: \`union u\`
+- Conectar superclases: \`link SUPERCLASE u\`
+- Conectar categoría: \`link u CATEGORIA\`
 
-**Input:** "Un empleado trabaja en un departamento. El empleado tiene DNI (clave) y Nombre. El departamento tiene un Nombre."
+### 📏 Guía de espaciado para evitar solapes
+- Atributos en fila superior: Y = entidad_Y - 130 a -160; máx 4 por fila; X +100px entre atributos; si hay más, abre segunda fila superior 40–60px más arriba y resetea X.
+- Atributos en laterales/columna: usa cuando haya >6 atributos; pon 3–4 a la izquierda (X = entidad_X - 130..140) y 3–4 a la derecha (X = entidad_X + 130..140); Y escalonado cada 70–80px.
+- Entidades: separa 320–360px en X y 260–320px en Y; si una entidad tiene muchos atributos, súbela o bájala ±80–120px respecto a sus vecinas para evitar colisiones de filas.
+- Relaciones: punto medio entre entidades; deja ≥180px de separación respecto a cada entidad si hay muchas aristas.
 
-**Output:**
-\`\`\`
-// Entidades
-ent EMPLEADO
-ent DEPARTAMENTO
+### 📋 Ejemplo completo (sin solapes)
+ent EMPLEADO (100, 200)
+ent DEPARTAMENTO (450, 200)
 
-// Atributos
-key_att DNI -> EMPLEADO
-att Nombre -> EMPLEADO
-att Nombre -> DEPARTAMENTO
+// Atributos ARRIBA de EMPLEADO, espaciados cada 100px
+key_att DNI -> EMPLEADO (0, 60)
+att Nombre -> EMPLEADO (100, 60)
+att Puesto -> EMPLEADO (200, 60)
+att Salario -> EMPLEADO (300, 60)
 
-// Relaciones
-rel TRABAJA_EN
+// Atributos de DEPARTAMENTO
+att NombreDept -> DEPARTAMENTO (400, 60)
+att Ubicacion -> DEPARTAMENTO (500, 60)
+
+// Relación centrada entre las dos entidades
+rel TRABAJA_EN (275, 200)
+
 link EMPLEADO TRABAJA_EN "N" [total]
 link DEPARTAMENTO TRABAJA_EN "1"
-\`\`\`
 
-### Tu Tarea:
-
-Genera el código EER Studio para el siguiente problema. Identifica correctamente claves, cardinalidades, jerarquías y entidades débiles. Puedes sugerir coordenadas aproximadas para evitar superposiciones.
+### Tu Tarea
+Genera el código EER Studio para el siguiente problema. Identifica correctamente claves, cardinalidades, jerarquías y entidades débiles. Posiciona siguiendo la guía de espaciado para evitar superposiciones. Usa nombres ≤15 caracteres.
 
 **Problema a modelar:**
 [AQUÍ PEGA TU PROBLEMA DE BASE DE DATOS]`;

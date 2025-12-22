@@ -99,7 +99,13 @@ export function parseCode(code: string): { nodes: NodeData[]; links: LinkData[] 
       if (command === 'derived_att') type = 'derived_attribute';
       if (command === 'multivalued_attribute') type = 'multivalued_attribute';
 
-      newNodes.push({ id, type, label, x, y, lineIndex: index });
+      // Extraer parentEntity si es un atributo
+      let parentEntity: string | undefined;
+      if (isAttribute && parts[2] === '->' && parts[3]) {
+        parentEntity = parts[3];
+      }
+
+      newNodes.push({ id, type, label, x, y, lineIndex: index, parentEntity });
 
       // Atajo para atributo: att Nombre -> Entidad
       if (parts[2] === '->' && parts[3]) {

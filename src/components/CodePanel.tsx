@@ -4,9 +4,20 @@ interface CodePanelProps {
   code: string;
   onCodeChange: (code: string) => void;
   onClear: () => void;
+  onEditStart?: () => void;
 }
 
-export function CodePanel({ code, onCodeChange, onClear }: CodePanelProps) {
+export function CodePanel({ code, onCodeChange, onClear, onEditStart }: CodePanelProps) {
+  const handleCodeChange = (newCode: string) => {
+    onCodeChange(newCode);
+  };
+
+  const handleTextareaFocus = () => {
+    if (onEditStart) {
+      onEditStart();
+    }
+  };
+
   return (
     <div className="flex flex-col h-full border-r border-slate-200 bg-white shadow-lg z-20 w-full">
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2 bg-slate-50">
@@ -32,7 +43,8 @@ export function CodePanel({ code, onCodeChange, onClear }: CodePanelProps) {
       </div>
       <textarea
         value={code}
-        onChange={(e) => onCodeChange(e.target.value)}
+        onChange={(e) => handleCodeChange(e.target.value)}
+        onFocus={handleTextareaFocus}
         className="flex-1 resize-none bg-slate-50 p-4 font-mono text-xs md:text-sm leading-relaxed text-slate-700 focus:outline-none selection:bg-indigo-100"
         spellCheck={false}
       />

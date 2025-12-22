@@ -6,7 +6,14 @@
 
 EER Studio es una aplicación web interactiva para crear y editar diagramas Entidad-Relación Extendido mediante un lenguaje específico de dominio (DSL) simple e intuitivo. Los cambios en el código se reflejan automáticamente en el diagrama visual, y viceversa: ¡arrastra los nodos y el código se actualiza con las nuevas coordenadas!
 
-## 🛠️ Resumen de la refactorización 2025
+## � Novedades - Versión 1.1.0
+
+- ✨ **Deselección automática al editar código** - Cuando haces focus en el editor de código, se deselecciona automáticamente cualquier nodo. Esto evita eliminar accidentalmente un elemento al pulsar Delete mientras editas.
+- 🎯 **Mover atributos con entidades (Shift+Drag)** - Presiona Shift mientras arrastras una entidad para mover también sus atributos, manteniendo la distancia relativa. Perfecto para reorganizar grupos de elementos sin perder el diseño.
+- 📐 **Prompt mejorado para IA** - Actualizado con guía detallada de espaciado, límite de caracteres (≤15) y ejemplos completos para generar diagramas limpios y sin solapamientos.
+- 💡 **Instrucción visual en la barra de herramientas** - Nuevo tooltip que explica cómo usar Shift+Drag para mover atributos junto con sus entidades.
+
+## �🛠️ Resumen de la refactorización 2025
 
 - Refactor completado en 7 fases (dic 2025) con separación total de responsabilidades.
 - Componentes creados: Canvas + Node/LinkRenderer, Toolbar, CodePanel y 5 modales reutilizables.
