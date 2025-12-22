@@ -33,8 +33,8 @@ export function ModalHelp({ isOpen, onClose }: ModalHelpProps) {
             <ul className="space-y-2">
               <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">att NOMBRE -&gt; ENTIDAD</code> <span>Atributo simple.</span></li>
               <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">key_att NOMBRE -&gt; ENTIDAD</code> <span>Atributo clave.</span></li>
-              <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">derived_att NOMBRE</code> <span>Derivado.</span></li>
-              <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">multivalued_attribute</code> <span>Multivaluado.</span></li>
+              <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">derived_att NOMBRE -&gt; ENTIDAD</code> <span>Derivado.</span></li>
+              <li className="flex flex-col"><code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 w-fit">multivalued_att NOMBRE -&gt; ENTIDAD</code> <span>Multivaluado.</span></li>
             </ul>
           </div>
           <div>

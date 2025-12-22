@@ -74,11 +74,11 @@ export function parseCode(code: string): { nodes: NodeData[]; links: LinkData[] 
     const command = parts[0].toLowerCase();
 
     // Comandos de Nodos
-    if (['ent', 'weak_ent', 'rel', 'ident_rel', 'att', 'key_att', 'derived_att', 'multivalued_attribute'].includes(command)) {
+    if (['ent', 'weak_ent', 'rel', 'ident_rel', 'att', 'key_att', 'derived_att', 'multivalued_attribute', 'multivalued_att'].includes(command)) {
       const label = parts[1];
       
       // Generar ID único
-      const isAttribute = ['att', 'key_att', 'derived_att', 'multivalued_attribute'].includes(command);
+      const isAttribute = ['att', 'key_att', 'derived_att', 'multivalued_attribute', 'multivalued_att'].includes(command);
       let id = label;
       
       if (isAttribute || existingIds.has(id)) {
@@ -97,7 +97,7 @@ export function parseCode(code: string): { nodes: NodeData[]; links: LinkData[] 
       if (command === 'att') type = 'attribute';
       if (command === 'key_att') type = 'key_attribute';
       if (command === 'derived_att') type = 'derived_attribute';
-      if (command === 'multivalued_attribute') type = 'multivalued_attribute';
+      if (command === 'multivalued_attribute' || command === 'multivalued_att') type = 'multivalued_attribute';
 
       // Extraer parentEntity si es un atributo
       let parentEntity: string | undefined;
