@@ -82,6 +82,12 @@ Puedes probar la aplicación ya desplegada en GitHub Pages:
 
 https://davidbuenov.github.io/eer-studio/
 
+### Video de demostración
+
+[![Video de demostración de EER Studio](https://img.youtube.com/vi/oFJYiJw_kRE/hqdefault.jpg)](https://youtu.be/oFJYiJw_kRE)
+
+Haz clic en la imagen para ver el vídeo completo en YouTube.
+
 Además, el repositorio incluye una carpeta `ejemplos/` con varios ficheros de ejemplo con extensión `.eer` que puedes abrir directamente en la app (File → Open) para ver diagramas de muestra y editar.
 
 ### Ejemplos incluidos
