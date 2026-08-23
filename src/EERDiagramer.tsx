@@ -6,8 +6,9 @@
 // =============================================================================
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
-import { BookOpen, Code, Share2, HelpCircle, Info, Database, Layers, FileText } from 'lucide-react';
+import { BookOpen, Code, Share2, HelpCircle, Info, Database, Layers, FileText, Pin, PinOff } from 'lucide-react';
 import type { EERDiagramerHandle } from './types';
+import { runningInTauri } from './utils/platform';
 import { SAMPLE_CODE } from './constants';
 import { 
   generateEntityCode, 
@@ -258,6 +259,51 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, showPropertiesModal]);
 
+  // Puente entre el menú nativo de macOS (Abrir/Guardar/Guardar como, ver
+  // src-tauri/src/lib.rs `macos_menu`) y el mismo flujo que ya usan los
+  // botones del menú "File" propio de la app — sin lógica nueva.
+  // Se suscribe una sola vez (no en cada tecleo) y llama siempre a la última
+  // versión de los handlers vía ref, para no guardar contenido obsoleto.
+  const menuHandlersRef = useRef({ handleOpenFile, handleSaveFile, handleSaveAsFile, handleLoadFileContent, getSaveContent });
+  useEffect(() => {
+    menuHandlersRef.current = { handleOpenFile, handleSaveFile, handleSaveAsFile, handleLoadFileContent, getSaveContent };
+  });
+
+  useEffect(() => {
+    if (!runningInTauri) return;
+    let unlistenFns: (() => void)[] = [];
+    import('@tauri-apps/api/event').then(({ listen }) => {
+      Promise.all([
+        listen('menu-open-file', () => {
+          const h = menuHandlersRef.current;
+          h.handleOpenFile(h.handleLoadFileContent);
+        }),
+        listen('menu-save', () => {
+          const h = menuHandlersRef.current;
+          h.handleSaveFile(h.getSaveContent());
+        }),
+        listen('menu-save-as', () => {
+          const h = menuHandlersRef.current;
+          h.handleSaveAsFile(h.getSaveContent());
+        }),
+      ]).then(unlisteners => {
+        unlistenFns = unlisteners;
+      });
+    });
+    return () => unlistenFns.forEach(fn => fn());
+  }, []);
+
+  // Chincheta "Fijar ventana encima" (Always on Top) — API multiplataforma de
+  // Tauri, sin código condicional por SO. Por ventana, sin persistir.
+  const [isPinned, setIsPinned] = useState(false);
+  const handleToggleAlwaysOnTop = useCallback(async () => {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window');
+    const win = getCurrentWindow();
+    const next = !(await win.isAlwaysOnTop());
+    await win.setAlwaysOnTop(next);
+    setIsPinned(next);
+  }, []);
+
   const handleCanvasClickInternal = useCallback((e: React.MouseEvent) => {
     if (!selectedTool || draggedNodeId) return;
     const coords = toolbarCanvasClick(e);
@@ -507,6 +553,18 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
 
         {/* Botones de Ayuda y Exportación */}
         <div className="flex items-center gap-2">
+          {runningInTauri && (
+            <button
+              onClick={handleToggleAlwaysOnTop}
+              title={isPinned ? 'Ventana fijada encima — clic para quitar' : 'Fijar ventana encima'}
+              className={`flex items-center justify-center rounded-md p-1.5 text-xs font-medium transition-colors ${
+                isPinned ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {isPinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
+            </button>
+          )}
+
           <button
             onClick={() => setShowStepInspector(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition"

@@ -1,0 +1,22 @@
+{
+  "identifier": "davidbuenov.DBVEERStudio",
+  "displayName": "dbv-eer-studio",
+  "publisher": "CN=TBD-PARTNER-CENTER-GUID",
+  "publisherDisplayName": "davidbuenov",
+  "capabilities": {
+    "general": []
+  },
+  "extensions": {
+    "shareTarget": false,
+    "fileAssociations": [],
+    "protocolHandlers": []
+  },
+  "signing": {
+    "pfx": null,
+    "pfxPassword": null
+  },
+  "resourceIndex": {
+    "enabled": false,
+    "keepConfig": false
+  }
+}

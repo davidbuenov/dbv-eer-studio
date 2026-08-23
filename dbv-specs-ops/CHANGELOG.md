@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.3.0] — 2026-08-23
+
+### Added
+- **Auto-actualización con `tauri-plugin-updater`**: clave de firma propia (fuera del repo, generada por el usuario), botón "Buscar actualizaciones" en Créditos oculto en modo web y en instalaciones de Microsoft Store (`is_packaged_app`, detecta la ruta `WindowsApps`).
+- **Menú nativo de macOS** (App/File/Edit/Window/Help) en `src-tauri/src/lib.rs`, con Abrir/Guardar/Guardar como propios, localizados según el idioma del sistema (`sys-locale`).
+- **Chincheta "Fijar ventana encima" (Always on Top)** junto a "Guía 9 Pasos" — API multiplataforma de Tauri, sin código condicional por SO.
+- **3 workflows de release** (`release-{windows,linux,macos}.yml`) para compilar y publicar en cada tag `vX.Y.Z`, línea base sin firmar.
+- **Empaquetado MSIX para Microsoft Store** (`@choochmeque/tauri-windows-bundle`), probado de extremo a extremo; identidad pendiente de reserva en Partner Center. Ver `dbv-specs-ops/docs/MICROSOFT_STORE.md`.
+
+### Fixed
+- Corregido un fallo estructural real en `README.md`: dos bloques de código sin cerrar hacían que secciones enteras ("Publicación en GitHub Pages" y "Uso") se renderizasen como texto preformateado en GitHub en vez de como encabezados/listas.
+- `Wide310x150Logo.png` del empaquetado MSIX se generaba como un placeholder negro sólido (mismo bug documentado en `dbv-md-reader`, causó allí un rechazo real de certificación) — corregido antes de cualquier envío.
+- 24 avisos de `markdownlint` en `README.md` (líneas en blanco alrededor de encabezados/listas/bloques de código, numeración de listas, tabs literales, URL suelta, énfasis usado como encabezado).
+
+---
+
 ## [1.2.0] — 2026-08-23
 
 ### Added

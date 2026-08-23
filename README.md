@@ -2,10 +2,16 @@
 
 [![Live demo](https://img.shields.io/badge/Live%20Demo-View-blue?logo=github)](https://davidbuenov.github.io/dbv-eer-studio/)
 
-**Editor de Diagramas Entidad-Relación Extendido (EER), Modelo Relacional y SQL DDL (Web & Escritorio Nativo)**
+Editor de Diagramas Entidad-Relación Extendido (EER), Modelo Relacional y SQL DDL (Web & Escritorio Nativo)
 
 `dbv-eer-studio` es una suite docente multiplataforma (Web + App Nativa de Escritorio con Tauri v2) para crear y editar diagramas Entidad-Relación Extendido mediante un lenguaje específico de dominio (DSL) simple e intuitivo.
 
+## 🆕 Novedades - Versión 1.3.0
+
+- 🔄 **Auto-actualización** - Botón "Buscar actualizaciones" en Créditos (se oculta en la web y en instalaciones de Microsoft Store).
+- 🍎 **Menú nativo de macOS** - App/File/Edit/Window/Help, con Abrir/Guardar/Guardar como propios.
+- 📌 **Chincheta "Fijar ventana encima"** - Mantén la ventana siempre visible con un clic.
+- 🏬 **Preparación para Microsoft Store** - Empaquetado MSIX listo, pendiente de identidad en Partner Center.
 
 ## 🆕 Novedades - Versión 1.2.0
 
@@ -57,6 +63,7 @@ flowchart TD
 ## ✨ Características
 
 ### Edición Visual e Interactiva
+
 - 🎨 **Barra de herramientas visual** - inserta elementos con un simple clic en el canvas
 - 🖱️ **Modales de configuración** - define propiedades de entidades, relaciones y atributos mediante formularios intuitivos
 - 🎯 **Inserción por coordenadas** - haz clic donde quieras colocar un elemento y configúralo visualmente
@@ -68,6 +75,7 @@ flowchart TD
 - 📋 **Dropdowns ordenados alfabéticamente** - encuentra entidades fácilmente en los formularios
 
 ### Código y Diagramas
+
 - 📝 **Editor de código DSL** con sintaxis simple para definir entidades, relaciones y atributos
 - 🎯 **Visualización en tiempo real** del diagrama EER
 - 💾 **Guardar/Abrir archivos `.eer`** con File System Access API (navegadores modernos) y fallback compatible
@@ -75,11 +83,13 @@ flowchart TD
 - 🔍 **Zoom y paneo** para trabajar con diagramas grandes
 
 ### IA y Recursos
+
 - 🤖 **Prompt integrado para IA** - genera código EER usando ChatGPT, Claude o Gemini
 - 📚 **Guía de sintaxis integrada** con ejemplos y referencia completa
 - 📁 **Ejemplos incluidos** - archivos `.eer` de muestra en la carpeta `ejemplos/`
 
 ### Diseño y Compatibilidad
+
 - 🎨 **Interfaz moderna** diseñada con Tailwind CSS
 - 🌐 **Compatible con navegadores modernos**
 - ⚡ **Sin alertas del sistema** - toda la interacción mediante modales personalizados
@@ -88,7 +98,7 @@ flowchart TD
 
 Puedes probar la aplicación ya desplegada en GitHub Pages:
 
-https://davidbuenov.github.io/dbv-eer-studio/
+<https://davidbuenov.github.io/dbv-eer-studio/>
 
 ### Video de demostración
 
@@ -106,8 +116,6 @@ Los siguientes ficheros ya están disponibles en la carpeta `ejemplos/`:
 - `ejemplos/Prompt_para_crear_gems.md` — Prompt optimizado para usar con IAs (ChatGPT, Claude, Gemini) y generar código EER Studio desde descripciones en lenguaje natural.
 
 > 💡 **Tip**: Usa el prompt incluido en la carpeta `ejemplos/` para que la IA genere diagramas EER perfectamente formateados para esta herramienta.
-
-
 
 ## 🚀 Características EER Soportadas
 
@@ -130,27 +138,26 @@ Los siguientes ficheros ya están disponibles en la carpeta `ejemplos/`:
 
 1. **Clona el repositorio:**
 
-```bash
-git clone https://github.com/davidbuenov/dbv-eer-studio.git
-cd dbv-eer-studio
-
-```
+   ```bash
+   git clone https://github.com/davidbuenov/dbv-eer-studio.git
+   cd dbv-eer-studio
+   ```
 
 2. **Instala las dependencias:**
 
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
 3. **Inicia el servidor de desarrollo:**
 
-```bash
-npm run dev
-```
+   ```bash
+   npm run dev
+   ```
 
 4. **Abre tu navegador:**
 
-Navega a [http://localhost:5173](http://localhost:5173) (o el puerto que muestre la terminal)
+   Navega a [http://localhost:5173](http://localhost:5173) (o el puerto que muestre la terminal)
 
 ## 🏗️ Build para Producción
 
@@ -206,6 +213,8 @@ Para previsualizar el build:
 
 ```bash
 npm run preview
+```
+
 ## 🌍 Publicación en GitHub Pages
 
 Este proyecto está preparado para desplegarse automáticamente en **GitHub Pages** usando una *GitHub Action* incluida en `.github/workflows/deploy-pages.yml`.
@@ -225,19 +234,21 @@ Este proyecto está preparado para desplegarse automáticamente en **GitHub Page
 ### Personalizar dominio (Opcional)
 
 Si quieres usar un dominio propio:
+
 1. Crea un archivo `CNAME` dentro de `dist/` en tiempo de build (puedes añadir un paso en la acción o un script).
 2. Apunta tu DNS (registro CNAME) al dominio `davidbuenov.github.io`.
 
 Ejemplo de paso adicional en el workflow:
 
 ```yaml
-			- name: Add CNAME
-				run: echo "mi-dominio.com" > dist/CNAME
+      - name: Add CNAME
+        run: echo "mi-dominio.com" > dist/CNAME
 ```
 
 ### Deploy manual (alternativa)
 
 Si prefieres hacerlo manual sin Actions:
+
 ```bash
 npm run build
 git checkout --orphan gh-pages
@@ -250,8 +261,6 @@ git checkout main
 ## 🔐 Seguridad
 
 Este proyecto no envía datos a servidores externos. Los archivos `.eer` solo se manejan localmente en tu navegador. Usa navegadores modernos para aprovechar la File System Access API.
-
-```
 
 ## 📖 Uso
 
@@ -362,19 +371,21 @@ Este proyecto está bajo licencia MIT. Ver el archivo `LICENSE` para más detall
 
 ## 👨‍💻 Autor
 
-**David Bueno Vallejo**
+David Bueno Vallejo
+
 - Website: [davidbuenov.com](https://davidbuenov.com/)
 - GitHub: [@davidbuenov](https://github.com/davidbuenov)
 
 ## 🙏 Agradecimientos y Referencias Académicas
 
 Este proyecto y su suite de conversión formal de 9 pasos han sido implementados siguiendo las propuestas didácticas y algoritmos de transformación del libro de referencia académica:
+
 - **"Fundamentos de Sistemas de Bases de Datos"** (*Fundamentals of Database Systems*), por **Ramez Elmasri** y **Shamkant B. Navathe**.
 
 Desarrollado con la asistencia de:
+
 - **Gemini** & **Antigravity** - Google DeepMind AI
 - **dbv-specs-ops** - Framework SDD por David Bueno Vallejo
-
 
 ---
 
