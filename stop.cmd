@@ -1,0 +1,3 @@
+@echo off
+echo Deteniendo servidor de desarrollo de dbv-eer-studio...
+taskkill /FI "WINDOWTITLE eq npm run dev*" /F 2>nul

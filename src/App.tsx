@@ -1,6 +1,6 @@
 /**
  * EER Studio - Enhanced Entity-Relationship Diagram Editor
- * Copyright (c) 2025 David Bueno Vallejo
+ * Copyright (c) 2025-2026 David Bueno Vallejo
  * 
  * Developed with the assistance of Gemini and GitHub Copilot AI
  * 

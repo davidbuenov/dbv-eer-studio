@@ -1,19 +1,27 @@
-# 🎨 EER Studio
+# 🎨 dbv-eer-studio
 
-[![Live demo](https://img.shields.io/badge/Live%20Demo-View-blue?logo=github)](https://davidbuenov.github.io/eer-studio/)
+[![Live demo](https://img.shields.io/badge/Live%20Demo-View-blue?logo=github)](https://davidbuenov.github.io/dbv-eer-studio/)
 
-**Editor de Diagramas Entidad-Relación Extendido (EER) con Edición Bidireccional**
+**Editor de Diagramas Entidad-Relación Extendido (EER), Modelo Relacional y SQL DDL (Web & Escritorio Nativo)**
 
-EER Studio es una aplicación web interactiva para crear y editar diagramas Entidad-Relación Extendido mediante un lenguaje específico de dominio (DSL) simple e intuitivo. Los cambios en el código se reflejan automáticamente en el diagrama visual, y viceversa: ¡arrastra los nodos y el código se actualiza con las nuevas coordenadas!
+`dbv-eer-studio` es una suite docente multiplataforma (Web + App Nativa de Escritorio con Tauri v2) para crear y editar diagramas Entidad-Relación Extendido mediante un lenguaje específico de dominio (DSL) simple e intuitivo.
 
-## � Novedades - Versión 1.1.0
+
+## 🆕 Novedades - Versión 1.2.0
+
+- 🖥️ **Escritorio nativo con Tauri v2** - `dbv-eer-studio` ya se distribuye como aplicación de escritorio nativa para Windows (instalador MSI y NSIS), manteniendo la versión web intacta.
+- 🐛 **Correcciones específicas del ejecutable nativo** - Zoom con Ctrl+rueda/Ctrl+±, arrastre fluido de tablas en el Modelo Relacional, e icono propio de la app.
+- ✅ **Suite de pruebas unitarias** - Cobertura de los 9 pasos formales de conversión EER → Relacional y del generador de SQL DDL con Vitest.
+- 🏷️ **Repositorio renombrado** a `dbv-eer-studio`.
+
+## 🆕 Novedades - Versión 1.1.0
 
 - ✨ **Deselección automática al editar código** - Cuando haces focus en el editor de código, se deselecciona automáticamente cualquier nodo. Esto evita eliminar accidentalmente un elemento al pulsar Delete mientras editas.
 - 🎯 **Mover atributos con entidades (Shift+Drag)** - Presiona Shift mientras arrastras una entidad para mover también sus atributos, manteniendo la distancia relativa. Perfecto para reorganizar grupos de elementos sin perder el diseño.
 - 📐 **Prompt mejorado para IA** - Actualizado con guía detallada de espaciado, límite de caracteres (≤15) y ejemplos completos para generar diagramas limpios y sin solapamientos.
 - 💡 **Instrucción visual en la barra de herramientas** - Nuevo tooltip que explica cómo usar Shift+Drag para mover atributos junto con sus entidades.
 
-## �🛠️ Resumen de la refactorización 2025
+## 🛠️ Resumen de la refactorización 2025
 
 - Refactor completado en 7 fases (dic 2025) con separación total de responsabilidades.
 - Componentes creados: Canvas + Node/LinkRenderer, Toolbar, CodePanel y 5 modales reutilizables.
@@ -80,7 +88,7 @@ flowchart TD
 
 Puedes probar la aplicación ya desplegada en GitHub Pages:
 
-https://davidbuenov.github.io/eer-studio/
+https://davidbuenov.github.io/dbv-eer-studio/
 
 ### Video de demostración
 
@@ -123,8 +131,9 @@ Los siguientes ficheros ya están disponibles en la carpeta `ejemplos/`:
 1. **Clona el repositorio:**
 
 ```bash
-git clone https://github.com/davidbuenov/eer-studio.git
-cd eer-studio
+git clone https://github.com/davidbuenov/dbv-eer-studio.git
+cd dbv-eer-studio
+
 ```
 
 2. **Instala las dependencias:**
@@ -153,6 +162,46 @@ npm run build
 
 Los archivos generados estarán en la carpeta `dist/`. Puedes servirlos con cualquier servidor web estático.
 
+## 🖥️ Aplicación de Escritorio Nativa (Tauri v2)
+
+Además de la versión web, `dbv-eer-studio` se distribuye como aplicación de escritorio nativa (Windows, con soporte de macOS/Linux vía Tauri v2).
+
+### Prerrequisitos adicionales
+
+- [Rust](https://www.rust-lang.org/tools/install) y Cargo
+- En Windows, el [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (viene preinstalado en Windows 11)
+
+### Ejecutar en modo desarrollo
+
+```bash
+npm run desktop:dev
+```
+
+### Generar el instalador de producción
+
+```bash
+npm run desktop:build
+```
+
+Genera el ejecutable y los instaladores (`.msi` y `-setup.exe` en Windows) en `src-tauri/target/release/` y `src-tauri/target/release/bundle/`.
+
+## ✅ Tests
+
+El motor de conversión EER → Relacional (9 pasos) y el generador de SQL DDL tienen cobertura de pruebas unitarias con [Vitest](https://vitest.dev/):
+
+```bash
+npm run test
+```
+
+## ▶️ Scripts de arranque rápido
+
+Alternativa a `npm run dev` para arrancar/parar el servidor de desarrollo con un solo comando:
+
+| Plataforma | Iniciar | Detener |
+| --- | --- | --- |
+| Windows | `start.cmd` | `stop.cmd` |
+| macOS / Linux | `./start.sh` | `./stop.sh` |
+
 Para previsualizar el build:
 
 ```bash
@@ -164,9 +213,9 @@ Este proyecto está preparado para desplegarse automáticamente en **GitHub Page
 ### Cómo funciona
 
 1. Cada push a la rama `main` ejecuta la acción.
-2. Se hace build con `npm run build` (base configurada en `vite.config.ts` como `/eer-studio/`).
+2. Se hace build con `npm run build` (la Action fija `VITE_BASE=/dbv-eer-studio/`; en local, `vite.config.ts` usa `./` por defecto para que también funcione empaquetado en Tauri).
 3. El contenido de `dist/` se publica en GitHub Pages.
-4. La URL final será: `https://davidbuenov.github.io/eer-studio/`.
+4. La URL final será: `https://davidbuenov.github.io/dbv-eer-studio/`.
 
 ### Activar GitHub Pages
 
@@ -317,11 +366,15 @@ Este proyecto está bajo licencia MIT. Ver el archivo `LICENSE` para más detall
 - Website: [davidbuenov.com](https://davidbuenov.com/)
 - GitHub: [@davidbuenov](https://github.com/davidbuenov)
 
-## 🙏 Agradecimientos
+## 🙏 Agradecimientos y Referencias Académicas
 
-Este proyecto fue desarrollado con la asistencia de:
-- **Gemini** - Google AI
-- **GitHub Copilot** - AI pair programmer
+Este proyecto y su suite de conversión formal de 9 pasos han sido implementados siguiendo las propuestas didácticas y algoritmos de transformación del libro de referencia académica:
+- **"Fundamentos de Sistemas de Bases de Datos"** (*Fundamentals of Database Systems*), por **Ramez Elmasri** y **Shamkant B. Navathe**.
+
+Desarrollado con la asistencia de:
+- **Gemini** & **Antigravity** - Google DeepMind AI
+- **dbv-specs-ops** - Framework SDD por David Bueno Vallejo
+
 
 ---
 

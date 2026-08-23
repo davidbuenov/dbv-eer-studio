@@ -1,0 +1,20 @@
+[package]
+name = "dbv-eer-studio"
+version = "1.2.0"
+description = "dbv-eer-studio — Editor de Diagramas Entidad-Relación Extendido (EER) y Modelo Relacional"
+authors = ["David Bueno Vallejo <https://github.com/davidbuenov>"]
+license = "MIT"
+repository = "https://github.com/davidbuenov/dbv-eer-studio"
+edition = "2021"
+
+[lib]
+name = "dbv_eer_studio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
