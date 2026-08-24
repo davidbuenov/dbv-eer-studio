@@ -8,11 +8,14 @@
  */
 
 import EERDiagrammer from './EERDiagramer';
+import { LanguageProvider } from './i18n/LanguageContext';
 
 function App() {
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
-      <EERDiagrammer />
+      <LanguageProvider>
+        <EERDiagrammer />
+      </LanguageProvider>
     </div>
   );
 }

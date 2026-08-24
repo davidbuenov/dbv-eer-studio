@@ -59,23 +59,113 @@
 ## 📌 Tareas Pendientes / Roadmap Futuro
 - [x] **Rename del Repositorio a `dbv-eer-studio`**: hecho en GitHub (`gh repo rename`), remote local, workflow de Pages y README.
 - [x] **Paso 7 (relaciones n-arias) implementado**: confirmado que el DSL (`link relacion entidad cardinalidad`) y el parser ya soportaban conectar 3+ entidades a una relación sin cambios; solo faltaba el motor de conversión. Añadido en `eerToRelational.ts` siguiendo la regla formal de `eer-to-relational-mapping.md` (PK = combinación de FKs, excepto la de la entidad con cardinalidad 1).
-- [ ] **Deuda técnica — Exportar SVG del Modelo Relacional**: las tarjetas son HTML (no SVG), por lo que el botón "Exportar SVG" solo funciona en la pestaña Diagrama EER. Requeriría un renderer SVG puro de las tarjetas relacionales.
+- [x] **Deuda técnica — Exportar SVG del Modelo Relacional**: RESUELTA (2026-08-23). Las tarjetas siguen siendo HTML en pantalla, pero ahora existe un renderer SVG puro dedicado (`exportRelationalSVG.ts`) que reconstruye la vista completa para exportación — ver Fase 2 abajo.
+- [x] **Bug del Paso 8A: PK sintética no retirada al heredar**: RESUELTO (2026-08-24). Retirada la PK sintética `STEP1_DEFAULT_PK` de las subclases al heredar en el Paso 8A y reordenado el pipeline para procesar el Paso 8 antes de las relaciones. Cubierto con tests TDD en `eerToRelational.test.ts`.
 - [ ] **Deuda técnica — Build multiplataforma**: el empaquetado Tauri solo se ha compilado y probado en Windows; falta validar macOS/Linux.
 - [x] **GitHub Releases**: `v1.2.0` publicado en https://github.com/davidbuenov/dbv-eer-studio/releases/tag/v1.2.0 con `.msi` y `-setup.exe`.
 - [ ] **Microsoft Store**: empaquetado MSIX listo y probado (ver Hito 5); falta reservar identidad real en Partner Center (acción del usuario, no automatizable), capturas, política de privacidad y descripción de la ficha. Ver `dbv-specs-ops/docs/MICROSOFT_STORE.md`.
 - [ ] **Uptodown u otro catálogo**: no iniciado.
 - [ ] **Decisión pendiente — firma en CI**: los 3 workflows de release están sin firmar/sin auto-actualización a propósito. Firmar en CI implicaría subir la clave privada del updater como secret de GitHub Actions, a diferencia de `dbv-md-reader` (que firma Windows siempre en local). Sin decidir todavía.
-- [ ] **Internacionalización (ES/EN)**: pendiente, tarea aparte de este ciclo — necesaria antes de publicar en marketplaces (mismo criterio que `dbv-teleprompter`/`dbv-md-reader`, que ya la tienen). Requiere extraer las cadenas de texto de todos los componentes a un `i18n.ts`/equivalente y un selector de idioma en la UI.
+- [x] **Internacionalización (ES/EN)** — implementada (2026-08-23). Ver desglose Fase 1 abajo.
+- [x] **Exportar SVG del Modelo Relacional** — implementada (2026-08-23). Ver desglose Fase 2 abajo.
+- [x] **Bug del Paso 2 (relación identificativa procesada dos veces)**: RESUELTO (2026-08-23). Detectado como claves React duplicadas durante la verificación visual de las Fases 1-2, diagnosticado a fondo al responder una pregunta teórica del usuario sobre entidades débiles sin atributos. Ver Fase 3 abajo.
+
+### Fase `/plan` — Internacionalización ES/EN + Exportación SVG del Modelo Relacional (2026-08-23)
+- [x] Adversarial Architect Review ejecutado (ver `memory.md`, ADR "StepTrace pasa a datos estructurados").
+- [x] Alcance acordado con el usuario: i18n completa (UI estática + texto pedagógico de los 9 pasos), orden i18n → SVG.
+- [x] `implementation_plan.md` creado con desglose de fases, dependencias, riesgos y estrategia de rollback.
+- [ ] **Aprobación explícita del usuario pendiente antes de iniciar `/build`.**
+
+**Fase 1 — Internacionalización (ES/EN):** ✅ Completada e implementada (2026-08-23), verificada en el navegador (dev server + Playwright: capturas ES/EN de cabecera, Inspector de 9 Pasos, Modelo Relacional y Ayuda DSL).
+- [x] `LanguageContext` + hook `useLanguage` (en ficheros separados por la regla `react-refresh/only-export-components` de ESLint), diccionarios `es.ts`/`en.ts`, persistencia en `localStorage`, selector ES/EN en la cabecera. Provider inyectado en `App.tsx`.
+- [x] Refactor de `StepTrace` (`src/types/relational.ts`) a `{ stepNumber, stepKey, params }` (dato estructurado, no texto pre-formateado).
+- [x] Migrado `eerToRelational.ts` (31 stepTrace, los 9 pasos incluidas variantes 8A y 9.1/9.2 — 8B/8C/8D no estaban implementadas en el motor, fuera de alcance) y `relationalParser.ts` (placeholder de DSL directo) a `stepKey` + `params`.
+- [x] Diccionario pedagógico `src/i18n/steps.ts` (34 claves + 9 pasos formales fijos) con interpolación, consumido en `RelationalViewer.tsx` y `StepInspectorModal.tsx`.
+- [x] Traducidos los 12 componentes UI estáticos: `Toolbar.tsx`, `CodePanel.tsx`, `EERDiagramer.tsx`, `Canvas.tsx`, todos los Modales (`ModalHelp`, `ModalCredits`, `ModalProperties`, `ModalAIPrompt`, `ModalClearConfirm`, `ModalDeleteConfirm`), `SQLPreviewModal.tsx`.
+- [x] Ampliación no prevista en el plan original: las cabeceras comentadas del script SQL exportado (`relationalToSQL.ts`) también se tradujeron (recibe `lang` desde `SQLPreviewModal.tsx`), por consistencia con la decisión de cobertura completa.
+- [x] Decisión documentada: `SAMPLE_CODE` (`src/constants/index.ts`) y el prompt de `ModalAIPrompt.tsx` permanecen en español (contenido de dominio, no UI).
+- [x] `relationalToSQL.test.ts` actualizado (stepTrace de los fixtures a `stepKey`/`params`) y en verde; suite completa (16 tests), `tsc -b`, `eslint .` y `npm run build` sin errores.
+- [x] **Deuda técnica encontrada durante la verificación visual (no introducida por este cambio, pre-existente):** claves React duplicadas en el Modelo Relacional al convertir el ejemplo `DEPENDIENTE`. RESUELTA en la Fase 3 (ver abajo) — la causa real no era la generación de ids sino un doble procesamiento de la relación identificativa.
+
+**Fase 3 — Fix del Paso 2: relación identificativa procesada dos veces:** ✅ Completada (2026-08-23), a petición explícita del usuario tras preguntar qué dice el algoritmo formal para una entidad débil sin atributos.
+- [x] Causa raíz: el bucle genérico de relaciones (`relationships.forEach`, Pasos 3/4/5/7) en `eerToRelational.ts` no excluía las `identifying_relationship` ya consumidas por el bloque del Paso 2, reprocesándolas como relación binaria normal.
+- [x] Dos manifestaciones: con cardinalidad declarada (`"1"`/`"N"`) → Paso 4 duplica la FK del propietario (columna + restricción); sin cardinalidad → Paso 5 crea una tabla puente espuria.
+- [x] Fix: `Set` de relaciones identificativas realmente consumidas por el Paso 2 (registradas donde se propaga la FK, no por tipo de nodo), excluidas del bucle genérico. Una `identifying_relationship` mal formada que el Paso 2 no pueda tratar sigue llegando al bucle genérico en vez de desaparecer en silencio.
+- [x] 3 tests nuevos en `eerToRelational.test.ts` (tabla puente espuria, FK duplicada con cardinalidad 1:N, entidad débil sin atributos propios), **verificados en rojo antes de dar el fix por bueno** desactivándolo temporalmente. Suite: 19 tests en verde.
+- [x] Verificado en la app real: 0 errores de consola (antes 8), la tarjeta `DEPENDIENTE` muestra una sola columna `EMPLEADO_DNI`, y desaparecen las etiquetas de flecha FK solapadas.
+- [x] Documentada la respuesta a la pregunta teórica original en un test: sin clave parcial la regla formal del Paso 2 no puede completarse (PK = FK propietario + clave parcial); el motor produce una PK formada solo por la FK del propietario, lo que limita a una instancia débil por propietario.
+
+**Fase `/code-simplify` — 4 agentes de revisión en paralelo + Security Review:** ✅ Completada (2026-08-23).
+- [x] Security Review (obligatoria por `MASTER_PROMPT.md`): sin secretos en el código nuevo; **cero dependencias nuevas** (sin riesgo de slopsquatting); sanitización verificada en profundidad (orígenes constreñidos a `[A-Za-z0-9_]` + `escapeXml()` en los 6 puntos de emisión al SVG).
+- [x] **Fix #1 — el fix del Paso 2 estaba incompleto:** el `Set` se rellenaba dentro de `if (ownerTable)` y usaba `find` en vez de `filter`. Dos variantes del mismo bug seguían vivas. Corregido reclamando por semántica, no por éxito del procesamiento.
+- [x] **Fix #2 — helpers idempotentes `addColumn`/`addForeignKey`**, adoptados por los Pasos 8 y 9. Corrige el `CONSTRAINT` duplicado del Paso 8 (DDL que Oracle rechaza).
+- [x] **Fix #3 — `computeFKEdges()` en `relationalGeometry.ts`**: única implementación del trazado de flechas FK (antes duplicada carácter a carácter, incluido el asignador de puertos, que es estado con orden significativo). `RELATIONAL_COLORS` adoptado también por `RelationalViewer`. Elimina de paso un `find` O(T×F) con `toUpperCase()` en la ruta de arrastre.
+- [x] **Fix #4 — `translate()` puro** en `src/i18n/translate.ts` usado por Provider y utils; eliminados 3 mapas de diccionarios, 2 `interpolate` duplicados y un `.replace()` manual frágil. `language.ts` fusiona tipo + contexto + hook.
+- [x] **Fix #5 — `getMappableAttributes()`** unificado en los 5 llamantes: los atributos derivados y multivaluados ya no se materializan como columnas al colgar de una relación (Pasos 4/5/7).
+- [x] Regresión propia de rendimiento corregida: `translateStep()` en la ruta caliente del arrastre → `translateStepTitle()` + `useMemo`.
+- [x] Fuga de object URL corregida y centralizada en `src/utils/download.ts`; los dos botones "Exportar SVG" fusionados en uno.
+- [x] Hardening: `localStorage` en `try/catch` (lanza excepción, no devuelve `null`, en modo privado — tumbaba la app al arrancar).
+- [x] 2 tests nuevos (constraint duplicado del Paso 8, filtro de atributos en relaciones). Suite: 21 tests. `tsc -b`, `eslint`, `build` y verificación visual con Playwright en verde (0 errores de consola).
+- [ ] **Hallazgo NO corregido, registrado como deuda técnica** (es corrección, no simplificación — fuera del alcance de `/code-simplify`): PK sintética no retirada en el Paso 8A. **Es la tarea de mañana**, ver "🔜 Siguiente sesión" al final de este fichero.
+
+**Fase de documentación — README bilingüe:** ✅ Completada (2026-08-23).
+- [x] `README.md` (español) y `README.en.md` (inglés) reescritos siguiendo el formato de `dbv-md-reader`: conmutador de idioma, badges, "Descárgalo e instálalo" por plataforma con nombres reales de artefactos, tabla de los 9 pasos, referencia del DSL, estructura del proyecto y créditos.
+- [x] Las secciones "🆕 Novedades - Versión X" salen del README; el historial queda centralizado en `CHANGELOG.md`.
+- [x] Honestidad explícita en el README: los paquetes de Linux y macOS los genera la CI pero no se han probado en hardware real; no se menciona Microsoft Store como disponible (la identidad sigue pendiente en Partner Center).
+- [x] Verificado el balance de fences (18 = 9 bloques) y la existencia de todos los ficheros enlazados, por el precedente del bug de bloques sin cerrar de una versión anterior.
+
+**Fase 2 — Exportar SVG del Modelo Relacional (depende de Fase 1):** ✅ Completada e implementada (2026-08-23), verificada con Playwright (descarga real del `.svg` vía el botón de la UI + render standalone del fichero exportado, comparado visualmente contra la vista en pantalla).
+- [x] Geometría extraída a `src/utils/relational/relationalGeometry.ts` (`CARD_WIDTH`/`HEADER_HEIGHT`/`ROW_HEIGHT`/`FOOTER_HEIGHT`, `getTableHeight`, `getAnchorPortPosition`, `getOptimalSides`) — consumida tanto por `RelationalViewer.tsx` (que ya no define estas funciones localmente) como por el exportador, eliminando el riesgo de divergencia documentado en `implementation_plan.md`.
+- [x] Paleta de colores hex en `src/utils/relational/relationalColors.ts` (calcada de las clases Tailwind slate/indigo/amber/cyan usadas en pantalla).
+- [x] `src/utils/relational/exportRelationalSVG.ts`: reconstrucción manual de tarjetas (`<rect>`/`<text>`, cabecera/columnas/pie con esquinas redondeadas) + flechas FK reutilizando el mismo algoritmo de anclaje/curvatura que `RelationalViewer.tsx`.
+- [x] Botón "Exportar SVG" condicionado a `activeTab === 'relational'` en `EERDiagramer.tsx`, mismo patrón `Blob`+`download` que `handleExport` (EER).
+- [x] Texto del SVG exportado (`stepTitle`, "Paso N") usa el idioma activo vía `translateStep`/diccionario de la Fase 1.
+- [x] Verificación end-to-end: descarga real disparada desde el botón de la UI (Playwright `waitForEvent('download')`), fichero `.svg` guardado y renderizado standalone en un navegador — comparado visualmente contra la captura de la vista en pantalla, coincide (tarjetas, colores PK/FK, curvas de flechas, texto pedagógico traducido).
+- [x] Deuda técnica "Exportar SVG del Modelo Relacional" resuelta — actualizado en la sección de deuda técnica más abajo.
 
 ---
 
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
-> **Last update / Última actualización:** 2026-08-23
-> **Punto exacto:** Sesión larga de continuación del empaquetado nativo, en 3 tandas: (1) auditoría y arreglo de defectos reales en el `.exe` (zoom, drag, icono, exportar SVG, créditos); (2) `/code-simplify` + `/test` + `/ship` → v1.2.0 publicado (commit, tag, push, GitHub Release) más el Paso 7 (relaciones n-arias) que se detectó como hueco durante los tests; (3) plan grande de distribución completa (auto-actualización, menú nativo macOS, chincheta always-on-top, 3 workflows de CI, MSIX para Microsoft Store), ejecutado tras aprobación explícita del usuario.
-> **Nota de sesión / Feedback del usuario:** Verificado en el ejecutable real por el usuario en la tanda 1 — "todo bien", "ahora va perfecto". En la tanda 3, el usuario corrigió una idea equivocada mía (que `dbv-tauri-starter` ya documentaba el menú nativo de macOS — no era cierto, solo vivía en el código de `dbv-md-reader`) y pidió backportear esa lección a los repos compartidos.
-> **Estado:** v1.2.0 en producción (web + GitHub Releases). Hito 5 sustancialmente completado en Windows, incluyendo preparación de Microsoft Store (MSIX probado de extremo a extremo, bloqueado solo por la reserva de identidad en Partner Center). Pendiente: exportar SVG del Modelo Relacional, validar build real en macOS/Linux, decidir firma en CI, internacionalización, y que el usuario revise/haga push de los 2 commits de documentación dejados en `dbv-specs-ops` y `dbv-tauri-starter`.
+> **Last update / Última actualización:** 2026-08-24
+> **Punto exacto:** Sesión de `/plan` + `/build` + `/test` + `/ship` para la versión 1.4.0: (1) Fix del Paso 8A (retirada de la PK sintética `STEP1_DEFAULT_PK` de las subclases al heredar y reordenación del pipeline para procesar el Paso 8 antes de las relaciones), (2) tests unitarios TDD en `eerToRelational.test.ts` (22 tests en verde), (3) sincronización de versiones a 1.4.0 en los 4 ficheros obligatorios (`package.json`, `tauri.conf.json`, `Cargo.toml`, `ModalCredits.tsx`), (4) revisión de la deuda técnica de builds multiplataforma y Microsoft Store, y (5) actualización de `CHANGELOG.md` y `task.md`.
+> **Estado:** `npx vitest run` (22 tests), `npx tsc -b`, `npx eslint .` y `npm run build` verificados sin errores. Versión 1.4.0 lista para commit/tag.
 
+### 1️⃣ PRIMERO: Bug del Paso 8A — PK sintética no retirada al heredar
 
+**Estado:** reproducido y confirmado con evidencia real (no es una inferencia). Sin corregir.
 
+**Causa raíz (orden implícito del pipeline).** En `src/utils/relational/eerToRelational.ts` los pasos corren en este orden de código: Paso 1 (línea ~223) → Paso 2 (~297) → bucle genérico con Pasos 3/4/5/7 (~456-683) → Paso 6 (~786) → **Paso 8 (~871)** → Paso 9 (~943). Es decir, el Paso 8 muta tablas que los pasos anteriores ya dieron por terminadas:
 
+1. El **Paso 1** da a toda entidad sin atributo clave una PK sintética `ID_<TABLA>` (línea ~266, `STEP1_DEFAULT_PK`). Una subclase típica no declara clave propia, así que la recibe.
+2. Los **Pasos 3/4** propagan FKs leyendo `columns.filter(isPrimaryKey)` **en ese momento** — o sea, apuntando a la PK sintética.
+3. El **Paso 8A** hace `addColumn(subTable, ..., 'start')` de la PK heredada de la superclase, pero **no retira la sintética**.
+
+**Evidencia reproducida** (subclase `INGENIERO` sin atributo clave, superclase `EMPLEADO` con PK `DNI`, y una relación 1:N `PROYECTO → INGENIERO` procesada antes del Paso 8):
+
+```text
+INGENIERO.columns  = ['DNI', 'ID_INGENIERO']
+INGENIERO.PKs      = ['DNI', 'ID_INGENIERO']    ← PK compuesta incorrecta; debería ser solo DNI
+PROYECTO.FKs       = ['FK_PROYECTO_INGENIERO -> INGENIERO(ID_INGENIERO)']
+                                                 ← referencia solo una parte de la PK compuesta
+```
+
+**Por qué importa:** en Oracle una FK debe referenciar la PK completa o una clave UNIQUE — el DDL generado no compila. Y pedagógicamente es incorrecto: la regla 8A dice que la subclase hereda la PK de la superclase, no que acumule dos.
+
+**Enfoque sugerido** (decidir al empezar, no está cerrado): al aplicar 8A, retirar de la subclase la PK sintética generada por el Paso 1 antes de insertar la heredada — identificable por `stepTrace.stepKey === 'STEP1_DEFAULT_PK'`, que es justo para lo que sirve el `StepTrace` estructurado. Queda por decidir qué hacer con las FKs que los Pasos 3/4 ya emitieron apuntando a la columna retirada: o se reescriben, o se mueve el Paso 8 antes del bucle genérico (más limpio conceptualmente, pero más arriesgado). **Evaluar ambas antes de tocar código.**
+
+**Cómo verificarlo** (misma práctica que se siguió con el fix del Paso 2, que funcionó bien):
+1. Escribir primero el test con el escenario de arriba y **confirmarlo en rojo** antes de tocar el motor.
+2. Aplicar el fix; comprobar que los 21 tests existentes siguen en verde (ojo a los tests del Paso 8 y a los de relaciones binarias).
+3. Verificación visual en la app con el ejemplo por defecto, que **ya contiene una jerarquía** (`spec d -> EMPLEADO` con SECRETARIA/INGENIERO/TECNICO) — mirar la pestaña Modelo Relacional y el SQL DDL generado.
+
+### 2️⃣ DESPUÉS: ciclo `/ship`
+
+Al terminar el fix, ejecutar `/ship` según `docs/MASTER_PROMPT.md`. Puntos a no olvidar:
+
+- **Versión sugerida: 1.4.0 (minor)** — hay funcionalidad nueva y aditiva (i18n ES/EN, exportación SVG del Modelo Relacional) y ningún cambio incompatible. Confirmar con el usuario, que es quien elige.
+- **Subir la versión en los CUATRO sitios a la vez:** `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` y `src/components/ModalCredits.tsx`.
+- Mover la sección `[Sin publicar]` de `CHANGELOG.md` a `[1.4.0] — fecha` (ya está redactada y bastante completa).
+- **Gate de memoria obligatorio** (`<memory_update_proposal>`) antes de cerrar.
+- ⚠️ **Importante:** los README ya documentan i18n y la exportación SVG del Modelo Relacional, pero eso **todavía no está en ninguna release publicada**. No dejar los README en `main` sin hacer el `/ship`, o quien descargue v1.3.0 leerá funciones que su binario no tiene.
+- Recordar que el usuario revisa antes de hacer push; proponer commit y tag, pero **no hacer push**.

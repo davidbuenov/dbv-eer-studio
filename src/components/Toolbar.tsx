@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Square, SquareDashed, Diamond, Zap, Circle, GitBranch, Layers } from 'lucide-react';
+import { useLanguage } from '../i18n/language';
 
 interface ToolbarProps {
   selectedTool: string | null;
@@ -7,64 +8,66 @@ interface ToolbarProps {
 }
 
 function ToolbarComponent({ selectedTool, onToolSelect }: ToolbarProps) {
+  const { t } = useLanguage();
+
   const toolButtons = useMemo(() => [
     {
       id: 'entity',
-      label: 'Entidad',
+      label: t('toolbar.entity.label'),
       icon: Square,
-      title: 'Entidad fuerte (click en canvas)',
+      title: t('toolbar.entity.title'),
       group: 'entities'
     },
     {
       id: 'weak_entity',
-      label: 'Entidad Débil',
+      label: t('toolbar.weakEntity.label'),
       icon: SquareDashed,
-      title: 'Entidad débil (click en canvas)',
+      title: t('toolbar.weakEntity.title'),
       group: 'entities'
     },
     {
       id: 'relationship',
-      label: 'Relación',
+      label: t('toolbar.relationship.label'),
       icon: Diamond,
-      title: 'Relación fuerte (click en canvas)',
+      title: t('toolbar.relationship.title'),
       group: 'relationships'
     },
     {
       id: 'ident_rel',
-      label: 'Rel. Identif.',
+      label: t('toolbar.identRel.label'),
       icon: Zap,
-      title: 'Relación identificativa (click en canvas)',
+      title: t('toolbar.identRel.title'),
       group: 'relationships'
     },
     {
       id: 'attribute',
-      label: 'Atributo',
+      label: t('toolbar.attribute.label'),
       icon: Circle,
-      title: 'Atributo simple (click en canvas)',
+      title: t('toolbar.attribute.title'),
       group: 'attributes'
     },
     {
       id: 'key_attr',
-      label: 'Atrib. Clave',
+      label: t('toolbar.keyAttr.label'),
       icon: Zap,
-      title: 'Atributo clave (click en canvas)',
+      title: t('toolbar.keyAttr.title'),
       group: 'attributes'
     },
     {
       id: 'specialization',
-      label: 'Especialización',
+      label: t('toolbar.specialization.label'),
       icon: GitBranch,
-      title: 'Especialización/Generalización',
+      title: t('toolbar.specialization.title'),
       group: 'hierarchy'
     },
     {
       id: 'union',
-      label: 'Unión',
+      label: t('toolbar.union.label'),
       icon: Layers,
-      title: 'Unión/Categoría',
+      title: t('toolbar.union.title'),
       group: 'hierarchy'
     }
-  ], []);
+  ], [t]);
 
   const renderButtonGroup = (groupId: string, buttons: typeof toolButtons) => {
     const groupButtons = buttons.filter(b => b.group === groupId);
@@ -94,7 +97,7 @@ function ToolbarComponent({ selectedTool, onToolSelect }: ToolbarProps) {
 
   return (
     <div className="flex items-center gap-1 border-b border-slate-200 bg-white px-4 py-2 shadow-sm">
-      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mr-2">Insertar:</span>
+      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mr-2">{t('toolbar.insert')}</span>
       
       {/* Entities */}
       {renderButtonGroup('entities', toolButtons)}
@@ -117,9 +120,9 @@ function ToolbarComponent({ selectedTool, onToolSelect }: ToolbarProps) {
       <div className="w-px bg-slate-200 mx-1 h-6"></div>
       
       {/* Instrucción sobre Shift */}
-      <div className="text-xs text-slate-500 ml-auto flex items-center gap-2" title="Presiona Shift mientras arrastras una entidad para mover también sus atributos">
+      <div className="text-xs text-slate-500 ml-auto flex items-center gap-2" title={t('toolbar.shiftHint.title')}>
         <kbd className="px-2 py-1 bg-slate-100 border border-slate-300 rounded text-xs font-mono">Shift</kbd>
-        <span>+ arrastrar entidad = mover atributos</span>
+        <span>{t('toolbar.shiftHint.text')}</span>
       </div>
     </div>
   );

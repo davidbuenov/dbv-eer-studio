@@ -34,16 +34,23 @@ import { Toolbar } from './components/Toolbar';
 import { CodePanel } from './components/CodePanel';
 import { ResizableDivider } from './components/ResizableDivider';
 import { eerToRelational } from './utils/relational/eerToRelational';
+import { exportRelationalToSVG } from './utils/relational/exportRelationalSVG';
 import { generateRelationalDSL } from './utils/relational/relationalCodeGenerator';
 import { parseRelationalDSL } from './utils/relational/relationalParser';
 import { RelationalViewer } from './components/relational/RelationalViewer';
 import { StepInspectorModal } from './components/relational/StepInspectorModal';
 import { SQLPreviewModal } from './components/sql/SQLPreviewModal';
 import type { RelationalTable, RelationalSchema } from './types/relational';
+import { useLanguage } from './i18n/language';
+import { downloadTextFile } from './utils/download';
 
 type ActiveViewTab = 'eer' | 'relational' | 'sql';
 
+const SVG_MIME = 'image/svg+xml;charset=utf-8';
+
 function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
+  const { lang, setLang, t } = useLanguage();
+
   // ==========================================
   // ESTADO DEL COMPONENTE Y PESTAÑAS
   // ==========================================
@@ -426,19 +433,18 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     resetPropertiesModal();
   }, [elementType, elementName, selectedEntity1, selectedEntity2, cardinalityE1, cardinalityE2, customCard1, customCard2, totalE1, totalE2, elementType2, selectedEntity, specType, specSuperclass, specSubclasses, unionName, unionSuperclasses, unionCategory, code, setCode, resetTool, resetPropertiesModal, clickX, clickY, setShowPropertiesModal]);
 
-  const handleExport = () => {
+  // Exporta a SVG la pestaña activa: el canvas EER se serializa desde el DOM (ya es SVG
+  // nativo); el Modelo Relacional se reconstruye, porque en pantalla son tarjetas HTML.
+  const handleExportSVG = useCallback(() => {
+    if (activeTab === 'relational') {
+      downloadTextFile(exportRelationalToSVG(relationalSchema, lang), 'relational-model.svg', SVG_MIME);
+      return;
+    }
     if (svgRef.current) {
       const data = new XMLSerializer().serializeToString(svgRef.current);
-      const blob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'eer-diagram.svg';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadTextFile(data, 'eer-diagram.svg', SVG_MIME);
     }
-  };
+  }, [activeTab, relationalSchema, lang, svgRef]);
 
   const handleZoomIn = useCallback(() => {
     setScale((s) => Math.min(2, Math.round((s + 0.1) * 100) / 100));
@@ -491,7 +497,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
           <BookOpen className="h-6 w-6 text-indigo-600" />
           <h1 className="text-xl font-bold text-slate-800">EER Studio</h1>
           <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
-            Suite Docente de Bases de Datos
+            {t('header.subtitle')}
           </span>
 
           {/* Menú Archivo */}
@@ -501,9 +507,9 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             </button>
             {showFileMenu && (
               <div className="absolute left-0 mt-1 w-40 rounded-md border border-slate-200 bg-white shadow-lg z-40">
-                <button onClick={() => handleOpenFile(handleLoadFileContent)} className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-100">Open</button>
-                <button onClick={() => handleSaveFile(getSaveContent())} className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-100">Save</button>
-                <button onClick={() => handleSaveAsFile(getSaveContent())} className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-100">Save as</button>
+                <button onClick={() => handleOpenFile(handleLoadFileContent)} className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-100">{t('header.fileMenu.open')}</button>
+                <button onClick={() => handleSaveFile(getSaveContent())} className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-100">{t('header.fileMenu.save')}</button>
+                <button onClick={() => handleSaveAsFile(getSaveContent())} className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-100">{t('header.fileMenu.saveAs')}</button>
               </div>
             )}
           </div>
@@ -520,7 +526,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Diagrama EER</span>
+            <span>{t('header.tabs.eer')}</span>
           </button>
 
           <button
@@ -532,7 +538,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             }`}
           >
             <Database className="w-4 h-4" />
-            <span>Modelo Relacional</span>
+            <span>{t('header.tabs.relational')}</span>
           </button>
 
           <button
@@ -547,16 +553,32 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Oracle SQL DDL</span>
+            <span>{t('header.tabs.sql')}</span>
           </button>
         </div>
 
         {/* Botones de Ayuda y Exportación */}
         <div className="flex items-center gap-2">
+          {/* Selector de Idioma ES/EN */}
+          <div className="flex items-center gap-0.5 rounded-md border border-slate-200 p-0.5 mr-1">
+            {(['es', 'en'] as const).map(code => (
+              <button
+                key={code}
+                onClick={() => setLang(code)}
+                title={t(`header.language.${code}`)}
+                className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${
+                  lang === code ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                {code.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
           {runningInTauri && (
             <button
               onClick={handleToggleAlwaysOnTop}
-              title={isPinned ? 'Ventana fijada encima — clic para quitar' : 'Fijar ventana encima'}
+              title={isPinned ? t('header.pinTooltip.pinned') : t('header.pinTooltip.unpinned')}
               className={`flex items-center justify-center rounded-md p-1.5 text-xs font-medium transition-colors ${
                 isPinned ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'text-slate-600 hover:bg-slate-100'
               }`}
@@ -570,29 +592,29 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition"
           >
             <BookOpen className="w-3.5 h-3.5" />
-            <span>Guía 9 Pasos</span>
+            <span>{t('header.stepGuide')}</span>
           </button>
 
           <button onClick={() => setShowHelp(true)} className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-            <HelpCircle className="h-4 w-4" /> Sintaxis
+            <HelpCircle className="h-4 w-4" /> {t('header.syntax')}
           </button>
 
           <button onClick={() => setShowAIPrompt(true)} className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-            <Code className="h-4 w-4" /> Prompt IA
-          </button>
-          
-          <button onClick={() => setShowCredits(true)} className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-            <Info className="h-4 w-4" /> Créditos
+            <Code className="h-4 w-4" /> {t('header.aiPrompt')}
           </button>
 
-          {activeTab === 'eer' && (
-            <button onClick={handleExport} className="flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 shadow-sm transition-colors">
-              <Share2 className="h-4 w-4" /> Exportar SVG
+          <button onClick={() => setShowCredits(true)} className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+            <Info className="h-4 w-4" /> {t('header.credits')}
+          </button>
+
+          {activeTab !== 'sql' && (
+            <button onClick={handleExportSVG} className="flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 shadow-sm transition-colors">
+              <Share2 className="h-4 w-4" /> {t('header.exportSVG')}
             </button>
           )}
 
           <button onClick={() => setShowSQLModal(true)} className="flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 shadow-sm transition-colors">
-            <Database className="h-4 w-4" /> Exportar SQL
+            <Database className="h-4 w-4" /> {t('header.exportSQL')}
           </button>
         </div>
 

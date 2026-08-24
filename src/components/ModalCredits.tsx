@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { X, BookOpen, RefreshCw } from 'lucide-react';
 import type { Update } from '@tauri-apps/plugin-updater';
 import { runningInTauri } from '../utils/platform';
+import { useLanguage } from '../i18n/language';
 
 interface ModalCreditsProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ type UpdateStatus =
  * Modal de créditos mostrando información del autor y contribuidores
  */
 export function ModalCredits({ isOpen, onClose }: ModalCreditsProps) {
+  const { t } = useLanguage();
   const [isPackagedApp, setIsPackagedApp] = useState(false);
   const [status, setStatus] = useState<UpdateStatus>({ kind: 'idle' });
   const [pendingUpdate, setPendingUpdate] = useState<Update | null>(null);
@@ -60,7 +62,7 @@ export function ModalCredits({ isOpen, onClose }: ModalCreditsProps) {
         const { relaunch } = await import('@tauri-apps/plugin-process');
         await relaunch();
       } catch {
-        setStatus({ kind: 'error', message: 'No se pudo instalar la actualización.' });
+        setStatus({ kind: 'error', message: t('modalCredits.status.errorInstall') });
       }
       return;
     }
@@ -76,7 +78,7 @@ export function ModalCredits({ isOpen, onClose }: ModalCreditsProps) {
       setPendingUpdate(update);
       setStatus({ kind: 'available', version: update.version });
     } catch {
-      setStatus({ kind: 'error', message: 'No se pudo comprobar actualizaciones.' });
+      setStatus({ kind: 'error', message: t('modalCredits.status.errorCheck') });
     }
   }
 
@@ -84,7 +86,7 @@ export function ModalCredits({ isOpen, onClose }: ModalCreditsProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-xl bg-gradient-to-br from-indigo-50 to-white p-8 shadow-2xl border border-indigo-100">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-indigo-900">Créditos <span className="text-sm font-normal text-slate-500">v1.3.0</span></h2>
+          <h2 className="text-2xl font-bold text-indigo-900">{t('modalCredits.title')} <span className="text-sm font-normal text-slate-500">v1.4.0</span></h2>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-indigo-100 transition-colors">
             <X className="h-5 w-5 text-slate-500" />
           </button>
@@ -94,33 +96,33 @@ export function ModalCredits({ isOpen, onClose }: ModalCreditsProps) {
           <div className="text-center">
             <BookOpen className="h-16 w-16 text-indigo-600 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-indigo-900 mb-2">dbv-eer-studio</h3>
-            <p className="text-sm text-slate-600">Editor de Diagramas Entidad-Relación Extendido</p>
+            <p className="text-sm text-slate-600">{t('modalCredits.appDesc')}</p>
           </div>
 
           <div className="bg-white rounded-lg p-4 border border-indigo-100">
             <p className="text-sm leading-relaxed">
-              <strong className="text-indigo-900">Desarrollado por:</strong><br />
+              <strong className="text-indigo-900">{t('modalCredits.developedBy')}</strong><br />
               <a href="https://davidbuenov.com/" target="_blank" rel="noopener noreferrer" className="text-lg font-semibold text-indigo-700 hover:text-indigo-900 hover:underline transition-colors">
                 David Bueno Vallejo
               </a>
               <br />
               <a href="https://github.com/davidbuenov/dbv-eer-studio" target="_blank" rel="noopener noreferrer" className="text-xs mt-2 inline-block text-slate-500 hover:text-slate-700 hover:underline transition-colors">
-                Repositorio GitHub · https://github.com/davidbuenov/dbv-eer-studio
+                {t('modalCredits.repoLabel')} · https://github.com/davidbuenov/dbv-eer-studio
               </a>
             </p>
           </div>
 
           <div className="bg-white rounded-lg p-4 border border-indigo-100">
             <p className="text-sm leading-relaxed">
-              <strong className="text-indigo-900">Base Teórica y Referencia Académica:</strong><br />
-              Implementado siguiendo el algoritmo de los 9 pasos formales expuesto en el libro <strong className="text-slate-800">"Fundamentos de Sistemas de Bases de Datos"</strong> de <strong className="text-indigo-700">Ramez Elmasri</strong> y <strong className="text-indigo-700">Shamkant B. Navathe</strong>.
+              <strong className="text-indigo-900">{t('modalCredits.theoryTitle')}</strong><br />
+              {t('modalCredits.theoryText.pre')} <strong className="text-slate-800">{t('modalCredits.theoryText.book')}</strong> {t('modalCredits.theoryText.by')} <strong className="text-indigo-700">Ramez Elmasri</strong> y <strong className="text-indigo-700">Shamkant B. Navathe</strong>.
             </p>
           </div>
 
           <div className="bg-white rounded-lg p-4 border border-indigo-100">
             <p className="text-sm leading-relaxed">
-              <strong className="text-indigo-900">Asistencia de IA:</strong><br />
-              Este proyecto fue desarrollado con la ayuda de <strong>Gemini & Antigravity</strong> (Google DeepMind AI) y el framework <strong>dbv-specs-ops</strong>.
+              <strong className="text-indigo-900">{t('modalCredits.aiTitle')}</strong><br />
+              {t('modalCredits.aiText.pre')} <strong>Gemini & Antigravity</strong> (Google DeepMind AI) {t('modalCredits.aiText.post')}
             </p>
           </div>
 
@@ -132,15 +134,15 @@ export function ModalCredits({ isOpen, onClose }: ModalCreditsProps) {
                 className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
               >
                 <RefreshCw className="h-4 w-4" />
-                {pendingUpdate ? 'Instalar actualización' : 'Buscar actualizaciones'}
+                {pendingUpdate ? t('modalCredits.updateButton.install') : t('modalCredits.updateButton.check')}
               </button>
               {status.kind !== 'idle' && (
                 <p className="mt-2 text-xs text-slate-500">
-                  {status.kind === 'checking' && 'Comprobando...'}
-                  {status.kind === 'up-to-date' && 'Ya tienes la última versión.'}
-                  {status.kind === 'available' && `Nueva versión disponible: v${status.version}`}
-                  {status.kind === 'downloading' && 'Descargando e instalando...'}
-                  {status.kind === 'installed' && 'Instalada. Reiniciando...'}
+                  {status.kind === 'checking' && t('modalCredits.status.checking')}
+                  {status.kind === 'up-to-date' && t('modalCredits.status.upToDate')}
+                  {status.kind === 'available' && t('modalCredits.status.available', { version: status.version })}
+                  {status.kind === 'downloading' && t('modalCredits.status.downloading')}
+                  {status.kind === 'installed' && t('modalCredits.status.installed')}
                   {status.kind === 'error' && status.message}
                 </p>
               )}
@@ -148,14 +150,14 @@ export function ModalCredits({ isOpen, onClose }: ModalCreditsProps) {
           )}
           {isPackagedApp && (
             <p className="text-center text-xs text-slate-400">
-              Instalada desde Microsoft Store — las actualizaciones son automáticas.
+              {t('modalCredits.storeNotice')}
             </p>
           )}
 
           <div className="text-center pt-4 border-t border-indigo-100">
             <p className="text-xs text-slate-500">
               © 2025-2026 David Bueno Vallejo<br />
-              Todos los derechos reservados
+              {t('modalCredits.allRightsReserved')}
             </p>
           </div>
         </div>

@@ -6,6 +6,9 @@
 // =============================================================================
 
 import type { RelationalSchema } from '../../types/relational';
+import type { Language } from '../../i18n/language';
+import { translate } from '../../i18n/translate';
+import { translateStep } from '../../i18n/steps';
 
 
 /**
@@ -50,19 +53,21 @@ function mapDataTypeToDialect(dataType: string, dialect: SQLDialect): string {
  * Genera el script DDL SQL completo para un esquema relacional.
  * Incluye cabecera explicativa con los 9 pasos formales e instrucciones CREATE TABLE y FKs.
  */
-export function relationalToSQL(schema: RelationalSchema, dialect: SQLDialect = 'oracle'): string {
+export function relationalToSQL(schema: RelationalSchema, dialect: SQLDialect = 'oracle', lang: Language = 'es'): string {
   const lines: string[] = [];
+  const t = (key: Parameters<typeof translate>[1], params?: Record<string, string | number>) =>
+    translate(lang, key, params);
 
   // Cabecera del archivo DDL
   lines.push(`-- =============================================================================`);
-  lines.push(`-- Script SQL DDL generado automáticamente por eer-studio`);
-  lines.push(`-- Dialecto Destino: ${dialect.toUpperCase()} ${dialect === 'oracle' ? '(Dialecto Universitario Principal)' : ''}`);
-  lines.push(`-- Fecha de Generación: ${new Date().toISOString()}`);
-  lines.push(`-- Basado en el Algoritmo Formal de Mapeo EER-a-Relacional (Pasos 1-9)`);
+  lines.push(`-- ${t('sqlExport.header.generated')}`);
+  lines.push(`-- ${t('sqlExport.header.dialect')} ${dialect.toUpperCase()} ${dialect === 'oracle' ? t('sqlExport.header.universityDialect') : ''}`);
+  lines.push(`-- ${t('sqlExport.header.generatedDate')} ${new Date().toISOString()}`);
+  lines.push(`-- ${t('sqlExport.header.basedOn')}`);
   lines.push(`-- =============================================================================\n`);
 
   if (dialect === 'oracle') {
-    lines.push(`-- Borrado previo de tablas (si existen)`);
+    lines.push(`-- ${t('sqlExport.dropTables')}`);
     schema.tables.forEach(table => {
       lines.push(`-- DROP TABLE ${table.name} CASCADE CONSTRAINTS;`);
     });
@@ -71,10 +76,11 @@ export function relationalToSQL(schema: RelationalSchema, dialect: SQLDialect = 
 
   // Generar cada tabla
   schema.tables.forEach(table => {
+    const stepText = translateStep(lang, table.stepTrace.stepKey, table.stepTrace.params);
     lines.push(`-- -----------------------------------------------------------------------------`);
-    lines.push(`-- Tabla: ${table.name}`);
-    lines.push(`-- Regla Aplicada: ${table.stepTrace.stepTitle}`);
-    lines.push(`-- Justificación: ${table.stepTrace.description}`);
+    lines.push(`-- ${t('sqlExport.table')} ${table.name}`);
+    lines.push(`-- ${t('sqlExport.ruleApplied')} ${stepText.title}`);
+    lines.push(`-- ${t('sqlExport.justification')} ${stepText.description}`);
     lines.push(`-- -----------------------------------------------------------------------------`);
     lines.push(`CREATE TABLE ${table.name} (`);
 

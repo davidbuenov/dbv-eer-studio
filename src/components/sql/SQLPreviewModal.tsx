@@ -9,6 +9,8 @@ import React, { useState } from 'react';
 import { X, Copy, Download, Check, Database, FileCode } from 'lucide-react';
 import type { RelationalSchema } from '../../types/relational';
 import { relationalToSQL, type SQLDialect } from '../../utils/relational/relationalToSQL';
+import { useLanguage } from '../../i18n/language';
+import { downloadTextFile } from '../../utils/download';
 
 
 interface SQLPreviewModalProps {
@@ -22,12 +24,13 @@ export const SQLPreviewModal: React.FC<SQLPreviewModalProps> = ({
   onClose,
   schema,
 }) => {
+  const { lang, t } = useLanguage();
   const [dialect, setDialect] = useState<SQLDialect>('oracle');
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
 
-  const sqlCode = relationalToSQL(schema, dialect);
+  const sqlCode = relationalToSQL(schema, dialect, lang);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(sqlCode);
@@ -36,15 +39,7 @@ export const SQLPreviewModal: React.FC<SQLPreviewModalProps> = ({
   };
 
   const handleDownload = () => {
-    const blob = new Blob([sqlCode], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `esquema_${dialect}.sql`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadTextFile(sqlCode, `esquema_${dialect}.sql`, 'text/plain;charset=utf-8');
   };
 
   return (
@@ -58,26 +53,26 @@ export const SQLPreviewModal: React.FC<SQLPreviewModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                <span>Exportar Script SQL DDL</span>
+                <span>{t('sqlPreview.title')}</span>
                 <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">
                   {dialect.toUpperCase()}
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Generación automática de sentencias DDL limpias y comentadas
+                {t('sqlPreview.subtitle')}
               </p>
             </div>
           </div>
 
           {/* Selector de Dialecto SGBD */}
           <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-400 font-medium">SGBD:</label>
+            <label className="text-xs text-slate-400 font-medium">{t('sqlPreview.dialectLabel')}</label>
             <select
               value={dialect}
               onChange={e => setDialect(e.target.value as SQLDialect)}
               className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             >
-              <option value="oracle">Oracle SQL (Universitario)</option>
+              <option value="oracle">{t('sqlPreview.dialect.oracle')}</option>
               <option value="postgres">PostgreSQL</option>
               <option value="mysql">MySQL</option>
               <option value="sqlite">SQLite</option>
@@ -102,7 +97,7 @@ export const SQLPreviewModal: React.FC<SQLPreviewModalProps> = ({
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/50 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <FileCode className="w-4 h-4 text-emerald-400" />
-            <span>{schema.tables.length} Tablas Relacionales Exportadas</span>
+            <span>{t('sqlPreview.tablesExported', { count: schema.tables.length })}</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -111,7 +106,7 @@ export const SQLPreviewModal: React.FC<SQLPreviewModalProps> = ({
               className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? '¡Copiado!' : 'Copiar SQL'}</span>
+              <span>{copied ? t('sqlPreview.copied') : t('sqlPreview.copy')}</span>
             </button>
 
             <button
@@ -119,7 +114,7 @@ export const SQLPreviewModal: React.FC<SQLPreviewModalProps> = ({
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-950/30 transition"
             >
               <Download className="w-4 h-4" />
-              <span>Descargar .sql</span>
+              <span>{t('sqlPreview.download')}</span>
             </button>
           </div>
         </div>

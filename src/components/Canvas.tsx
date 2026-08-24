@@ -2,6 +2,7 @@ import type { NodeData, LinkData } from '../types';
 import { NodeRenderer } from './NodeRenderer';
 import { LinkRenderer } from './LinkRenderer';
 import { Plus, Minus, RotateCcw, Maximize2 } from 'lucide-react';
+import { useLanguage } from '../i18n/language';
 
 interface CanvasProps {
   svgRef: React.RefObject<SVGSVGElement | null>;
@@ -117,6 +118,7 @@ interface ZoomControlsProps {
 }
 
 function ZoomControls({ scale, onZoomIn, onZoomOut, onResetZoom, onFitToContent }: ZoomControlsProps) {
+  const { t } = useLanguage();
   // Los handlers se pasan a través del padre para mantener control centralizado
   return (
     <>
@@ -124,7 +126,7 @@ function ZoomControls({ scale, onZoomIn, onZoomOut, onResetZoom, onFitToContent 
         type="button"
         className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
         onClick={onZoomOut}
-        title="Alejar"
+        title={t('canvas.zoomOut')}
       >
         <Minus className="h-3 w-3" />
       </button>
@@ -135,7 +137,7 @@ function ZoomControls({ scale, onZoomIn, onZoomOut, onResetZoom, onFitToContent 
         type="button"
         className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
         onClick={onZoomIn}
-        title="Acercar"
+        title={t('canvas.zoomIn')}
       >
         <Plus className="h-3 w-3" />
       </button>
@@ -143,7 +145,7 @@ function ZoomControls({ scale, onZoomIn, onZoomOut, onResetZoom, onFitToContent 
         type="button"
         className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
         onClick={onResetZoom}
-        title="Reiniciar zoom"
+        title={t('canvas.resetZoom')}
       >
         <RotateCcw className="h-3 w-3" />
       </button>
@@ -151,7 +153,7 @@ function ZoomControls({ scale, onZoomIn, onZoomOut, onResetZoom, onFitToContent 
         type="button"
         className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
         onClick={onFitToContent}
-        title="Ajustar al contenido"
+        title={t('canvas.fitContent')}
       >
         <Maximize2 className="h-3 w-3" />
       </button>

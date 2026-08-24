@@ -7,7 +7,9 @@
 
 import React from 'react';
 import { X, BookOpen, CheckCircle, Info, HelpCircle } from 'lucide-react';
-import type { StepTrace, RelationalTable } from '../../types/relational';
+import type { RelationalTable } from '../../types/relational';
+import { useLanguage } from '../../i18n/language';
+import { translateStep, translateFormalStep, type FormalStepNumber } from '../../i18n/steps';
 
 interface StepInspectorModalProps {
   isOpen: boolean;
@@ -15,62 +17,19 @@ interface StepInspectorModalProps {
   selectedTable?: RelationalTable | null;
 }
 
-const FORMAL_STEPS = [
-  {
-    step: 1,
-    title: 'Paso 1: Entidades Fuertes',
-    desc: 'Por cada tipo de entidad fuerte E, se crea una relación (tabla) R. Los atributos simples se incluyen directamente como columnas. La clave primaria de E se convierte en la PK de R.',
-  },
-  {
-    step: 2,
-    title: 'Paso 2: Entidades Débiles',
-    desc: 'Se crea una tabla para la entidad débil W. Se propaga la PK de la entidad propietaria como FK y se combina con la clave parcial de W para formar su PK compuesta (con ON DELETE CASCADE).',
-  },
-  {
-    step: 3,
-    title: 'Paso 3: Relaciones Binarias 1:1',
-    desc: 'Se elige la relación con participación total e incluye como FK la clave primaria de la otra tabla, marcándola con restricción UNIQUE.',
-  },
-  {
-    step: 4,
-    title: 'Paso 4: Relaciones Binarias 1:N',
-    desc: 'Se propaga la clave primaria de la tabla del lado 1 como clave ajena (FK) en la tabla del lado N. Los atributos de la relación migran al lado N.',
-  },
-  {
-    step: 5,
-    title: 'Paso 5: Relaciones Binarias M:N',
-    desc: 'Se crea una tabla puente de correspondencia. Su PK es la combinación de las FKs que referencian a las dos entidades participantes.',
-  },
-  {
-    step: 6,
-    title: 'Paso 6: Atributos Multivalorados',
-    desc: 'Para cada atributo multivalor se crea una tabla independiente con la PK del propietario y el valor del atributo (evitando violar la 1FN).',
-  },
-  {
-    step: 7,
-    title: 'Paso 7: Relaciones n-arias (n > 2)',
-    desc: 'Se crea una tabla de relación n-vías que incluye las PKs de todas las entidades participantes como claves ajenas.',
-  },
-  {
-    step: 8,
-    title: 'Paso 8: Especialización y Generalización',
-    desc: 'Se aplican las opciones de herencia: 8A (varias tablas con FK a la superclase), 8B (tablas solo por subclase), 8C (tabla única con discriminador) u 8D (banderas booleanas).',
-  },
-  {
-    step: 9,
-    title: 'Paso 9: Categorías (Tipos de Unión)',
-    desc: 'Se crea una tabla de categoría con clave sustituta artificial (Caso 9.1) o PK unificada compartida (Caso 9.2).',
-  },
-];
+const FORMAL_STEP_NUMBERS: FormalStepNumber[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 export const StepInspectorModal: React.FC<StepInspectorModalProps> = ({
   isOpen,
   onClose,
   selectedTable,
 }) => {
+  const { lang, t } = useLanguage();
+
   if (!isOpen) return null;
 
-  const currentTrace: StepTrace | undefined = selectedTable?.stepTrace;
+  const currentTrace = selectedTable?.stepTrace;
+  const currentTranslated = currentTrace ? translateStep(lang, currentTrace.stepKey, currentTrace.params) : undefined;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -83,10 +42,10 @@ export const StepInspectorModal: React.FC<StepInspectorModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-100">
-                Guía Docente: Algoritmo de Mapeo EER ➔ Relacional
+                {t('stepInspector.title')}
               </h2>
               <p className="text-xs text-slate-400">
-                Explicación didáctica de los 9 pasos formales para estudiantes universitarios
+                {t('stepInspector.subtitle')}
               </p>
             </div>
           </div>
@@ -100,17 +59,17 @@ export const StepInspectorModal: React.FC<StepInspectorModalProps> = ({
 
         {/* Contenido */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {selectedTable && currentTrace && (
+          {selectedTable && currentTrace && currentTranslated && (
             <div className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-950/20 space-y-2">
               <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm">
                 <CheckCircle className="w-4 h-4" />
-                <span>Inspección Activa: Tabla '{selectedTable.name}'</span>
+                <span>{t('stepInspector.activeInspection', { name: selectedTable.name })}</span>
               </div>
               <p className="text-sm font-medium text-slate-200">
-                {currentTrace.stepTitle}
+                {currentTranslated.title}
               </p>
               <p className="text-xs text-slate-300 leading-relaxed">
-                {currentTrace.description}
+                {currentTranslated.description}
               </p>
             </div>
           )}
@@ -118,15 +77,16 @@ export const StepInspectorModal: React.FC<StepInspectorModalProps> = ({
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
               <Info className="w-4 h-4 text-indigo-400" />
-              Resumen Teórico de los 9 Pasos del Algoritmo
+              {t('stepInspector.summaryTitle')}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {FORMAL_STEPS.map(item => {
-                const isCurrent = currentTrace?.stepNumber === item.step;
+              {FORMAL_STEP_NUMBERS.map(step => {
+                const isCurrent = currentTrace?.stepNumber === step;
+                const item = translateFormalStep(lang, step);
                 return (
                   <div
-                    key={item.step}
+                    key={step}
                     className={`p-3 rounded-lg border text-xs transition ${
                       isCurrent
                         ? 'border-indigo-500 bg-indigo-500/10 text-slate-100 ring-1 ring-indigo-500'
@@ -136,10 +96,10 @@ export const StepInspectorModal: React.FC<StepInspectorModalProps> = ({
                     <div className="font-bold text-slate-200 mb-1 flex items-center justify-between">
                       <span>{item.title}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-                        Paso {item.step}
+                        {t('common.step', { n: step })}
                       </span>
                     </div>
-                    <p className="leading-relaxed text-slate-300">{item.desc}</p>
+                    <p className="leading-relaxed text-slate-300">{item.description}</p>
                   </div>
                 );
               })}
@@ -151,13 +111,13 @@ export const StepInspectorModal: React.FC<StepInspectorModalProps> = ({
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/50 flex items-center justify-between text-xs text-slate-400">
           <span className="flex items-center gap-1.5">
             <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
-            Basado en la especificación formal <code>eer-to-relational-mapping.md</code>
+            {t('stepInspector.footerNote')} <code>eer-to-relational-mapping.md</code>
           </span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition"
           >
-            Entendido
+            {t('common.understood')}
           </button>
         </div>
       </div>

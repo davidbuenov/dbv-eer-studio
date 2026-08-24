@@ -48,8 +48,8 @@ export function parseRelationalDSL(code: string): RelationalSchema {
         lineIndex: lineIndex + 1,
         stepTrace: {
           stepNumber: 1,
-          stepTitle: 'Tabla Relacional DSL',
-          description: `Tabla '${tableName}' definida mediante DSL de texto relacional.`,
+          stepKey: 'DSL_TABLE',
+          params: { tableName },
         },
       };
       currentColumns = [];

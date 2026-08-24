@@ -5,6 +5,8 @@
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 
+import type { StepKey } from '../i18n/steps';
+
 /**
  * Acciones en cascada para la integridad referencial de Claves Foráneas
  */
@@ -13,14 +15,19 @@ export type CascadeOption = 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION';
 /**
  * Trazabilidad pedagógica de la conversión para alumnos universitarios.
  * Informa sobre cuál de los 9 pasos formales generó cada elemento.
+ *
+ * Se almacena como datos estructurados (clave + parámetros), no como texto
+ * pre-formateado: la traducción e interpolación (ver `src/i18n/steps.ts`) se
+ * resuelven en el punto de renderizado, nunca dentro del motor de conversión
+ * (ver ADR "StepTrace pasa a datos estructurados" en dbv-specs-ops/memory.md).
  */
 export interface StepTrace {
   /** Número del paso formal (1 a 9) */
   stepNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-  /** Título del paso (ej. "Paso 1: Entidades Fuertes") */
-  stepTitle: string;
-  /** Explicación didáctica detallada del motivo de la regla */
-  description: string;
+  /** Clave de la plantilla pedagógica (título + descripción) en `src/i18n/steps.ts` */
+  stepKey: StepKey;
+  /** Valores reales (nombres de tabla/entidad) a interpolar en la plantilla */
+  params?: Record<string, string>;
   /** ID del nodo EER origen */
   sourceEERNodeId?: string;
   /** Nombre/Etiqueta del nodo EER origen */

@@ -85,6 +85,19 @@ function getNodeAttributes(nodeId: string, nodes: NodeData[], links: LinkData[])
 }
 
 /**
+ * Atributos de un nodo que se materializan como columnas.
+ *
+ * Excluye los derivados (se recalculan, no se almacenan) y los multivaluados (violarían
+ * la 1FN; el Paso 6 les crea su propia tabla). La regla vive aquí, en el mecanismo, para
+ * que valga igual colgando de una entidad (Pasos 1 y 2) que de una relación (Pasos 4, 5 y 7).
+ */
+function getMappableAttributes(nodeId: string, nodes: NodeData[], links: LinkData[]): NodeData[] {
+  return getNodeAttributes(nodeId, nodes, links).filter(
+    attr => attr.type !== 'derived_attribute' && attr.type !== 'multivalued_attribute'
+  );
+}
+
+/**
  * Convierte atributos compuestos a sus componentes simples hoja
  */
 function expandSimpleAttributes(attrNode: NodeData, nodes: NodeData[], links: LinkData[]): NodeData[] {
@@ -181,6 +194,31 @@ export function eerToRelational(
 
   const tables: RelationalTable[] = [];
 
+  /**
+   * Añade una columna solo si la tabla no tiene ya otra con el mismo nombre.
+   * Varios pasos pueden alcanzar la misma tabla (una subclase accesible desde dos nodos
+   * `spec`, una superclase en dos uniones...); la idempotencia vive aquí, en el mecanismo,
+   * en vez de repetirse como guard ad-hoc en cada paso.
+   */
+  function addColumn(table: RelationalTable, column: RelationalColumn, position: 'start' | 'end' = 'end') {
+    if (table.columns.some((c: RelationalColumn) => c.name === column.name)) return;
+    if (position === 'start') {
+      table.columns.unshift(column);
+    } else {
+      table.columns.push(column);
+    }
+  }
+
+  /**
+   * Añade una restricción de clave ajena solo si no existe ya otra con el mismo
+   * `constraintName`. Sin esto, dos pasos que alcancen la misma tabla emiten dos
+   * `CONSTRAINT` homónimos y el DDL generado no compila en Oracle.
+   */
+  function addForeignKey(table: RelationalTable, fk: ForeignKeyConstraint) {
+    if (table.foreignKeys.some((f: ForeignKeyConstraint) => f.constraintName === fk.constraintName)) return;
+    table.foreignKeys.push(fk);
+  }
+
   // =========================================================================
   // PASO 1: Mapeado de los Tipos de Entidad Regulares (Fuertes)
   // =========================================================================
@@ -188,21 +226,18 @@ export function eerToRelational(
 
   strongEntities.forEach(entity => {
     const tableName = sanitizeName(entity.label);
-    const attrNodes = getNodeAttributes(entity.id, nodes, links);
+    const attrNodes = getMappableAttributes(entity.id, nodes, links);
 
     const columns: RelationalColumn[] = [];
     const stepTrace: StepTrace = {
       stepNumber: 1,
-      stepTitle: 'Paso 1: Mapeado de Entidades Fuertes',
-      description: `Se crea la tabla '${tableName}' para la entidad fuerte '${entity.label}'. Se mapean los atributos simples y componentes simples de compuestos.`,
+      stepKey: 'STEP1_STRONG_ENTITY',
+      params: { tableName, entityLabel: entity.label },
       sourceEERNodeId: entity.id,
       sourceEERNodeLabel: entity.label,
     };
 
     attrNodes.forEach(attr => {
-      if (attr.type === 'derived_attribute') return;
-      if (attr.type === 'multivalued_attribute') return;
-
       const expanded = expandSimpleAttributes(attr, nodes, links);
       expanded.forEach(simpleAttr => {
         const colName = sanitizeName(simpleAttr.label);
@@ -218,10 +253,8 @@ export function eerToRelational(
           isUnique: isKey,
           stepTrace: {
             stepNumber: 1,
-            stepTitle: 'Paso 1: Atributo de Entidad Fuerte',
-            description: isKey
-              ? `Clave Primaria (PK) derivada del atributo clave '${simpleAttr.label}'.`
-              : `Columna derivada del atributo '${simpleAttr.label}'.`,
+            stepKey: isKey ? 'STEP1_ATTR_PK' : 'STEP1_ATTR_COLUMN',
+            params: { attrLabel: simpleAttr.label },
             sourceEERNodeId: simpleAttr.id,
             sourceEERNodeLabel: simpleAttr.label,
           },
@@ -241,8 +274,8 @@ export function eerToRelational(
         isUnique: true,
         stepTrace: {
           stepNumber: 1,
-          stepTitle: 'Paso 1: Clave Primaria por Defecto',
-          description: `Se genera la columna PK '${defaultKeyName}' al no detectarse atributo clave explícito en la entidad.`,
+          stepKey: 'STEP1_DEFAULT_PK',
+          params: { defaultKeyName },
         },
       });
     }
@@ -265,20 +298,35 @@ export function eerToRelational(
   // =========================================================================
   const weakEntities = nodes.filter(n => n.type === 'weak_entity');
 
+  // Registro de nodos de relación ya reclamados por un paso anterior. El bucle genérico
+  // de relaciones (Pasos 3/4/5/7) debe saltárselos: si volviera a procesar una relación
+  // identificativa como binaria normal, propagaría por segunda vez la misma FK, duplicando
+  // columna y restricción en la tabla de la entidad débil.
+  // Se reclama por semántica (es una relación identificativa de una entidad débil), no por
+  // que su procesamiento haya tenido éxito: si el propietario no se resuelve, la relación
+  // sigue siendo del Paso 2 y no debe caer al bucle genérico.
+  const consumedRelationshipIds = new Set<string>();
+
   weakEntities.forEach(weakEntity => {
     const tableName = sanitizeName(weakEntity.label);
     const stepTrace: StepTrace = {
       stepNumber: 2,
-      stepTitle: 'Paso 2: Mapeado de Entidades Débiles',
-      description: `Se crea la tabla '${tableName}' para la entidad débil '${weakEntity.label}'. Incluye la PK de la entidad propietaria como FK y forma su PK compuesta con su clave parcial.`,
+      stepKey: 'STEP2_WEAK_ENTITY',
+      params: { tableName, weakEntityLabel: weakEntity.label },
       sourceEERNodeId: weakEntity.id,
       sourceEERNodeLabel: weakEntity.label,
     };
 
     const connectedRelIds = getNeighborNodeIds(weakEntity.id, links);
-    const identifyingRel = nodes.find(
+    // `filter`, no `find`: una entidad débil puede tener más de una relación identificativa
+    // conectada. Todas pertenecen al Paso 2 y todas deben reclamarse, o las no reclamadas
+    // reaparecerían en el bucle genérico propagando FKs duplicadas.
+    const identifyingRels = nodes.filter(
       n => connectedRelIds.includes(n.id) && n.type === 'identifying_relationship'
     );
+    identifyingRels.forEach(rel => consumedRelationshipIds.add(rel.id));
+
+    const identifyingRel = identifyingRels[0];
 
     let ownerEntity: NodeData | undefined;
     if (identifyingRel) {
@@ -312,8 +360,8 @@ export function eerToRelational(
             isUnique: false,
             stepTrace: {
               stepNumber: 2,
-              stepTitle: 'Paso 2: FK Propagada del Propietario',
-              description: `Clave ajena propagada desde la entidad propietaria '${ownerTable.name}'.`,
+              stepKey: 'STEP2_FK_OWNER',
+              params: { ownerTableName: ownerTable.name },
             },
           });
         });
@@ -328,18 +376,14 @@ export function eerToRelational(
           onUpdate: 'CASCADE',
           stepTrace: {
             stepNumber: 2,
-            stepTitle: 'Paso 2: Restricción FK con CASCADE',
-            description: `Integridad referencial ON DELETE CASCADE obligatoria al depender la entidad débil de la propietaria.`,
+            stepKey: 'STEP2_FK_CASCADE',
           },
         });
       }
     }
 
-    const attrNodes = getNodeAttributes(weakEntity.id, nodes, links);
+    const attrNodes = getMappableAttributes(weakEntity.id, nodes, links);
     attrNodes.forEach(attr => {
-      if (attr.type === 'derived_attribute') return;
-      if (attr.type === 'multivalued_attribute') return;
-
       const expanded = expandSimpleAttributes(attr, nodes, links);
       expanded.forEach(simpleAttr => {
         const colName = sanitizeName(simpleAttr.label);
@@ -355,10 +399,8 @@ export function eerToRelational(
           isUnique: false,
           stepTrace: {
             stepNumber: 2,
-            stepTitle: 'Paso 2: Clave Parcial / Atributo',
-            description: isPartialKey
-              ? `Clave parcial (discriminador) de la entidad débil '${weakEntity.label}'.`
-              : `Atributo de la entidad débil '${weakEntity.label}'.`,
+            stepKey: isPartialKey ? 'STEP2_PARTIAL_KEY' : 'STEP2_ATTRIBUTE',
+            params: { weakEntityLabel: weakEntity.label },
           },
         });
       });
@@ -377,8 +419,106 @@ export function eerToRelational(
     });
   });
 
+  // =========================================================================
+  // PASO 8: Mapeado de Especialización o Generalización
+  // =========================================================================
+  // Se procesa antes de los Pasos 3/4/5/6/7 para establecer la PK definitiva de las subclases
+  // (retirando cualquier PK sintética) antes de que las relaciones propaguen claves ajenas.
+  const specializations = nodes.filter(n => n.type === 'specialization');
+
+  let passChanged = true;
+  let passCount = 0;
+  while (passChanged && passCount < Math.max(1, specializations.length)) {
+    passChanged = false;
+    passCount++;
+
+    specializations.forEach(spec => {
+      const connectedLinks = links.filter(l => l.source === spec.id || l.target === spec.id);
+
+      const superLink = connectedLinks.find(l => l.target === spec.id);
+      const subLinks = connectedLinks.filter(l => l.source === spec.id);
+
+      const superNodeId = superLink ? superLink.source : getNeighborNodeIds(spec.id, links)[0];
+      const subNodeIds = subLinks.length > 0
+        ? subLinks.map(l => l.target)
+        : getNeighborNodeIds(spec.id, links).filter(id => id !== superNodeId);
+
+      const superNode = nodes.find(n => n.id === superNodeId);
+      const superTable = superNode ? tables.find(t => t.id === superNode.id || t.name === sanitizeName(superNode.label)) : undefined;
+
+      if (superTable && subNodeIds.length > 0) {
+        const selectedOption = config.inheritanceOptions[spec.id] ?? '8A';
+
+        subNodeIds.forEach(subId => {
+          const subNode = nodes.find(n => n.id === subId);
+          const subTable = subNode ? tables.find(t => t.id === subNode.id || t.name === sanitizeName(subNode.label)) : undefined;
+
+          if (subTable && subTable.id !== superTable.id) {
+            if (selectedOption === '8A') {
+              const superPKs = superTable.columns.filter((c: RelationalColumn) => c.isPrimaryKey);
+              if (superPKs.length > 0) {
+                const hadDefaultPK = subTable.columns.some((c: RelationalColumn) => c.stepTrace?.stepKey === 'STEP1_DEFAULT_PK');
+                if (hadDefaultPK) {
+                  subTable.columns = subTable.columns.filter((c: RelationalColumn) => c.stepTrace?.stepKey !== 'STEP1_DEFAULT_PK');
+                  passChanged = true;
+                }
+
+                const fkCols: string[] = [];
+
+                superPKs.forEach((pk: RelationalColumn) => {
+                  const colName = pk.name;
+                  fkCols.push(colName);
+
+                  const lenBefore = subTable.columns.length;
+                  addColumn(subTable, {
+                    id: `${subTable.name}_${colName}`,
+                    name: colName,
+                    dataType: pk.dataType,
+                    isPrimaryKey: true,
+                    isForeignKey: true,
+                    isNullable: false,
+                    isUnique: true,
+                    stepTrace: {
+                      stepNumber: 8,
+                      stepKey: 'STEP8A_PK_FK_INHERITED',
+                      params: { superTableName: superTable.name },
+                    },
+                  }, 'start');
+
+                  if (subTable.columns.length > lenBefore) {
+                    passChanged = true;
+                  }
+                });
+
+                addForeignKey(subTable, {
+                  id: `FK_${subTable.name}_${superTable.name}`,
+                  constraintName: `FK_${subTable.name}_${superTable.name}`,
+                  sourceColumnNames: fkCols,
+                  targetTableName: superTable.name,
+                  targetColumnNames: superPKs.map((c: RelationalColumn) => c.name),
+                  onDelete: 'CASCADE',
+                  onUpdate: 'CASCADE',
+                  stepTrace: {
+                    stepNumber: 8,
+                    stepKey: 'STEP8A_FK_LINK',
+                    params: { subTableName: subTable.name, superTableName: superTable.name },
+                  },
+                });
+              }
+            }
+          }
+        });
+      }
+    });
+  }
+
+  // =========================================================================
+  // PASOS 3, 4, 5 y 7: Relaciones
+  // =========================================================================
   const relationships = nodes.filter(
-    n => n.type === 'relationship' || n.type === 'identifying_relationship'
+    n =>
+      (n.type === 'relationship' || n.type === 'identifying_relationship') &&
+      !consumedRelationshipIds.has(n.id)
   );
 
   relationships.forEach(rel => {
@@ -432,8 +572,8 @@ export function eerToRelational(
               isUnique: true,
               stepTrace: {
                 stepNumber: 3,
-                stepTitle: 'Paso 3: FK en Relación Binaria 1:1',
-                description: `Clave ajena propagada para modelar la relación 1:1 '${rel.label}'. Contiene restricción UNIQUE.`,
+                stepKey: 'STEP3_FK_ONE_TO_ONE',
+                params: { relLabel: rel.label },
               },
             });
           });
@@ -448,8 +588,8 @@ export function eerToRelational(
             onUpdate: 'CASCADE',
             stepTrace: {
               stepNumber: 3,
-              stepTitle: 'Paso 3: Restricción FK 1:1',
-              description: `Restricción referencial 1:1 entre '${targetTable.name}' y '${sourceTable.name}'.`,
+              stepKey: 'STEP3_FK_CONSTRAINT',
+              params: { targetTableName: targetTable.name, sourceTableName: sourceTable.name },
             },
           });
         }
@@ -475,13 +615,13 @@ export function eerToRelational(
               isUnique: false,
               stepTrace: {
                 stepNumber: 4,
-                stepTitle: 'Paso 4: FK en Relación Binaria 1:N',
-                description: `Propagación de la clave primaria de la tabla del lado 1 '${tableOne.name}' como FK en la tabla del lado N '${tableMany.name}'.`,
+                stepKey: 'STEP4_FK_ONE_TO_MANY',
+                params: { tableOneName: tableOne.name, tableManyName: tableMany.name },
               },
             });
           });
 
-          const relAttrs = getNodeAttributes(rel.id, nodes, links);
+          const relAttrs = getMappableAttributes(rel.id, nodes, links);
           relAttrs.forEach(attr => {
             const expanded = expandSimpleAttributes(attr, nodes, links);
             expanded.forEach(simpleAttr => {
@@ -495,8 +635,8 @@ export function eerToRelational(
                 isUnique: false,
                 stepTrace: {
                   stepNumber: 4,
-                  stepTitle: 'Paso 4: Atributo de Relación 1:N',
-                  description: `Atributo de la relación 1:N migrado a la tabla del lado N '${tableMany.name}'.`,
+                  stepKey: 'STEP4_ATTR',
+                  params: { tableManyName: tableMany.name },
                 },
               });
             });
@@ -512,8 +652,8 @@ export function eerToRelational(
             onUpdate: 'CASCADE',
             stepTrace: {
               stepNumber: 4,
-              stepTitle: 'Paso 4: Restricción FK 1:N',
-              description: `Restricción de clave ajena referenciando al lado 1 '${tableOne.name}'.`,
+              stepKey: 'STEP4_FK_CONSTRAINT',
+              params: { tableOneName: tableOne.name },
             },
           });
         }
@@ -538,8 +678,8 @@ export function eerToRelational(
               isUnique: false,
               stepTrace: {
                 stepNumber: 5,
-                stepTitle: 'Paso 5: Componente PK/FK M:N (Entidad A)',
-                description: `Clave ajena participante de '${tableA.name}' formando la PK compuesta de la tabla puente M:N.`,
+                stepKey: 'STEP5_PK_FK',
+                params: { tableName: tableA.name, side: 'A' },
               },
             });
           });
@@ -554,8 +694,8 @@ export function eerToRelational(
             onUpdate: 'CASCADE',
             stepTrace: {
               stepNumber: 5,
-              stepTitle: 'Paso 5: Restricción FK M:N',
-              description: `Integridad referencial a '${tableA.name}' con CASCADE.`,
+              stepKey: 'STEP5_FK_CONSTRAINT',
+              params: { tableName: tableA.name },
             },
           });
 
@@ -574,8 +714,8 @@ export function eerToRelational(
               isUnique: false,
               stepTrace: {
                 stepNumber: 5,
-                stepTitle: 'Paso 5: Componente PK/FK M:N (Entidad B)',
-                description: `Clave ajena participante de '${tableB.name}' formando la PK compuesta de la tabla puente M:N.`,
+                stepKey: 'STEP5_PK_FK',
+                params: { tableName: tableB.name, side: 'B' },
               },
             });
           });
@@ -590,12 +730,12 @@ export function eerToRelational(
             onUpdate: 'CASCADE',
             stepTrace: {
               stepNumber: 5,
-              stepTitle: 'Paso 5: Restricción FK M:N',
-              description: `Integridad referencial a '${tableB.name}' con CASCADE.`,
+              stepKey: 'STEP5_FK_CONSTRAINT',
+              params: { tableName: tableB.name },
             },
           });
 
-          const relAttrs = getNodeAttributes(rel.id, nodes, links);
+          const relAttrs = getMappableAttributes(rel.id, nodes, links);
           relAttrs.forEach(attr => {
             const expanded = expandSimpleAttributes(attr, nodes, links);
             expanded.forEach(simpleAttr => {
@@ -609,8 +749,7 @@ export function eerToRelational(
                 isUnique: false,
                 stepTrace: {
                   stepNumber: 5,
-                  stepTitle: 'Paso 5: Atributo Propio M:N',
-                  description: `Atributo de la relación muchos-a-muchos incorporado como columna en la tabla puente.`,
+                  stepKey: 'STEP5_ATTR',
                 },
               });
             });
@@ -625,8 +764,8 @@ export function eerToRelational(
             y: rel.y || 60,
             stepTrace: {
               stepNumber: 5,
-              stepTitle: 'Paso 5: Mapeado de Relaciones M:N Binarias',
-              description: `Se crea la tabla puente '${bridgeTableName}' para representar la relación muchos-a-muchos. Su PK es la unión de las FKs de ambas entidades.`,
+              stepKey: 'STEP5_BRIDGE_TABLE',
+              params: { bridgeTableName },
               sourceEERNodeId: rel.id,
               sourceEERNodeLabel: rel.label,
             },
@@ -676,12 +815,8 @@ export function eerToRelational(
               isUnique: false,
               stepTrace: {
                 stepNumber: 7,
-                stepTitle: hasCardinalityOne
-                  ? 'Paso 7 (N-aria): FK excluida de la PK por cardinalidad 1'
-                  : 'Paso 7 (N-aria): Componente de la PK Compuesta',
-                description: hasCardinalityOne
-                  ? `Clave ajena de '${table.name}' excluida de la PK por su restricción de cardinalidad 1 en la relación n-aria '${rel.label}'.`
-                  : `Clave ajena de '${table.name}' participante de la PK compuesta de la relación n-aria '${rel.label}'.`,
+                stepKey: hasCardinalityOne ? 'STEP7_PK_EXCLUDED' : 'STEP7_PK_COMPONENT',
+                params: { tableName: table.name, relLabel: rel.label },
               },
             });
           });
@@ -696,13 +831,13 @@ export function eerToRelational(
             onUpdate: 'CASCADE',
             stepTrace: {
               stepNumber: 7,
-              stepTitle: 'Paso 7: Restricción FK N-aria',
-              description: `Integridad referencial a '${table.name}' con CASCADE.`,
+              stepKey: 'STEP7_FK_CONSTRAINT',
+              params: { tableName: table.name },
             },
           });
         });
 
-        const relAttrs = getNodeAttributes(rel.id, nodes, links);
+        const relAttrs = getMappableAttributes(rel.id, nodes, links);
         relAttrs.forEach(attr => {
           const expanded = expandSimpleAttributes(attr, nodes, links);
           expanded.forEach(simpleAttr => {
@@ -716,8 +851,7 @@ export function eerToRelational(
               isUnique: false,
               stepTrace: {
                 stepNumber: 7,
-                stepTitle: 'Paso 7: Atributo Propio de la Relación N-aria',
-                description: `Atributo de la relación n-aria incorporado como columna en la tabla de relación.`,
+                stepKey: 'STEP7_ATTR',
               },
             });
           });
@@ -732,8 +866,8 @@ export function eerToRelational(
           y: rel.y || 60,
           stepTrace: {
             stepNumber: 7,
-            stepTitle: 'Paso 7: Mapeado de Relaciones N-arias (n > 2)',
-            description: `Se crea la tabla de relación '${bridgeTableName}' para representar la relación n-aria entre ${participants.length} entidades. Su PK es la combinación de las FKs de las entidades sin restricción de cardinalidad 1.`,
+            stepKey: 'STEP7_BRIDGE_TABLE',
+            params: { bridgeTableName, count: String(participants.length) },
             sourceEERNodeId: rel.id,
             sourceEERNodeLabel: rel.label,
           },
@@ -775,8 +909,7 @@ export function eerToRelational(
           isUnique: false,
           stepTrace: {
             stepNumber: 6,
-            stepTitle: 'Paso 6: FK Propietario de Atributo Multivalorado',
-            description: `Clave ajena de la entidad propietaria formando parte de la PK de la tabla del atributo multivalor.`,
+            stepKey: 'STEP6_FK_OWNER',
           },
         });
       });
@@ -792,8 +925,7 @@ export function eerToRelational(
         isUnique: false,
         stepTrace: {
           stepNumber: 6,
-          stepTitle: 'Paso 6: Valor del Atributo Multivalorado',
-          description: `Columna que almacena cada uno de los múltiples valores asociados a la entidad.`,
+          stepKey: 'STEP6_VALUE',
         },
       });
 
@@ -807,8 +939,7 @@ export function eerToRelational(
         onUpdate: 'CASCADE',
         stepTrace: {
           stepNumber: 6,
-          stepTitle: 'Paso 6: Restricción FK con CASCADE',
-          description: `ON DELETE CASCADE para eliminar los valores multivalorados al borrar la entidad propietaria.`,
+          stepKey: 'STEP6_FK_CASCADE',
         },
       });
 
@@ -821,8 +952,8 @@ export function eerToRelational(
         y: attr.y || 60,
         stepTrace: {
           stepNumber: 6,
-          stepTitle: 'Paso 6: Mapeado de Atributos Multivalorados',
-          description: `Se crea la tabla independiente '${tableName}' para evitar violar la Primera Forma Normal (1FN).`,
+          stepKey: 'STEP6_TABLE',
+          params: { tableName },
           sourceEERNodeId: attr.id,
           sourceEERNodeLabel: attr.label,
         },
@@ -832,79 +963,7 @@ export function eerToRelational(
     }
   });
 
-  // =========================================================================
-  // PASO 8: Mapeado de Especialización o Generalización
-  // =========================================================================
-  const specializations = nodes.filter(n => n.type === 'specialization');
 
-  specializations.forEach(spec => {
-    const connectedLinks = links.filter(l => l.source === spec.id || l.target === spec.id);
-    
-    // Identificar superclase (enlace entrante o primer nodo)
-    const superLink = connectedLinks.find(l => l.target === spec.id);
-    const subLinks = connectedLinks.filter(l => l.source === spec.id);
-
-    const superNodeId = superLink ? superLink.source : getNeighborNodeIds(spec.id, links)[0];
-    const subNodeIds = subLinks.length > 0 
-      ? subLinks.map(l => l.target) 
-      : getNeighborNodeIds(spec.id, links).filter(id => id !== superNodeId);
-
-    const superNode = nodes.find(n => n.id === superNodeId);
-    const superTable = superNode ? tables.find(t => t.id === superNode.id || t.name === sanitizeName(superNode.label)) : undefined;
-
-    if (superTable && subNodeIds.length > 0) {
-      const selectedOption = config.inheritanceOptions[spec.id] ?? '8A';
-
-      subNodeIds.forEach(subId => {
-        const subNode = nodes.find(n => n.id === subId);
-        const subTable = subNode ? tables.find(t => t.id === subNode.id || t.name === sanitizeName(subNode.label)) : undefined;
-
-        if (subTable && subTable.id !== superTable.id) {
-          if (selectedOption === '8A') {
-            const superPKs = superTable.columns.filter((c: RelationalColumn) => c.isPrimaryKey);
-            const fkCols: string[] = [];
-
-            superPKs.forEach((pk: RelationalColumn) => {
-              const colName = pk.name;
-              fkCols.push(colName);
-
-              if (!subTable.columns.some((c: RelationalColumn) => c.name === colName)) {
-                subTable.columns.unshift({
-                  id: `${subTable.name}_${colName}`,
-                  name: colName,
-                  dataType: pk.dataType,
-                  isPrimaryKey: true,
-                  isForeignKey: true,
-                  isNullable: false,
-                  isUnique: true,
-                  stepTrace: {
-                    stepNumber: 8,
-                    stepTitle: 'Paso 8 (Opción 8A): PK/FK de Superclase Heredada',
-                    description: `Clave heredada de la superclase '${superTable.name}' actuando como PK y FK en la subclase.`,
-                  },
-                });
-              }
-            });
-
-            subTable.foreignKeys.push({
-              id: `FK_${subTable.name}_${superTable.name}`,
-              constraintName: `FK_${subTable.name}_${superTable.name}`,
-              sourceColumnNames: fkCols,
-              targetTableName: superTable.name,
-              targetColumnNames: superPKs.map((c: RelationalColumn) => c.name),
-              onDelete: 'CASCADE',
-              onUpdate: 'CASCADE',
-              stepTrace: {
-                stepNumber: 8,
-                stepTitle: 'Paso 8 (Opción 8A): Enlace de Herencia FK',
-                description: `Restricción de herencia asociando la subclase '${subTable.name}' a su superclase '${superTable.name}'.`,
-              },
-            });
-          }
-        }
-      });
-    }
-  });
 
   // =========================================================================
   // PASO 9: Mapeado de Tipos de Unión (Categorías)
@@ -931,8 +990,8 @@ export function eerToRelational(
     if (categoryTable) {
       categoryTable.stepTrace = {
         stepNumber: 9,
-        stepTitle: 'Paso 9: Mapeado de Categoría (Tipo de Unión)',
-        description: `Se crea la tabla de categoría '${categoryTable.name}' con su clave sustituta artificial como PK.`,
+        stepKey: 'STEP9_CATEGORY_TABLE',
+        params: { categoryTableName: categoryTable.name },
         sourceEERNodeId: categoryNode!.id,
         sourceEERNodeLabel: categoryNode!.label,
       };
@@ -950,37 +1009,35 @@ export function eerToRelational(
           if (superTable && superTable.id !== categoryTable.id) {
             const fkColName = `${categoryTable.name}_${categoryPK.name}`;
 
-            if (!superTable.columns.some((c: RelationalColumn) => c.name === fkColName)) {
-              superTable.columns.push({
-                id: `${superTable.name}_${fkColName}`,
-                name: fkColName,
-                dataType: categoryPK.dataType,
-                isPrimaryKey: false,
-                isForeignKey: true,
-                isNullable: true,
-                isUnique: false,
-                stepTrace: {
-                  stepNumber: 9,
-                  stepTitle: 'Paso 9: FK de Categoría de Unión (Caso 9.1)',
-                  description: `Clave ajena que vincula la superclase '${superTable.name}' con la categoría sustituta '${categoryTable.name}'.`,
-                },
-              });
+            addColumn(superTable, {
+              id: `${superTable.name}_${fkColName}`,
+              name: fkColName,
+              dataType: categoryPK.dataType,
+              isPrimaryKey: false,
+              isForeignKey: true,
+              isNullable: true,
+              isUnique: false,
+              stepTrace: {
+                stepNumber: 9,
+                stepKey: 'STEP9_FK_CATEGORY',
+                params: { superTableName: superTable.name, categoryTableName: categoryTable.name },
+              },
+            });
 
-              superTable.foreignKeys.push({
-                id: `FK_${superTable.name}_${categoryTable.name}`,
-                constraintName: `FK_${superTable.name}_${categoryTable.name}`,
-                sourceColumnNames: [fkColName],
-                targetTableName: categoryTable.name,
-                targetColumnNames: [categoryPK.name],
-                onDelete: 'SET NULL',
-                onUpdate: 'CASCADE',
-                stepTrace: {
-                  stepNumber: 9,
-                  stepTitle: 'Paso 9: Restricción FK de Categoría',
-                  description: `Integridad referencial que asocia la superclase a la categoría '${categoryTable.name}'.`,
-                },
-              });
-            }
+            addForeignKey(superTable, {
+              id: `FK_${superTable.name}_${categoryTable.name}`,
+              constraintName: `FK_${superTable.name}_${categoryTable.name}`,
+              sourceColumnNames: [fkColName],
+              targetTableName: categoryTable.name,
+              targetColumnNames: [categoryPK.name],
+              onDelete: 'SET NULL',
+              onUpdate: 'CASCADE',
+              stepTrace: {
+                stepNumber: 9,
+                stepKey: 'STEP9_FK_CONSTRAINT',
+                params: { categoryTableName: categoryTable.name },
+              },
+            });
           }
         });
       }

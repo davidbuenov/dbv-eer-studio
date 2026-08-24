@@ -5,10 +5,14 @@
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Key, Link, BookOpen, Database, Plus, Minus, RotateCcw, Maximize2, LayoutGrid } from 'lucide-react';
 
 import type { RelationalSchema, RelationalTable } from '../../types/relational';
+import { useLanguage } from '../../i18n/language';
+import { translateStepTitle } from '../../i18n/steps';
+import { CARD_WIDTH, getTableHeight, computeFKEdges } from '../../utils/relational/relationalGeometry';
+import { RELATIONAL_COLORS as C } from '../../utils/relational/relationalColors';
 
 interface RelationalViewerProps {
   schema: RelationalSchema;
@@ -16,13 +20,13 @@ interface RelationalViewerProps {
   onSelectTableForInspection: (table: RelationalTable) => void;
 }
 
-type Side = 'top' | 'bottom' | 'left' | 'right';
-
 export const RelationalViewer: React.FC<RelationalViewerProps> = ({
   schema,
   onTablePositionChange,
   onSelectTableForInspection,
 }) => {
+  const { lang, t } = useLanguage();
+
   // Estado de Zoom y Panning (Arrastre del Canvas)
   const [scale, setScale] = useState<number>(0.85);
   const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 40, y: 40 });
@@ -41,12 +45,6 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
   const [liveDragPos, setLiveDragPos] = useState<{ id: string; x: number; y: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Constantes de dimensiones de tarjetas de tablas
-  const CARD_WIDTH = 288; // 18rem (w-72)
-  const HEADER_HEIGHT = 41;
-  const ROW_HEIGHT = 33;
-  const FOOTER_HEIGHT = 26;
 
   // Manejadores de Zoom
   const handleZoomIn = useCallback(() => {
@@ -67,7 +65,7 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
     const minX = Math.min(...schema.tables.map(t => t.x));
     const maxX = Math.max(...schema.tables.map(t => t.x + CARD_WIDTH));
     const minY = Math.min(...schema.tables.map(t => t.y));
-    const maxY = Math.max(...schema.tables.map(t => t.y + HEADER_HEIGHT + t.columns.length * ROW_HEIGHT + FOOTER_HEIGHT));
+    const maxY = Math.max(...schema.tables.map(t => t.y + getTableHeight(t)));
 
     const contentWidth = maxX - minX + 160;
     const contentHeight = maxY - minY + 160;
@@ -103,7 +101,7 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
       const newY = MARGIN_Y + row * (180 + GAP_Y);
       onTablePositionChange(table.id, newX, newY);
     });
-  }, [schema.tables, onTablePositionChange, CARD_WIDTH]);
+  }, [schema.tables, onTablePositionChange]);
 
   /**
    * Posición efectiva de una tabla: la de arrastre en vivo si es la que se está
@@ -169,105 +167,28 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
     setIsPanning(false);
   };
 
-  /**
-   * Calcula la altura total estimada de una tarjeta de tabla
-   */
-  const getTableHeight = (table: RelationalTable): number => {
-    return HEADER_HEIGHT + table.columns.length * ROW_HEIGHT + FOOTER_HEIGHT;
-  };
-
-  /**
-   * Calcula las coordenadas exactas de un puerto de anclaje (3 puertos por lado: 25%, 50%, 75%)
-   */
-  const getAnchorPortPosition = (
-    table: RelationalTable,
-    side: Side,
-    slotIndex: number = 1
-  ): { x: number; y: number; normalX: number; normalY: number } => {
-    const height = getTableHeight(table);
-    const slots = [0.25, 0.5, 0.75];
-    const ratio = slots[slotIndex % 3] ?? 0.5;
-
-    switch (side) {
-      case 'top':
-        return {
-          x: table.x + CARD_WIDTH * ratio,
-          y: table.y,
-          normalX: 0,
-          normalY: -1,
-        };
-      case 'bottom':
-        return {
-          x: table.x + CARD_WIDTH * ratio,
-          y: table.y + height,
-          normalX: 0,
-          normalY: 1,
-        };
-      case 'left':
-        return {
-          x: table.x,
-          y: table.y + height * ratio,
-          normalX: -1,
-          normalY: 0,
-        };
-      case 'right':
-      default:
-        return {
-          x: table.x + CARD_WIDTH,
-          y: table.y + height * ratio,
-          normalX: 1,
-          normalY: 0,
-        };
-    }
-  };
-
-  /**
-   * Determina los lados de conexión óptimos (Top, Bottom, Left, Right) entre dos tablas
-   */
-  const getOptimalSides = (
-    sourceTable: RelationalTable,
-    targetTable: RelationalTable
-  ): { sourceSide: Side; targetSide: Side } => {
-    const sourceHeight = getTableHeight(sourceTable);
-    const targetHeight = getTableHeight(targetTable);
-
-    const sourceCenterX = sourceTable.x + CARD_WIDTH / 2;
-    const sourceCenterY = sourceTable.y + sourceHeight / 2;
-
-    const targetCenterX = targetTable.x + CARD_WIDTH / 2;
-    const targetCenterY = targetTable.y + targetHeight / 2;
-
-    const dx = targetCenterX - sourceCenterX;
-    const dy = targetCenterY - sourceCenterY;
-
-    if (Math.abs(dy) > Math.abs(dx) * 1.1) {
-      if (dy > 0) {
-        return { sourceSide: 'bottom', targetSide: 'top' };
-      } else {
-        return { sourceSide: 'top', targetSide: 'bottom' };
-      }
-    } else {
-      if (dx > 0) {
-        return { sourceSide: 'right', targetSide: 'left' };
-      } else {
-        return { sourceSide: 'left', targetSide: 'right' };
-      }
-    }
-  };
-
   // Tamaño total del canvas SVG interno
   const maxX = Math.max(3000, ...schema.tables.map(t => t.x + 800));
   const maxY = Math.max(2400, ...schema.tables.map(t => t.y + 800));
 
-  // Contador global de puertos utilizados
-  const sidePortUsage: Record<string, number> = {};
+  // Trazado de las flechas FK: misma función que usa el exportador a SVG.
+  const fkEdges = computeFKEdges(schema, getEffectivePos);
 
-  const getNextPortIndex = (tableId: string, side: Side): number => {
-    const key = `${tableId}_${side}`;
-    const count = sidePortUsage[key] ?? 0;
-    sidePortUsage[key] = count + 1;
-    return count;
-  };
+  // El pie de cada tarjeta se traduce fuera del render de la tarjeta: este componente se
+  // re-renderiza en cada `mousemove` del arrastre, y `schema.tables` no cambia durante él.
+  const stepLabels = useMemo(
+    () =>
+      new Map(
+        schema.tables.map(table => [
+          table.id,
+          {
+            title: translateStepTitle(lang, table.stepTrace.stepKey, table.stepTrace.params),
+            step: t('common.step', { n: table.stepTrace.stepNumber }),
+          },
+        ])
+      ),
+    [lang, schema.tables, t]
+  );
 
   return (
     <div
@@ -289,9 +210,9 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
       {schema.tables.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-3">
           <Database className="w-12 h-12 stroke-[1.5]" />
-          <p className="text-sm font-medium">No hay tablas relacionales generadas aún.</p>
+          <p className="text-sm font-medium">{t('relationalViewer.empty.title')}</p>
           <p className="text-xs text-slate-600">
-            Diseña un diagrama en la pestaña EER para convertirlo automáticamente.
+            {t('relationalViewer.empty.subtitle')}
           </p>
         </div>
       ) : (
@@ -323,7 +244,7 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#38bdf8" />
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill={C.arrowRegular} />
                 </marker>
 
                 <marker
@@ -335,115 +256,75 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#818cf8" />
+                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill={C.arrowIdentifying} />
                 </marker>
               </defs>
 
-              {schema.tables.flatMap(sourceTableRaw => {
-                const sourceTable = { ...sourceTableRaw, ...getEffectivePos(sourceTableRaw) };
-                return sourceTableRaw.foreignKeys.map(fk => {
-                  const targetTableRaw = schema.tables.find(
-                    t => t.name.toUpperCase() === fk.targetTableName.toUpperCase()
-                  );
+              {fkEdges.map(edge => {
+                const lineColor = edge.isIdentifying ? C.arrowIdentifying : C.arrowRegular;
+                const markerId = edge.isIdentifying ? 'url(#fk-arrow-solid)' : 'url(#fk-arrow-dashed)';
+                const dashArray = edge.isIdentifying ? undefined : '6,4';
+                const rectX = -edge.textWidth / 2;
 
-                  if (!targetTableRaw) return null;
-                  const targetTable = { ...targetTableRaw, ...getEffectivePos(targetTableRaw) };
+                const isConnectedToHover =
+                  hoveredTableId === edge.sourceTableId || hoveredTableId === edge.targetTableId;
+                const isHoverActive = hoveredTableId !== null;
+                const strokeOpacity = isHoverActive ? (isConnectedToHover ? 1 : 0.15) : 0.85;
+                const strokeWidth = isConnectedToHover ? 3.5 : 2;
 
-                  const fkColName = fk.sourceColumnNames[0] || 'FK';
-                  const fkColumnObj = sourceTable.columns.find(
-                    c => c.name.toUpperCase() === fkColName.toUpperCase()
-                  );
+                return (
+                  <g key={edge.key} className="transition-opacity duration-200" style={{ opacity: strokeOpacity }}>
+                    <path
+                      d={edge.pathData}
+                      fill="none"
+                      stroke={C.arrowHalo}
+                      strokeWidth={strokeWidth + 2}
+                      strokeOpacity="0.25"
+                    />
+                    <path
+                      d={edge.pathData}
+                      fill="none"
+                      stroke={lineColor}
+                      strokeWidth={strokeWidth}
+                      strokeDasharray={dashArray}
+                      markerEnd={markerId}
+                    />
+                    <circle cx={edge.sourceAnchor.x} cy={edge.sourceAnchor.y} r={isConnectedToHover ? 4.5 : 3} fill={lineColor} />
+                    <circle cx={edge.targetAnchor.x} cy={edge.targetAnchor.y} r={isConnectedToHover ? 4.5 : 3} fill={lineColor} />
 
-                  const { sourceSide, targetSide } = getOptimalSides(sourceTable, targetTable);
-                  const sourceSlot = getNextPortIndex(sourceTable.id, sourceSide);
-                  const targetSlot = getNextPortIndex(targetTable.id, targetSide);
-
-                  const sourceAnchor = getAnchorPortPosition(sourceTable, sourceSide, sourceSlot);
-                  const targetAnchor = getAnchorPortPosition(targetTable, targetSide, targetSlot);
-
-                  const isIdentifying = fkColumnObj ? fkColumnObj.isPrimaryKey : false;
-                  const lineColor = isIdentifying ? '#818cf8' : '#38bdf8';
-                  const markerId = isIdentifying ? 'url(#fk-arrow-solid)' : 'url(#fk-arrow-dashed)';
-                  const dashArray = isIdentifying ? undefined : '6,4';
-
-                  const dist = Math.hypot(
-                    targetAnchor.x - sourceAnchor.x,
-                    targetAnchor.y - sourceAnchor.y
-                  );
-                  const curvature = Math.min(160, Math.max(50, dist * 0.4));
-
-                  const ctrlX1 = sourceAnchor.x + sourceAnchor.normalX * curvature;
-                  const ctrlY1 = sourceAnchor.y + sourceAnchor.normalY * curvature;
-                  const ctrlX2 = targetAnchor.x + targetAnchor.normalX * curvature;
-                  const ctrlY2 = targetAnchor.y + targetAnchor.normalY * curvature;
-
-                  const pathData = `M ${sourceAnchor.x} ${sourceAnchor.y} C ${ctrlX1} ${ctrlY1}, ${ctrlX2} ${ctrlY2}, ${targetAnchor.x} ${targetAnchor.y}`;
-                  const midX = (sourceAnchor.x + targetAnchor.x) / 2;
-                  const midY = (sourceAnchor.y + targetAnchor.y) / 2;
-                  const labelText = `${fkColName} ➔ ${targetTable.name}`;
-                  const textWidth = Math.max(80, Math.round(labelText.length * 6.5 + 20));
-                  const rectX = -textWidth / 2;
-
-
-
-
-                  const isConnectedToHover =
-                    hoveredTableId === sourceTable.id || hoveredTableId === targetTable.id;
-                  const isHoverActive = hoveredTableId !== null;
-                  const strokeOpacity = isHoverActive ? (isConnectedToHover ? 1 : 0.15) : 0.85;
-                  const strokeWidth = isConnectedToHover ? 3.5 : 2;
-
-                  return (
-                    <g key={`${sourceTable.id}_${fk.id}`} className="transition-opacity duration-200" style={{ opacity: strokeOpacity }}>
-                      <path
-                        d={pathData}
-                        fill="none"
-                        stroke="#0284c7"
-                        strokeWidth={strokeWidth + 2}
-                        strokeOpacity="0.25"
-                      />
-                      <path
-                        d={pathData}
-                        fill="none"
+                    <g transform={`translate(${edge.midX}, ${edge.midY})`}>
+                      <rect
+                        x={rectX}
+                        y="-12"
+                        width={edge.textWidth}
+                        height="24"
+                        rx="12"
+                        fill={C.labelBg}
                         stroke={lineColor}
-                        strokeWidth={strokeWidth}
-                        strokeDasharray={dashArray}
-                        markerEnd={markerId}
+                        strokeWidth={isConnectedToHover ? 2 : 1.5}
                       />
-                      <circle cx={sourceAnchor.x} cy={sourceAnchor.y} r={isConnectedToHover ? 4.5 : 3} fill={lineColor} />
-                      <circle cx={targetAnchor.x} cy={targetAnchor.y} r={isConnectedToHover ? 4.5 : 3} fill={lineColor} />
-
-                      <g transform={`translate(${midX}, ${midY})`}>
-                        <rect
-                          x={rectX}
-                          y="-12"
-                          width={textWidth}
-                          height="24"
-                          rx="12"
-                          fill="#090d16"
-                          stroke={lineColor}
-                          strokeWidth={isConnectedToHover ? 2 : 1.5}
-                        />
-                        <text
-                          x="0"
-                          y="4"
-                          textAnchor="middle"
-                          fill={lineColor}
-                          fontSize="9.5"
-                          fontWeight="bold"
-                          fontFamily="monospace"
-                        >
-                          {labelText}
-                        </text>
-                      </g>
+                      <text
+                        x="0"
+                        y="4"
+                        textAnchor="middle"
+                        fill={lineColor}
+                        fontSize="9.5"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                      >
+                        {edge.labelText}
+                      </text>
                     </g>
-                  );
-                });
+                  </g>
+                );
               })}
             </svg>
 
             {/* Tarjetas Visuales de las Tablas */}
-            {schema.tables.map(table => (
+            {schema.tables.map(table => {
+              const pos = getEffectivePos(table);
+              const stepLabel = stepLabels.get(table.id);
+              return (
               <div
                 key={table.id}
                 onMouseDown={e => handleTableMouseDown(table, e)}
@@ -459,8 +340,8 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
                     : 'border-slate-800 hover:border-slate-700 cursor-grab z-10'
                 }`}
                 style={{
-                  left: `${getEffectivePos(table).x}px`,
-                  top: `${getEffectivePos(table).y}px`,
+                  left: `${pos.x}px`,
+                  top: `${pos.y}px`,
                 }}
               >
 
@@ -477,7 +358,7 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
                       e.stopPropagation();
                       onSelectTableForInspection(table);
                     }}
-                    title="Ver explicación del paso formal"
+                    title={t('relationalViewer.viewStepTooltip')}
                     className="p-1 rounded text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/50 transition"
                   >
                     <BookOpen className="w-3.5 h-3.5" />
@@ -493,12 +374,12 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
                     >
                       <div className="flex items-center gap-2">
                         {col.isPrimaryKey && (
-                          <span title="Primary Key (PK - Subrayado)">
+                          <span title={t('relationalViewer.pkTooltip')}>
                             <Key className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                           </span>
                         )}
                         {col.isForeignKey && !col.isPrimaryKey && (
-                          <span title="Foreign Key (FK - Referencia)">
+                          <span title={t('relationalViewer.fkTooltip')}>
                             <Link className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                           </span>
                         )}
@@ -523,11 +404,12 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
 
                 {/* Pie con indicador de Regla del Algoritmo */}
                 <div className="px-3 py-1.5 bg-slate-950/70 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-500 font-medium">
-                  <span>{table.stepTrace.stepTitle}</span>
-                  <span className="font-mono text-indigo-400">Paso {table.stepTrace.stepNumber}</span>
+                  <span>{stepLabel?.title}</span>
+                  <span className="font-mono text-indigo-400">{stepLabel?.step}</span>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Barra Flotante de Controles de Zoom y Pan (Idéntica a la Pestaña EER) */}
@@ -539,7 +421,7 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
               type="button"
               className="inline-flex items-center justify-center p-1.5 rounded-md border border-slate-700 bg-slate-800 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition"
               onClick={handleZoomOut}
-              title="Alejar Zoom"
+              title={t('relationalViewer.zoomOut')}
             >
               <Minus className="h-3.5 w-3.5" />
             </button>
@@ -550,7 +432,7 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
               type="button"
               className="inline-flex items-center justify-center p-1.5 rounded-md border border-slate-700 bg-slate-800 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition"
               onClick={handleZoomIn}
-              title="Acercar Zoom"
+              title={t('relationalViewer.zoomIn')}
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
@@ -558,7 +440,7 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
               type="button"
               className="inline-flex items-center justify-center p-1.5 rounded-md border border-slate-700 bg-slate-800 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition"
               onClick={handleResetZoom}
-              title="Reiniciar Zoom (100%)"
+              title={t('relationalViewer.resetZoom')}
             >
               <RotateCcw className="h-3.5 w-3.5" />
             </button>
@@ -566,7 +448,7 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
               type="button"
               className="inline-flex items-center justify-center p-1.5 rounded-md border border-slate-700 bg-slate-800 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition"
               onClick={handleFitToContent}
-              title="Ajustar al contenido"
+              title={t('relationalViewer.fitContent')}
             >
               <Maximize2 className="h-3.5 w-3.5" />
             </button>
@@ -574,7 +456,7 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
               type="button"
               className="inline-flex items-center justify-center p-1.5 rounded-md border border-slate-700 bg-slate-800 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition"
               onClick={handleAutoLayout}
-              title="Reorganizar tablas en cuadrícula"
+              title={t('relationalViewer.autoLayout')}
             >
               <LayoutGrid className="h-3.5 w-3.5" />
             </button>

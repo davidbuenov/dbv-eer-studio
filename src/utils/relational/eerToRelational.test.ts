@@ -85,6 +85,143 @@ describe('eerToRelational — Paso 2: Entidades Débiles', () => {
     expect(linea.foreignKeys[0]!.targetTableName).toBe('PEDIDO');
     expect(linea.foreignKeys[0]!.onDelete).toBe('CASCADE');
   });
+
+  it('no crea una tabla puente espuria para la relación identificativa (ya consumida por el Paso 2)', () => {
+    const nodes: NodeData[] = [
+      node({ id: 'e1', type: 'entity', label: 'Pedido' }),
+      node({ id: 'a1', type: 'key_attribute', label: 'id_pedido' }),
+      node({ id: 'we1', type: 'weak_entity', label: 'Linea_Pedido' }),
+      node({ id: 'a2', type: 'key_attribute', label: 'numero_linea' }),
+      node({ id: 'r1', type: 'identifying_relationship', label: 'contiene' }),
+    ];
+    const links: LinkData[] = [
+      { source: 'e1', target: 'a1' },
+      { source: 'we1', target: 'a2' },
+      { source: 'we1', target: 'r1' },
+      { source: 'r1', target: 'e1' },
+    ];
+
+    const schema = eerToRelational(nodes, links);
+
+    // Solo PEDIDO y LINEA_PEDIDO: la relación identificativa no genera tabla propia.
+    expect(schema.tables.map(t => t.name).sort()).toEqual(['LINEA_PEDIDO', 'PEDIDO']);
+  });
+
+  it('no duplica la FK del propietario cuando la relación identificativa lleva cardinalidad 1:N', () => {
+    // Reproduce el caso real del ejemplo por defecto (EMPLEADO / TIENE_DEP / DEPENDIENTE):
+    // con cardinalidades declaradas, el bucle genérico de relaciones reprocesaba la
+    // relación identificativa como un 1:N normal (Paso 4) y propagaba la FK por segunda vez.
+    const nodes: NodeData[] = [
+      node({ id: 'e1', type: 'entity', label: 'Empleado' }),
+      node({ id: 'a1', type: 'key_attribute', label: 'dni' }),
+      node({ id: 'we1', type: 'weak_entity', label: 'Dependiente' }),
+      node({ id: 'a2', type: 'key_attribute', label: 'nombre_dep' }),
+      node({ id: 'r1', type: 'identifying_relationship', label: 'tiene_dep' }),
+    ];
+    const links: LinkData[] = [
+      { source: 'e1', target: 'a1' },
+      { source: 'we1', target: 'a2' },
+      { source: 'e1', target: 'r1', label: '1' },
+      { source: 'we1', target: 'r1', label: 'N', style: 'double' },
+    ];
+
+    const schema = eerToRelational(nodes, links);
+
+    const dependiente = findTable(schema, 'DEPENDIENTE');
+    const fkCols = dependiente.columns.filter(c => c.name === 'EMPLEADO_DNI');
+
+    expect(fkCols).toHaveLength(1);
+    expect(dependiente.foreignKeys).toHaveLength(1);
+    // Los ids deben ser únicos (se usan como `key` de React en RelationalViewer).
+    const colIds = dependiente.columns.map(c => c.id);
+    expect(new Set(colIds).size).toBe(colIds.length);
+  });
+
+  it('entidad débil sin atributos propios: la PK queda formada solo por la FK del propietario', () => {
+    // Caso degenerado admitido por el editor: sin clave parcial, la regla formal del Paso 2
+    // no puede completarse (PK = FK propietario + clave parcial), así que la PK resultante
+    // es únicamente la FK del propietario. Se documenta el comportamiento real del motor.
+    const nodes: NodeData[] = [
+      node({ id: 'e1', type: 'entity', label: 'Empleado' }),
+      node({ id: 'a1', type: 'key_attribute', label: 'dni' }),
+      node({ id: 'we1', type: 'weak_entity', label: 'Dependiente' }),
+      node({ id: 'r1', type: 'identifying_relationship', label: 'tiene_dep' }),
+    ];
+    const links: LinkData[] = [
+      { source: 'e1', target: 'a1' },
+      { source: 'e1', target: 'r1', label: '1' },
+      { source: 'we1', target: 'r1', label: 'N', style: 'double' },
+    ];
+
+    const schema = eerToRelational(nodes, links);
+
+    const dependiente = findTable(schema, 'DEPENDIENTE');
+    expect(dependiente.columns).toHaveLength(1);
+    expect(dependiente.columns[0]!.name).toBe('EMPLEADO_DNI');
+    expect(dependiente.columns[0]!.isPrimaryKey).toBe(true);
+    expect(dependiente.columns[0]!.isForeignKey).toBe(true);
+    expect(dependiente.foreignKeys).toHaveLength(1);
+  });
+});
+
+describe('eerToRelational — Idempotencia y filtrado de atributos', () => {
+  it('no emite dos restricciones FK con el mismo nombre si dos nodos spec alcanzan la misma subclase', () => {
+    // Dos especializaciones sobre la misma superclase que comparten subclase: sin el
+    // `addForeignKey` idempotente se emitían dos CONSTRAINT homónimos y el DDL de Oracle
+    // no compilaba.
+    const nodes: NodeData[] = [
+      node({ id: 'e1', type: 'entity', label: 'Empleado' }),
+      node({ id: 'k1', type: 'key_attribute', label: 'dni' }),
+      node({ id: 'e2', type: 'entity', label: 'Ingeniero' }),
+      node({ id: 's1', type: 'specialization', label: 'd' }),
+      node({ id: 's2', type: 'specialization', label: 'd2' }),
+    ];
+    const links: LinkData[] = [
+      { source: 'e1', target: 'k1' },
+      { source: 'e1', target: 's1' },
+      { source: 's1', target: 'e2' },
+      { source: 'e1', target: 's2' },
+      { source: 's2', target: 'e2' },
+    ];
+
+    const schema = eerToRelational(nodes, links);
+
+    const ingeniero = findTable(schema, 'INGENIERO');
+    const names = ingeniero.foreignKeys.map(fk => fk.constraintName);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('ignora atributos derivados y multivaluados también cuando cuelgan de una relación', () => {
+    // Los Pasos 1 y 2 ya los descartaban; los Pasos 4/5/7 no, así que un atributo
+    // derivado sobre una relación se materializaba como columna real.
+    const nodes: NodeData[] = [
+      node({ id: 'e1', type: 'entity', label: 'Alumno' }),
+      node({ id: 'k1', type: 'key_attribute', label: 'expediente' }),
+      node({ id: 'e2', type: 'entity', label: 'Curso' }),
+      node({ id: 'k2', type: 'key_attribute', label: 'codigo' }),
+      node({ id: 'r1', type: 'relationship', label: 'matricula' }),
+      node({ id: 'a1', type: 'attribute', label: 'nota' }),
+      node({ id: 'a2', type: 'derived_attribute', label: 'apto' }),
+      node({ id: 'a3', type: 'multivalued_attribute', label: 'tutoria' }),
+    ];
+    const links: LinkData[] = [
+      { source: 'e1', target: 'k1' },
+      { source: 'e2', target: 'k2' },
+      { source: 'e1', target: 'r1', label: 'N' },
+      { source: 'e2', target: 'r1', label: 'M' },
+      { source: 'r1', target: 'a1' },
+      { source: 'r1', target: 'a2' },
+      { source: 'r1', target: 'a3' },
+    ];
+
+    const schema = eerToRelational(nodes, links);
+
+    const matricula = findTable(schema, 'MATRICULA');
+    const colNames = matricula.columns.map(c => c.name);
+    expect(colNames).toContain('NOTA');
+    expect(colNames).not.toContain('APTO');
+    expect(colNames).not.toContain('TUTORIA');
+  });
 });
 
 describe('eerToRelational — Relaciones Binarias (Pasos 3, 4 y 5)', () => {
@@ -266,6 +403,38 @@ describe('eerToRelational — Paso 8: Especialización/Generalización (Opción 
     expect(inheritedPk?.isPrimaryKey).toBe(true);
     expect(inheritedPk?.isForeignKey).toBe(true);
     expect(coche.foreignKeys[0]!.targetTableName).toBe('VEHICULO');
+  });
+
+  it('retira la PK sintética de la subclase al heredar la PK de la superclase y propaga la PK heredada a relaciones', () => {
+    const nodes: NodeData[] = [
+      node({ id: 'e1', type: 'entity', label: 'Empleado' }),
+      node({ id: 'k1', type: 'key_attribute', label: 'dni' }),
+      node({ id: 'e2', type: 'entity', label: 'Ingeniero' }),
+      node({ id: 's1', type: 'specialization', label: 'd' }),
+      node({ id: 'e3', type: 'entity', label: 'Proyecto' }),
+      node({ id: 'k3', type: 'key_attribute', label: 'id_proyecto' }),
+      node({ id: 'r1', type: 'relationship', label: 'supervisa' }),
+    ];
+    const links: LinkData[] = [
+      { source: 'e1', target: 'k1' },
+      { source: 'e1', target: 's1' },
+      { source: 's1', target: 'e2' },
+      { source: 'e3', target: 'k3' },
+      { source: 'e2', target: 'r1', label: '1' },
+      { source: 'r1', target: 'e3', label: 'N' },
+    ];
+
+    const schema = eerToRelational(nodes, links);
+
+    const ingeniero = findTable(schema, 'INGENIERO');
+    const pkNames = ingeniero.columns.filter(c => c.isPrimaryKey).map(c => c.name);
+    expect(pkNames).toEqual(['DNI']);
+    expect(ingeniero.columns.find(c => c.name === 'ID_INGENIERO')).toBeUndefined();
+
+    const proyecto = findTable(schema, 'PROYECTO');
+    const fkCol = proyecto.columns.find(c => c.name === 'INGENIERO_DNI');
+    expect(fkCol?.isForeignKey).toBe(true);
+    expect(proyecto.foreignKeys[0]!.targetColumnNames).toEqual(['DNI']);
   });
 });
 

@@ -18,7 +18,7 @@ function buildSchema(): RelationalSchema {
         name: 'CLIENTE',
         x: 0,
         y: 0,
-        stepTrace: { stepNumber: 1, stepTitle: 'Paso 1', description: 'Entidad fuerte' },
+        stepTrace: { stepNumber: 1, stepKey: 'STEP1_STRONG_ENTITY', params: { tableName: 'CLIENTE', entityLabel: 'CLIENTE' } },
         columns: [
           { id: 'c1', name: 'ID_CLIENTE', dataType: 'NUMBER(10)', isPrimaryKey: true, isForeignKey: false, isNullable: false, isUnique: true },
           { id: 'c2', name: 'NOMBRE', dataType: 'VARCHAR2(100)', isPrimaryKey: false, isForeignKey: false, isNullable: true, isUnique: false },
@@ -31,7 +31,7 @@ function buildSchema(): RelationalSchema {
         name: 'PEDIDO',
         x: 0,
         y: 0,
-        stepTrace: { stepNumber: 4, stepTitle: 'Paso 4', description: 'Relación 1:N' },
+        stepTrace: { stepNumber: 4, stepKey: 'STEP4_FK_ONE_TO_MANY', params: { tableOneName: 'CLIENTE', tableManyName: 'PEDIDO' } },
         columns: [
           { id: 'p1', name: 'ID_PEDIDO', dataType: 'NUMBER(10)', isPrimaryKey: true, isForeignKey: false, isNullable: false, isUnique: true },
           { id: 'p2', name: 'CLIENTE_ID_CLIENTE', dataType: 'NUMBER(10)', isPrimaryKey: false, isForeignKey: true, isNullable: false, isUnique: false },

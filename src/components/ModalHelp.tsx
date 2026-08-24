@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { X, Layers, Database, BookOpen } from 'lucide-react';
-
+import { useLanguage } from '../i18n/language';
 
 interface ModalHelpProps {
   isOpen: boolean;
@@ -18,6 +18,7 @@ interface ModalHelpProps {
  * Modal de ayuda mostrando la guía de sintaxis DSL tanto para EER como para el Modelo Relacional
  */
 export function ModalHelp({ isOpen, onClose }: ModalHelpProps) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'eer' | 'relational'>('eer');
 
   if (!isOpen) return null;
@@ -32,8 +33,8 @@ export function ModalHelp({ isOpen, onClose }: ModalHelpProps) {
               <BookOpen className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-800">Guía de Sintaxis DSL</h2>
-              <p className="text-xs text-slate-500">Referencia rápida de código para diagramas EER y esquemas relacionales</p>
+              <h2 className="text-lg font-bold text-slate-800">{t('modalHelp.title')}</h2>
+              <p className="text-xs text-slate-500">{t('modalHelp.subtitle')}</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-slate-100 transition">
@@ -52,7 +53,7 @@ export function ModalHelp({ isOpen, onClose }: ModalHelpProps) {
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Sintaxis Diagrama EER</span>
+            <span>{t('modalHelp.tabEER')}</span>
           </button>
 
           <button
@@ -64,7 +65,7 @@ export function ModalHelp({ isOpen, onClose }: ModalHelpProps) {
             }`}
           >
             <Database className="w-4 h-4" />
-            <span>Sintaxis Modelo Relacional</span>
+            <span>{t('modalHelp.tabRelational')}</span>
           </button>
         </div>
 
@@ -73,77 +74,77 @@ export function ModalHelp({ isOpen, onClose }: ModalHelpProps) {
           {activeTab === 'eer' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-600">
               <div>
-                <h3 className="mb-2.5 font-bold text-indigo-600 flex items-center gap-2">Entidades y Relaciones</h3>
+                <h3 className="mb-2.5 font-bold text-indigo-600 flex items-center gap-2">{t('modalHelp.eer.entitiesTitle')}</h3>
                 <ul className="space-y-3">
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">entity EMPLEADO (100, 150)</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Entidad fuerte con coordenadas opcionales (x, y).</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.entity.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">weak_entity DEPENDIENTE</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Entidad débil que depende de una propietaria.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.weakEntity.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">relationship TRABAJA_EN</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Relación binaria regular.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.relationship.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">identifying_relationship ES_DE</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Relación identificativa para entidad débil.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.identRel.desc')}</span>
                   </li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="mb-2.5 font-bold text-indigo-600">Atributos</h3>
+                <h3 className="mb-2.5 font-bold text-indigo-600">{t('modalHelp.eer.attributesTitle')}</h3>
                 <ul className="space-y-3">
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">att Nombre -&gt; EMPLEADO</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Atributo simple regular.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.attrSimple.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">att DNI [key] -&gt; EMPLEADO</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Atributo clave primaria (subrayado).</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.attrKey.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">att Edad [derived] -&gt; EMPLEADO</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Atributo derivado (línea discontinua).</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.attrDerived.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">att Telefono [multivalued] -&gt; EMPLEADO</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Atributo multivalorado (elipse doble).</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.attrMultivalued.desc')}</span>
                   </li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="mb-2.5 font-bold text-indigo-600">Conexiones y Cardinalidad</h3>
+                <h3 className="mb-2.5 font-bold text-indigo-600">{t('modalHelp.eer.connectionsTitle')}</h3>
                 <ul className="space-y-3">
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">link EMPLEADO TRABAJA_EN "N"</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Conexión con cardinalidad "1", "N" o "M".</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.link.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">link DEPARTAMENTO TRABAJA_EN "1" [total]</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Participación total (línea doble).</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.linkTotal.desc')}</span>
                   </li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="mb-2.5 font-bold text-indigo-600">Jerarquías EER (Avanzado)</h3>
+                <h3 className="mb-2.5 font-bold text-indigo-600">{t('modalHelp.eer.hierarchyTitle')}</h3>
                 <ul className="space-y-3">
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">spec d -&gt; EMPLEADO</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Especialización disjunta (d) u solapada (o).</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.spec.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">link d INGENIERO</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Conecta una subclase al nodo de especialización.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.specLink.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">union u</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Categoría (Tipo de Unión Paso 9).</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.eer.union.desc')}</span>
                   </li>
                 </ul>
               </div>
@@ -153,61 +154,61 @@ export function ModalHelp({ isOpen, onClose }: ModalHelpProps) {
           {activeTab === 'relational' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-600">
               <div>
-                <h3 className="mb-2.5 font-bold text-indigo-600">Definición de Tablas y Posición</h3>
+                <h3 className="mb-2.5 font-bold text-indigo-600">{t('modalHelp.rel.tablesTitle')}</h3>
                 <ul className="space-y-3">
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">table EMPLEADO [x: 60, y: 60] &#123; ... &#125;</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Declara una tabla relacional con sus coordenadas 2D.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.rel.tableCoords.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">table DEPARTAMENTO &#123; ... &#125;</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Declara una tabla con posicionamiento automático.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.rel.tableAuto.desc')}</span>
                   </li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="mb-2.5 font-bold text-indigo-600">Columnas y Claves Primarias</h3>
+                <h3 className="mb-2.5 font-bold text-indigo-600">{t('modalHelp.rel.columnsTitle')}</h3>
                 <ul className="space-y-3">
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">DNI NUMBER(10) PK</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Columna Clave Primaria (PK).</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.rel.colPK.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">NOMBRE VARCHAR2(100) NOT NULL</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Atributo regular obligatorio.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.rel.colNotNull.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">FECHA_INGRESO DATE NULLable</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Atributo opcional que permite nulos.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.rel.colNullable.desc')}</span>
                   </li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="mb-2.5 font-bold text-indigo-600">Claves Ajenas (FK) e Integridad Referencial</h3>
+                <h3 className="mb-2.5 font-bold text-indigo-600">{t('modalHelp.rel.fkTitle')}</h3>
                 <ul className="space-y-3">
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">DEPT_ID NUMBER(10) FK -&gt; DEPARTAMENTO(NUMERO)</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Clave ajena regular (relación 1:N no identificativa).</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.rel.fkRegular.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">EMP_ID NUMBER(10) PK FK -&gt; EMPLEADO(ID)</code>
-                    <span className="text-xs text-slate-500 mt-0.5">FK que forma parte de PK (relación identificativa / herencia).</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.rel.fkPk.desc')}</span>
                   </li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="mb-2.5 font-bold text-indigo-600">Restricciones de Unicidad y Cascada</h3>
+                <h3 className="mb-2.5 font-bold text-indigo-600">{t('modalHelp.rel.constraintsTitle')}</h3>
                 <ul className="space-y-3">
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">GERENTE_ID NUMBER(10) FK UNIQUE</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Restricción de unicidad para relaciones 1:1.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.rel.unique.desc')}</span>
                   </li>
                   <li className="flex flex-col">
                     <code className="bg-slate-100 px-2 py-1 rounded text-indigo-950 font-mono text-xs w-fit">ON DELETE CASCADE / SET NULL</code>
-                    <span className="text-xs text-slate-500 mt-0.5">Reglas de eliminación referencial.</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t('modalHelp.rel.cascade.desc')}</span>
                   </li>
                 </ul>
               </div>
@@ -218,13 +219,13 @@ export function ModalHelp({ isOpen, onClose }: ModalHelpProps) {
         {/* Pie del Modal */}
         <div className="mt-4 border-t border-slate-200 pt-4 flex items-center justify-between flex-shrink-0">
           <span className="text-xs text-slate-400 font-mono">
-            Sintaxis activa: {activeTab === 'eer' ? 'Diagrama EER DSL' : 'Modelo Relacional DSL'}
+            {t('modalHelp.footer.activeSyntax', { syntax: activeTab === 'eer' ? t('modalHelp.footer.eerDsl') : t('modalHelp.footer.relDsl') })}
           </span>
           <button
             onClick={onClose}
             className="rounded-lg bg-indigo-600 px-6 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition"
           >
-            Entendido
+            {t('common.understood')}
           </button>
         </div>
       </div>

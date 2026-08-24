@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useLanguage } from '../i18n/language';
 
 interface ModalAIPromptProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface ModalAIPromptProps {
  * Proporciona un prompt estructurado que se puede usar con ChatGPT, Claude, Gemini, etc.
  */
 export function ModalAIPrompt({ isOpen, onClose }: ModalAIPromptProps) {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   const promptText = `Actúa como un experto en diseño de bases de datos y generador de código para la herramienta "EER Studio". Tu tarea es analizar una descripción en lenguaje natural de un problema de requisitos de datos y convertirla en el código DSL (Domain Specific Language) específico que utiliza EER Studio para generar diagramas.
@@ -83,39 +86,40 @@ Genera el código EER Studio para el siguiente problema. Identifica correctament
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 flex-shrink-0">
-          <h2 className="text-lg font-bold text-slate-800">🤖 Prompt para tu IA</h2>
+          <h2 className="text-lg font-bold text-slate-800">{t('modalAIPrompt.title')}</h2>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-slate-100"><X className="h-5 w-5 text-slate-500" /></button>
         </div>
         <div className="overflow-y-auto p-4 text-sm text-slate-700 space-y-4">
           <p className="text-slate-600">
-            Usa este prompt con <strong>ChatGPT, Claude, Gemini</strong> u otra IA para generar código EER automáticamente.
+            {t('modalAIPrompt.intro')}
           </p>
-          
+
           <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase">Copiar este prompt</span>
-              <button 
+              <span className="text-xs font-semibold text-slate-500 uppercase">{t('modalAIPrompt.copyLabel')}</span>
+              <button
                 onClick={() => {
                   navigator.clipboard.writeText(promptText);
                 }}
                 className="rounded-md bg-indigo-600 px-3 py-1 text-xs text-white hover:bg-indigo-700"
               >
-                Copiar
+                {t('modalAIPrompt.copyButton')}
               </button>
             </div>
             <pre className="text-xs overflow-x-auto whitespace-pre-wrap font-mono bg-white p-3 rounded border border-slate-200 max-h-96">
 {promptText}
             </pre>
+            <p className="mt-2 text-[11px] text-slate-400 italic">{t('modalAIPrompt.note')}</p>
           </div>
 
           <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
-            <h3 className="font-semibold text-indigo-900 mb-2">📋 Instrucciones:</h3>
+            <h3 className="font-semibold text-indigo-900 mb-2">{t('modalAIPrompt.instructionsTitle')}</h3>
             <ol className="text-sm space-y-1 list-decimal list-inside text-slate-700">
-              <li>Haz clic en "Copiar" para copiar el prompt</li>
-              <li>Pégalo en ChatGPT, Claude, Gemini o tu IA favorita</li>
-              <li>Reemplaza <code className="bg-white px-1 rounded text-xs">[AQUÍ PEGA TU PROBLEMA DE BASE DE DATOS]</code> con tu enunciado</li>
-              <li>Copia el código generado por la IA</li>
-              <li>Pégalo en el panel izquierdo de EER Studio</li>
+              <li>{t('modalAIPrompt.step1')}</li>
+              <li>{t('modalAIPrompt.step2')}</li>
+              <li>{t('modalAIPrompt.step3.pre')} <code className="bg-white px-1 rounded text-xs">[AQUÍ PEGA TU PROBLEMA DE BASE DE DATOS]</code> {t('modalAIPrompt.step3.post')}</li>
+              <li>{t('modalAIPrompt.step4')}</li>
+              <li>{t('modalAIPrompt.step5')}</li>
             </ol>
           </div>
         </div>
