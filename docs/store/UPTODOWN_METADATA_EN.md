@@ -1,0 +1,49 @@
+# 🟢 Uptodown — Listing Metadata (English)
+
+> **Name:** dbv-eer-studio  
+> **Category:** Development / Utilities / Education  
+> **License:** Free / Open Source (MIT)  
+> **Platform:** Windows (Native 64-bit) / Web  
+
+---
+
+## 📌 App Overview
+* **Application Name:** `dbv-eer-studio`
+* **Tagline / Summary:** Interactive EER diagram, Relational Model & Oracle SQL DDL modeling suite
+* **Author / Developer:** David Bueno Vallejo
+* **Official Website:** https://davidbuenov.github.io/dbv-eer-studio/
+* **GitHub Repository:** https://github.com/davidbuenov/dbv-eer-studio
+
+---
+
+## 📝 Short Description
+Design Extended Entity-Relationship (EER) diagrams, automatically convert them into Relational Schemas using a formal 9-step algorithm, and export Oracle SQL DDL scripts — 100% offline and private.
+
+---
+
+## 📄 Full Description
+
+**dbv-eer-studio** is a free, powerful desktop application engineered to streamline the teaching and learning of relational database design.
+
+It pairs an **Extended Entity-Relationship (EER)** visual diagram editor with a lightweight text DSL panel, allowing seamless switching between visual and textual modeling. Its built-in transformation engine automatically maps conceptual schemas into formal **Relational Models** and generates production-ready **Oracle SQL DDL** scripts.
+
+### 💡 Highlights
+
+- **Comprehensive EER Modeling**: Supports strong and weak entities, key, derived, and multivalued attributes, binary (1:1, 1:N, M:N) and identifying relationships, N-ary relationships, specialization/generalization hierarchies, and union categories.
+- **9-Step Educational Inspector**: Provides step-by-step academic explanations based on the formal algorithm by Ramez Elmasri & Shamkant B. Navathe for every generated table and foreign key.
+- **Multi-Dialect SQL Exporter**: Generates clean DDL for Oracle SQL (with `CONSTRAINT` syntax and standard university data types), PostgreSQL, MySQL, and SQLite.
+- **SVG Vector Exporter**: Export high-resolution SVG diagram files directly for presentations and academic reports.
+- **Bilingual & Privacy-Focused**: Available in English and Spanish. Operates completely offline without accounts, tracking, or external server calls.
+
+---
+
+## 🏷️ Tags
+`database-design`, `eer-diagram`, `relational-model`, `oracle-sql`, `er-modeler`, `developer-tools`, `computer-science`
+
+---
+
+## 🆕 What's New in Version v1.4.0
+- Refined Step 8A mapping engine (proper primary key inheritance without accumulating synthetic default keys).
+- Fully bilingual UI and Educational Inspector (English / Spanish).
+- Dedicated SVG vector exporter for the Relational Model tab.
+- Smoother table dragging performance in desktop native WebView2.

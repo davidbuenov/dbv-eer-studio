@@ -344,9 +344,10 @@ See [`dbv-specs-ops/CHANGELOG.md`](./dbv-specs-ops/CHANGELOG.md) for the complet
 
 ---
 
-## 📄 License
+## 📄 License & Privacy
 
-[MIT](./LICENSE) license.
+- [MIT](./LICENSE) license.
+- Privacy Policy: [PRIVACY_POLICY.md](./PRIVACY_POLICY.md).
 
 Copyright (c) 2025-2026 David Bueno Vallejo
 
