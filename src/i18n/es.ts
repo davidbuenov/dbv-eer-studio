@@ -231,6 +231,25 @@ export const es = {
   'sqlExport.table': 'Tabla:',
   'sqlExport.ruleApplied': 'Regla Aplicada:',
   'sqlExport.justification': 'Justificación:',
+
+  'compiler.valid': 'Sintaxis correcta',
+  'compiler.entitiesAndRelations': '{{entities}} entidades, {{relations}} relaciones',
+  'compiler.empty': 'Diagrama vacío',
+  'compiler.line': 'Línea {{line}}',
+  'compiler.missingEntityName': "Se esperaba el nombre de la entidad tras '{{command}}' (ej: {{command}} CLIENTE)",
+  'compiler.missingRelationshipName': "Se esperaba el nombre de la relación tras '{{command}}' (ej: {{command}} COMPRA)",
+  'compiler.missingAttributeName': "Se esperaba el nombre del atributo tras '{{command}}' (ej: {{command}} Nombre)",
+  'compiler.missingParentEntity': "Falta la entidad padre tras '->' (ej: {{command}} {{name}} -> ENTIDAD)",
+  'compiler.incompleteLink': "Falta el nodo origen o destino en el enlace (ej: link ENTIDAD RELACION)",
+  'compiler.unknownCommand': "Comando '{{command}}' no reconocido",
+  'compiler.undeclaredReference': "El nodo '{{name}}' referenciado en el enlace no está declarado",
+  'compiler.duplicateNode': "El identificador '{{name}}' ya ha sido declarado",
+
+  'errorBoundary.title': 'Se ha producido un error inesperado',
+  'errorBoundary.subtitle': 'El editor ha protegido tu código en memoria para evitar pérdida de datos.',
+  'errorBoundary.copyCode': 'Copiar código al portapapeles',
+  'errorBoundary.copied': '¡Código copiado!',
+  'errorBoundary.restore': 'Recargar aplicación',
 } as const;
 
 export type TranslationKey = keyof typeof es;

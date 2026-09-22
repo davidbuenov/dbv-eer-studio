@@ -1,11 +1,30 @@
 # Backlog - eer-studio
 
 ## Contexto del Proyecto (Context Snapshot)
-* **Objetivo**: Desarrollar la suite completa de modelado de bases de datos bajo SDD (`dbv-specs-ops`), incorporando conversión EER ➔ Relacional (9 Pasos), Editor de Modelo Relacional, Exportador SQL DDL, Ingeniería Inversa (Relacional ➔ EER) y posterior empaquetado nativo de escritorio (`dbv-tauri-starter`).
-* **Estado actual**: Fase `/spec` completada. Especificaciones (`SPECIFICATIONS.md`) y Arquitectura (`ARCHITECTURE.md`) actualizadas con el diseño formal del modelo relacional y las 9 reglas de conversión (`eer-to-relational-mapping.md`).
-* **Próximo paso**: Presentar el plan `/plan` detallado con la revisión adversaria de arquitectura (Adversarial Architect Review) y desglose de tareas en `implementation_plan.md` para aprobación del usuario antes de iniciar `/build`.
+* **Objetivo**: Implementar el Compilador / Linter EER con estrategia de resiliencia Stale-while-error, barra de diagnósticos pedagógicos en `CodePanel` y Red de Seguridad Zero-Crash (`ErrorBoundary` en React y defensas en `parser.ts` y `eerToRelational.ts`), evitando reinicios de la aplicación al editar entidades en texto.
+* **Estado actual**: Implementación y verificación completadas con éxito. Tests unitarios (31 tests) en verde, `npm run lint` y `npm run build` sin errores, y validación manual satisfactoria en navegador.
+* **Próximo paso**: Commit/push o siguiente requerimiento según indique el usuario.
 
 ## Checklist de Tareas
+
+- [x] **Fase `/spec`: Compilador / Linter EER y Tolerancia a Fallos**
+  - [x] Actualizar `SPECIFICATIONS.md` con §3.5 (Linter 2 niveles, Stale-while-error, Barra Diagnósticos, Red de Seguridad).
+  - [x] Actualizar `ARCHITECTURE.md` con §4 (Pipeline de compilador, hook `useEERParser`, componentes `ErrorBoundary` y barra diagnósticos).
+- [x] **Fase `/plan`: Planificación e Implementation Plan**
+  - [x] Ejecutar Adversarial Architect Review (debate en XML con términos formales de SPEC).
+  - [x] Crear `implementation_plan.md` con Frontmatter (dependencies, risks, rollback_strategy) y desglose de tareas.
+  - [x] Obtener aprobación explícita del usuario.
+- [x] **Fase `/build`: Implementación Incremental**
+  - [x] `src/types/compiler.ts`: Tipos `Diagnostic`, `CompileResult`, severidades y códigos de error.
+  - [x] `src/utils/compiler.ts`: Compilador léxico/sintáctico y linter semántico con mensajes pedagógicos.
+  - [x] `src/i18n/compiler.ts` y diccionarios `es.ts`/`en.ts`: Localización de diagnósticos pedagógicos.
+  - [x] `src/utils/parser.ts` & `src/utils/relational/eerToRelational.ts`: Guardas defensivas en `sanitizeName` y normalización.
+  - [x] `src/hooks/useEERParser.ts`: Estrategia Stale-while-error reteniendo último AST válido.
+  - [x] `src/components/ErrorBoundary.tsx`: Límite de errores React envolviendo la app en `App.tsx` / `main.tsx`.
+  - [x] `src/components/CodePanel.tsx`: Barra de diagnósticos inferior con estado (éxito/error/aviso) y navegación a línea.
+- [x] **Fase `/test`: Pruebas Unitarias y Validación**
+  - [x] Tests unitarios en `src/utils/compiler.test.ts` (entidades sin nombre, enlaces rotos, sintaxis correcta, tolerancia a fallos).
+  - [x] Validación manual en navegador (edición en vivo de entidades sin reiniciar la app verificada por el usuario).
 
 - [x] **Fase `/spec`: Especificación y Definición del Modelo Relacional**
   - [x] Definir alcance funcional en `SPECIFICATIONS.md` (Conversión 9 Pasos, Editor Relacional, SQL DDL, Ingeniería Inversa, Roadmap Tauri v2).
@@ -128,8 +147,8 @@
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
 > **Last update / Última actualización:** 2026-08-24
-> **Punto exacto:** Sesión de `/plan` + `/build` + `/test` + `/ship` para la versión 1.4.0: (1) Fix del Paso 8A (retirada de la PK sintética `STEP1_DEFAULT_PK` de las subclases al heredar y reordenación del pipeline para procesar el Paso 8 antes de las relaciones), (2) tests unitarios TDD en `eerToRelational.test.ts` (22 tests en verde), (3) sincronización de versiones a 1.4.0 en los 4 ficheros obligatorios (`package.json`, `tauri.conf.json`, `Cargo.toml`, `ModalCredits.tsx`), (4) revisión de la deuda técnica de builds multiplataforma y Microsoft Store, y (5) actualización de `CHANGELOG.md` y `task.md`.
-> **Estado:** `npx vitest run` (22 tests), `npx tsc -b`, `npx eslint .` y `npm run build` verificados sin errores. Versión 1.4.0 lista para commit/tag.
+> **Punto exacto:** Sesión v1.4.0 & Kit de Publicación en Marketplace: (1) Fix del Paso 8A y pipeline, (2) tests unitarios TDD (22 pasados), (3) kit de publicación para Microsoft Store y Uptodown en `docs/store/` (descripciones ES/EN, capturas 1920x1080, política de privacidad `PRIVACY_POLICY.md` e imagen de cabecera promocional en ES/EN), (4) reserva de identidad en Partner Center (`davidbuenov.dbv-eer-studio`), paquete MSIX `.msixbundle` compilado, y (5) actualización del **nuevo logo oficial** (red EER + cilindro DB relacional brillante) propagado en alta resolución (1024x1024) a todos los tamaños e iconos de la aplicación (Tauri desktop, web favicons, PWA y Microsoft Store MSIX assets).
+> **Estado:** `npx vitest run` (22 tests), `npx tsc -b`, `npx eslint .`, `npm run build` y empaquetado `.msixbundle` verificados con éxito.
 
 ### 1️⃣ PRIMERO: Bug del Paso 8A — PK sintética no retirada al heredar
 

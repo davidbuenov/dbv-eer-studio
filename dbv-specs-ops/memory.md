@@ -11,6 +11,15 @@
 - **Foco inmediato:** Revisar y realizar commit y tag `v1.4.0` ("Version v1.4.0"); reservar identidad real en Microsoft Partner Center para Microsoft Store; revisar y hacer push de los commits de documentación pendientes en repositorios secundarios.
 
 ## 🏗️ Log de Decisiones Técnicas (ADR Ligero)
+- **2026-09-22 — Compilador / Linter EER, Estrategia Stale-while-error y Red de Seguridad Zero-Crash:**
+  - *Contexto:* Los alumnos reportaron que al borrar o editar el nombre de una entidad en el editor de texto (`ent `), la aplicación se reiniciaba por completo perdiendo el trabajo no guardado.
+  - *Causa Raíz:* `parser.ts` aceptaba líneas incompletas e inyectaba `NodeData` con `label: undefined`. El hook reactivo lanzaba `eerToRelational`, donde `sanitizeName(entity.label)` intentaba ejecutar `name.trim()`, arrojando un `TypeError` no capturado. En React 18/19, al no haber `ErrorBoundary`, la excepción desmontaba todo el árbol de componentes, reiniciando la SPA a `SAMPLE_CODE`.
+  - *Decisiones de Diseño:*
+    1. **Compilador / Linter EER de dos niveles (`src/utils/compiler.ts`)**: Validación sintáctica bloqueante (`severity: 'error'`) y semántica/pedagógica (`severity: 'warning'`). Nunca emite nodos con `id` o `label` indefinidos ni propaga enlaces huérfanos.
+    2. **Estrategia Stale-while-error (`useEERParser.ts`)**: Si el código tiene errores sintácticos bloqueantes mientras el usuario escribe, el Canvas y el Modelo Relacional conservan congelado el último estado compilado válido, evitando parpadeos (*flickering*) o desaparición de nodos.
+    3. **Barra de Diagnósticos en `CodePanel.tsx`**: Indicador visual interactivo al pie del editor con número de línea, mensaje explicativo internacionalizado (ES/EN) y clic para situar el cursor en la línea con error.
+    4. **Defensas en profundidad**: `ErrorBoundary` en la raíz (`App.tsx`) para contener fallos imprevistos y proteger el código en memoria/localStorage, junto con `sanitizeName` e `inferSQLType` seguros ante valores nulos/vacíos en `eerToRelational.ts`.
+
 - **2026-08-24 — Fix del Paso 8A (PK sintética en subclases) y reordenación del pipeline de conversión EER ➔ Relacional:**
   - Se detectó que el Paso 1 asigna PK sintética `ID_<TABLA>` (`STEP1_DEFAULT_PK`) a subclases sin clave propia. Al aplicar el Paso 8A, la PK sintética no se retiraba, produciendo una PK compuesta errónea `['DNI', 'ID_INGENIERO']`.
   - Solución: se retira `STEP1_DEFAULT_PK` al heredar la PK de la superclase en el Paso 8A. Además, se reordenó el pipeline para ejecutar el Paso 8 antes del bucle de relaciones (Pasos 3/4/5/7), permitiendo que cualquier relación conectada a una subclase propague la PK heredada real (`DNI`) como clave ajena. Incluye resolución multi-pasada para soportar jerarquías de herencia multinivel (`Persona` ➔ `Empleado` ➔ `Ingeniero`).

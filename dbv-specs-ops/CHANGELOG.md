@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.1] — 2026-09-22
+
+### Added
+- **Compilador y Linter EER (`src/utils/compiler.ts`)**: Análisis y validación léxico-sintáctica en dos niveles previa al renderizado visual y relacional. Diagnósticos tipados (`Diagnostic`) con severidad `error` (sintaxis bloqueante) y `warning` (semántica/pedagógica), e internacionalización de mensajes explicativos (ES/EN).
+- **Barra de Diagnósticos en `CodePanel`**: Indicador visual al pie del editor con icono y estado en vivo (verde para sintaxis válida con conteo de entidades/relaciones; ámbar/rojo para advertencias o errores con número de línea y mensaje explicativo). Permite hacer clic en el mensaje para posicionar y seleccionar automáticamente la línea errónea en el editor de texto.
+- **Estrategia Stale-while-error (`useEERParser`)**: Tolerancia a fallos durante la edición en vivo. Si el usuario borra o modifica temporalmente una entidad dejando la sintaxis incompleta (`ent `), el Canvas EER y el Modelo Relacional conservan congelado el último estado compilado válido, evitando parpadeos visuales (*flickering*) y la desaparición de nodos.
+- **Red de Seguridad Zero-Crash (`ErrorBoundary`)**: Componente `ErrorBoundary` de React envolviendo la aplicación en `App.tsx` para atrapar excepciones imprevistas, conservar el código fuente en memoria/localStorage y ofrecer una pantalla amigable de recuperación en lugar de un reinicio de la aplicación.
+- **Suite de pruebas unitarias del compilador (`compiler.test.ts`)**: 9 tests de cobertura para validación de líneas vacías, entidades sin nombre, relaciones sin nombre, atributos sin padre, enlaces incompletos, enlaces con nodos no declarados, identificadores duplicados y sintaxis válida.
+
+### Fixed
+- **Reinicio de la aplicación al editar y dejar una entidad sin nombre**: Si en el editor de texto se borraba el nombre de una entidad (`ent `), el parser generaba un `NodeData` con `label: undefined`, lo que provocaba un fallo fatal `TypeError: Cannot read properties of undefined (reading 'trim')` en `sanitizeName` dentro de `eerToRelational.ts`. Al no existir un `ErrorBoundary`, React desmontaba todo el árbol de componentes y la aplicación se reiniciaba al estado inicial (`SAMPLE_CODE`), perdiendo los cambios del usuario. Corregido con el paso previo de compilación, guardas defensivas en `sanitizeName` e `inferSQLType`, y contención de errores.
+
 ## [1.4.0] — 2026-08-24
 
 ### Added

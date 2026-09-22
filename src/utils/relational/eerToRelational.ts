@@ -18,20 +18,28 @@ import type {
 /**
  * Normaliza nombres de tabla y columna para formato SQL
  */
-function sanitizeName(name: string): string {
-  return name
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9_]/g, '_')
-    .replace(/^([0-9])/, '_$1')
-    .toUpperCase();
+function sanitizeName(name?: string): string {
+  if (!name || typeof name !== 'string') {
+    return '_SIN_NOMBRE';
+  }
+  return (
+    name
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_]/g, '_')
+      .replace(/^([0-9])/, '_$1')
+      .toUpperCase() || '_SIN_NOMBRE'
+  );
 }
 
 /**
  * Deduce un tipo de dato SQL en función del nombre del atributo
  */
-function inferSQLType(attrName: string, isKey: boolean = false): string {
+function inferSQLType(attrName?: string, isKey: boolean = false): string {
+  if (!attrName || typeof attrName !== 'string') {
+    return 'VARCHAR2(100)';
+  }
   const lower = attrName.toLowerCase();
   if (isKey || lower.includes('id') || lower.includes('codigo') || lower.includes('num')) {
     return 'NUMBER(10)';

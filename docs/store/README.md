@@ -33,4 +33,9 @@ Ubicados en [`docs/store/screenshots/`](file:///d:/Programacion/github-davidbuen
 - `screenshot_04_step_inspector_en.png`: 9-Step Educational Inspector dialog.
 
 ### Banner Promocional / Featured Artwork (1360x768 16:9):
-- `featured_banner_1360x768.jpg`: Banner promocional de alta calidad para la cabecera de la ficha en Microsoft Store y Uptodown.
+- `featured_banner_1360x768_es.png`: Banner promocional en **Español** para Microsoft Store.
+- `featured_banner_1360x768_en.png`: Banner promocional en **Inglés** para Microsoft Store.
+
+### Banner Promocional Uptodown (1024x500 PNG):
+- `uptodown_featured_1024x500_es.png`: Featured Image en **Español** (1024x500 PNG) para la cabecera de la ficha en Uptodown.
+- `uptodown_featured_1024x500_en.png`: Featured Image en **Inglés** (1024x500 PNG) para la cabecera de la ficha en Uptodown.

@@ -233,4 +233,23 @@ export const en: Record<TranslationKey, string> = {
   'sqlExport.table': 'Table:',
   'sqlExport.ruleApplied': 'Rule Applied:',
   'sqlExport.justification': 'Justification:',
+
+  'compiler.valid': 'Syntax valid',
+  'compiler.entitiesAndRelations': '{{entities}} entities, {{relations}} relationships',
+  'compiler.empty': 'Empty diagram',
+  'compiler.line': 'Line {{line}}',
+  'compiler.missingEntityName': "Expected entity name after '{{command}}' (e.g. {{command}} CUSTOMER)",
+  'compiler.missingRelationshipName': "Expected relationship name after '{{command}}' (e.g. {{command}} PURCHASES)",
+  'compiler.missingAttributeName': "Expected attribute name after '{{command}}' (e.g. {{command}} Name)",
+  'compiler.missingParentEntity': "Missing parent entity after '->' (e.g. {{command}} {{name}} -> ENTITY)",
+  'compiler.incompleteLink': "Missing source or target node in link (e.g. link ENTITY RELATION)",
+  'compiler.unknownCommand': "Unrecognized command '{{command}}'",
+  'compiler.undeclaredReference': "Node '{{name}}' referenced in link is not declared",
+  'compiler.duplicateNode': "Identifier '{{name}}' has already been declared",
+
+  'errorBoundary.title': 'An unexpected error occurred',
+  'errorBoundary.subtitle': 'The editor has protected your code in memory to prevent data loss.',
+  'errorBoundary.copyCode': 'Copy code to clipboard',
+  'errorBoundary.copied': 'Code copied!',
+  'errorBoundary.restore': 'Reload application',
 };

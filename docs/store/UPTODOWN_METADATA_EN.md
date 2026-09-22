@@ -13,6 +13,7 @@
 * **Author / Developer:** David Bueno Vallejo
 * **Official Website:** https://davidbuenov.github.io/dbv-eer-studio/
 * **GitHub Repository:** https://github.com/davidbuenov/dbv-eer-studio
+* **Featured Image (1024x500 PNG EN):** [`docs/store/screenshots/uptodown_featured_1024x500_en.png`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/screenshots/uptodown_featured_1024x500_en.png)
 
 ---
 

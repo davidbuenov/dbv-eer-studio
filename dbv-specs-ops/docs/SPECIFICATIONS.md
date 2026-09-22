@@ -50,6 +50,17 @@
 ### 3.4. Navegación por Pestañas y Vistas
 - [ ] **Navegación Superior por Pestañas:** `[Diagrama EER]` | `[Modelo Relacional]` | `[Vista SQL DDL]` con opción de activar vista dividida (side-by-side).
 
+### 3.5. Compilación, Linter EER y Tolerancia a Fallos (Zero-Crash & Stale-while-error) `[NUEVO]`
+- [ ] **Compilador y Linter EER**: Validación sintáctica y semántica de dos niveles previa a la propagación a Canvas y Modelo Relacional:
+  - **Nivel 1 (Errores Bloqueantes):** Detección de comandos incompletos o sin nombre (`ent`, `rel`, `att`, `weak_ent`, `ident_rel`, etc.), asignaciones de atributo sin padre (`att Nombre ->`), enlaces huérfanos (`link`, `link Origen`) y coordenadas mal formadas.
+  - **Nivel 2 (Advertencias Pedagógicas / Semánticas):** Enlaces hacia nodos no declarados, entidades sin atributos clave (`key_att`) o identificadores duplicados.
+- [ ] **Estrategia Stale-while-error:** Si el usuario introduce un error de sintaxis al escribir, el Canvas EER y el Modelo Relacional conservan congelado el último estado compilado válido para evitar parpadeos o roturas.
+- [ ] **Barra de Diagnósticos Informativa en `CodePanel`:** Indicador inferior visual con icono, severidad (error/warning/éxito) y número de línea con mensaje explicativo pedagógico internacionalizado (ES/EN). Clic en el error enfoca la línea en el editor.
+- [ ] **Red de Seguridad en Profundidad:**
+  - `ErrorBoundary` de React a nivel de aplicación que atrapa excepciones imprevistas, muestra panel de recuperación y protege el contenido del editor contra pérdidas de datos.
+  - Normalización defensiva en `parser.ts` (nunca emitir nodos con `id` o `label` indefinidos).
+  - Sanitización segura en `eerToRelational.ts` (`sanitizeName` con fallback seguro ante cadenas vacías/nulas).
+
 ## 🏗️ 4. Propuesta de Solución Técnica
 - **Modelos de Dominio:** `EERDiagram` (Conceptual) ↔ `RelationalSchema` (Lógico con DSL + Coordenadas) ↔ `SQLScript` (Físico Oracle / Multi-SGBD).
 - **Motores:** `eerToRelational` (con trazabilidad pedagógica de 9 pasos), `relationalParser` / `relationalCodeGenerator` (DSL de texto relacional) y `relationalToSQL` (Oracle prioritario).

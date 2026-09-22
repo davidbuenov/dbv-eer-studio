@@ -99,6 +99,19 @@ Sigue estrictamente la especificación de **9 Pasos** en `dbv-specs-ops/docs/eer
 ### 3. Motor SQL DDL (`src/utils/relational/relationalToSQL.ts`)
 Genera sentencias DDL limpias formateadas con sangría, comentarios explicativos por tabla indicando la regla del algoritmo origen, e instrucciones `CREATE TABLE`, `PRIMARY KEY`, `FOREIGN KEY` e `INDEX`.
 
+### 4. Compilador, Linter EER y Resiliencia (`src/utils/compiler.ts`, `src/components/ErrorBoundary.tsx`)
+Pipeline de validación previa y contención de errores:
+- **Compilador EER (`src/utils/compiler.ts`)**:
+  - `compileEER(code: string): CompileResult`: analiza línea a línea, clasifica diagnósticos en `error` (bloqueante) y `warning` (semántico/pedagógico).
+  - Solo genera `NodeData[]` y `LinkData[]` a partir de líneas válidas, asegurando que ningún nodo contenga `id` o `label` indefinidos.
+- **Estrategia Stale-while-error (`src/hooks/useEERParser.ts`)**:
+  - Si `compileEER` detecta errores bloqueantes mientras el usuario escribe, el hook retiene en memoria (`lastValidNodesRef`, `lastValidLinksRef`) el último estado correcto para que el Canvas y el Modelo Relacional no sufran parpadeos ni desmontajes.
+  - Expone `{ nodes, links, diagnostics, isValid }`.
+- **Barra de Diagnósticos (`src/components/CodePanel.tsx`)**:
+  - Renderiza el estado de compilación al pie del editor: éxito en verde con conteo de elementos o advertencia/error con número de línea y mensaje explicativo i18n.
+- **ErrorBoundary React (`src/components/ErrorBoundary.tsx`)**:
+  - Atrapa fallos no controlados en el árbol de componentes, preservando el código del usuario en `localStorage` y ofreciendo una vista de recuperación en lugar de un crash completo.
+
 ---
 
 ## 🖥️ Roadmap Nativo de Escritorio (`dbv-tauri-starter`)

@@ -9,14 +9,17 @@
 
 import EERDiagrammer from './EERDiagramer';
 import { LanguageProvider } from './i18n/LanguageContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App() {
   return (
-    <div style={{ width: '100vw', height: '100vh' }}>
-      <LanguageProvider>
-        <EERDiagrammer />
-      </LanguageProvider>
-    </div>
+    <ErrorBoundary>
+      <div style={{ width: '100vw', height: '100vh' }}>
+        <LanguageProvider>
+          <EERDiagrammer />
+        </LanguageProvider>
+      </div>
+    </ErrorBoundary>
   );
 }
 

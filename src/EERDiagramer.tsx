@@ -5,7 +5,7 @@
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { BookOpen, Code, Share2, HelpCircle, Info, Database, Layers, FileText, Pin, PinOff } from 'lucide-react';
 import type { EERDiagramerHandle } from './types';
 import { runningInTauri } from './utils/platform';
@@ -48,8 +48,20 @@ type ActiveViewTab = 'eer' | 'relational' | 'sql';
 
 const SVG_MIME = 'image/svg+xml;charset=utf-8';
 
+/**
+ * Componente principal del editor de diagramas EER
+ * 
+ * Gestiona el estado global de la aplicación:
+ * - Código DSL del diagrama
+ * - Nodos y enlaces (parseados del código)
+ * - Herramienta seleccionada en la toolbar
+ * - Modales de propiedades y ayuda
+ * - Transformaciones del canvas (zoom, pan)
+ * 
+ * Expone métodos imperativos vía ref para control externo (desktop mode).
+ */
 function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
-  const { lang, setLang, t } = useLanguage();
+  const { t, lang, setLang } = useLanguage();
 
   // ==========================================
   // ESTADO DEL COMPONENTE Y PESTAÑAS
@@ -82,21 +94,31 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     codeRef.current = code;
   }, [code]);
   
-  // Parser hook - parsea el código EER y genera nodos y enlaces
-  const { nodes, links, setNodes } = useEERParser(code);
+  // Parser hook - compila el código EER y genera nodos y enlaces con tolerancia a fallos
+  const { nodes, links, setNodes, diagnostics, isValid } = useEERParser(code);
+
+  const elementCount = useMemo(() => ({
+    entities: nodes.filter(n => n.type === 'entity' || n.type === 'weak_entity').length,
+    relations: nodes.filter(n => n.type === 'relationship' || n.type === 'identifying_relationship').length,
+  }), [nodes]);
 
   // Ref para controlar la regeneración reactiva solo cuando cambia el diagrama EER
   const lastEERCodeRef = useRef<string>('');
 
-  // Actualización reactiva del Esquema Relacional solo cuando cambia el diagrama EER
+  // Actualización reactiva del Esquema Relacional solo cuando cambia el diagrama EER y el código es válido
   useEffect(() => {
-    if (nodes.length > 0 && code !== lastEERCodeRef.current) {
+    if (isValid && nodes.length > 0 && code !== lastEERCodeRef.current) {
       lastEERCodeRef.current = code;
-      const derived = eerToRelational(nodes, links, undefined, relationalPositions);
-      setRelationalSchema(derived);
-      setRelationalCode(generateRelationalDSL(derived));
+      try {
+        const derived = eerToRelational(nodes, links, undefined, relationalPositions);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setRelationalSchema(derived);
+        setRelationalCode(generateRelationalDSL(derived));
+      } catch (err) {
+        console.error('[EERDiagramer] Error al convertir EER a Relacional:', err);
+      }
     }
-  }, [code, nodes, links, relationalPositions]);
+  }, [code, nodes, links, relationalPositions, isValid]);
   
   // File operations hook
   const {
@@ -631,6 +653,9 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
                 onCodeChange={setCode}
                 onClear={() => setShowClearConfirm(true)}
                 onEditStart={() => setSelectedNodeId(null)}
+                diagnostics={diagnostics}
+                isValid={isValid}
+                elementCount={elementCount}
               />
             </div>
 

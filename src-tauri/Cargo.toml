@@ -1,6 +1,6 @@
 [package]
 name = "dbv-eer-studio"
-version = "1.4.0"
+version = "1.4.1"
 description = "dbv-eer-studio — Editor de Diagramas Entidad-Relación Extendido (EER) y Modelo Relacional"
 authors = ["David Bueno Vallejo <https://github.com/davidbuenov>"]
 license = "MIT"
