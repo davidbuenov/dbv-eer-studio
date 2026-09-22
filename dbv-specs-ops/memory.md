@@ -11,6 +11,16 @@
 - **Foco inmediato:** Revisar y realizar commit y tag `v1.4.0` ("Version v1.4.0"); reservar identidad real en Microsoft Partner Center para Microsoft Store; revisar y hacer push de los commits de documentación pendientes en repositorios secundarios.
 
 ## 🏗️ Log de Decisiones Técnicas (ADR Ligero)
+- **2026-09-22 — Compilador / Linter del Modelo Relacional y Tolerancia a Fallos en DSL Relacional:**
+  - *Contexto:* La edición directa del DSL relacional (`table NOMBRE { ... }`) carecía de un pipeline formal de compilación y validación previa. Si un estudiante borraba temporalmente el nombre de una tabla o introducía sintaxis incompleta, el parser relacional generaba un esquema parcial o vacío que reemplazaba de inmediato el estado visual, provocando parpadeos (*flickering*), desaparición repentina de tarjetas del canvas y rotura de flechas FK.
+  - *Decisiones de Diseño:*
+    1. **Compilador Relacional Multi-pasada (`compileRelationalDSL`)**:
+       - *Pase 1 (Sintaxis)*: Validación línea por línea de apertura y cierre de tablas, definición de columnas y sintaxis de claves foráneas (`FK -> TARGET(COL)`).
+       - *Pase 2 (Semántica & Linter Educativo)*: Verificación de integridad referencial con resolución transparente de *forward references* (tablas declaradas después de ser referenciadas por una FK) sin falsos positivos de tabla no declarada. Emite advertencias formativas para tablas sin clave primaria (`TABLE_WITHOUT_PK`), tablas destino no declaradas (`UNDECLARED_TARGET_TABLE`), columnas destino inexistentes (`UNDECLARED_TARGET_COLUMN`) y nombres duplicados.
+    2. **Estrategia Stale-while-error Relacional**: El visor relacional retiene congelado en memoria el último esquema válido (`lastValidRelationalSchemaRef`). Si el alumno introduce errores sintácticos mientras escribe, las tarjetas y enlaces del canvas visual no parpadean ni desaparecen.
+    3. **Protección de interacción mixta**: El arrastre de tarjetas en el canvas relacional solo actualiza el código DSL si el código actual es sintácticamente válido (`isRelationalValidRef.current`), evitando sobreescribir el trabajo que el estudiante está redactando.
+    4. **Barra de Diagnósticos interactiva unificada en `CodePanel`**: Indicador visual inferior con salto directo a la línea del error o advertencia al hacer clic, con soporte bilingüe completo (ES/EN) y resumen de conteo de tablas y FKs (`compiler.tablesAndFKs`).
+
 - **2026-09-22 — Compilador / Linter EER, Estrategia Stale-while-error y Red de Seguridad Zero-Crash:**
   - *Contexto:* Los alumnos reportaron que al borrar o editar el nombre de una entidad en el editor de texto (`ent `), la aplicación se reiniciaba por completo perdiendo el trabajo no guardado.
   - *Causa Raíz:* `parser.ts` aceptaba líneas incompletas e inyectaba `NodeData` con `label: undefined`. El hook reactivo lanzaba `eerToRelational`, donde `sanitizeName(entity.label)` intentaba ejecutar `name.trim()`, arrojando un `TypeError` no capturado. En React 18/19, al no haber `ErrorBoundary`, la excepción desmontaba todo el árbol de componentes, reiniciando la SPA a `SAMPLE_CODE`.

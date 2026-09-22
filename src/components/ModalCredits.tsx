@@ -86,7 +86,7 @@ export function ModalCredits({ isOpen, onClose }: ModalCreditsProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-xl bg-gradient-to-br from-indigo-50 to-white p-8 shadow-2xl border border-indigo-100">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-indigo-900">{t('modalCredits.title')} <span className="text-sm font-normal text-slate-500">v1.4.1</span></h2>
+          <h2 className="text-2xl font-bold text-indigo-900">{t('modalCredits.title')} <span className="text-sm font-normal text-slate-500">v1.5.0</span></h2>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-indigo-100 transition-colors">
             <X className="h-5 w-5 text-slate-500" />
           </button>

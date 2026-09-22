@@ -112,6 +112,15 @@ Pipeline de validación previa y contención de errores:
 - **ErrorBoundary React (`src/components/ErrorBoundary.tsx`)**:
   - Atrapa fallos no controlados en el árbol de componentes, preservando el código del usuario en `localStorage` y ofreciendo una vista de recuperación en lugar de un crash completo.
 
+### 5. Compilador y Diagnósticos del Modelo Relacional (`src/utils/relational/relationalCompiler.ts`) `[NUEVO]`
+- **Compilador DSL Relacional (`compileRelationalDSL`)**:
+  - Parsea bloques `table NOMBRE [x: N, y: N] { ... }` validando llaves de apertura y cierre, declaraciones de columnas, PKs y sintaxis estricta de FK (`COL TIPO FK -> TABLA(COL_DESTINO) [ON DELETE ...]`).
+  - Emite diagnósticos sintácticos (`error`) y semánticos (`warning`: integridad referencial ante tablas o columnas destino no declaradas, tablas sin PK, nombres duplicados).
+  - `parseRelationalDSL(code)` delega en `compileRelationalDSL(code)`.
+- **Estrategia Stale-while-error en Pestaña Relacional**:
+  - `EERDiagramer.tsx` retiene el último esquema relacional válido si el usuario introduce errores sintácticos al editar el DSL relacional, previniendo la desaparición súbita de tablas (*flickering*).
+  - Conecta los diagnósticos del DSL relacional con la barra inferior de `CodePanel`.
+
 ---
 
 ## 🖥️ Roadmap Nativo de Escritorio (`dbv-tauri-starter`)

@@ -19,6 +19,7 @@ interface CodePanelProps {
   diagnostics?: Diagnostic[];
   isValid?: boolean;
   elementCount?: { entities: number; relations: number };
+  countSummary?: string;
 }
 
 export function CodePanel({
@@ -29,6 +30,7 @@ export function CodePanel({
   diagnostics,
   isValid = true,
   elementCount,
+  countSummary,
 }: CodePanelProps) {
   const { t } = useLanguage();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -140,14 +142,18 @@ export function CodePanel({
                   {t('compiler.valid')}
                 </span>
                 {code.trim() ? (
-                  elementCount && (
+                  countSummary ? (
+                    <span className="text-[11px] text-emerald-600/80">
+                      ({countSummary})
+                    </span>
+                  ) : elementCount ? (
                     <span className="text-[11px] text-emerald-600/80">
                       ({t('compiler.entitiesAndRelations', {
                         entities: elementCount.entities,
                         relations: elementCount.relations,
                       })})
                     </span>
-                  )
+                  ) : null
                 ) : (
                   <span className="text-[11px] text-slate-400">
                     ({t('compiler.empty')})

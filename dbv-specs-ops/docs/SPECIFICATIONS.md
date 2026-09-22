@@ -50,16 +50,23 @@
 ### 3.4. Navegación por Pestañas y Vistas
 - [ ] **Navegación Superior por Pestañas:** `[Diagrama EER]` | `[Modelo Relacional]` | `[Vista SQL DDL]` con opción de activar vista dividida (side-by-side).
 
-### 3.5. Compilación, Linter EER y Tolerancia a Fallos (Zero-Crash & Stale-while-error) `[NUEVO]`
-- [ ] **Compilador y Linter EER**: Validación sintáctica y semántica de dos niveles previa a la propagación a Canvas y Modelo Relacional:
-  - **Nivel 1 (Errores Bloqueantes):** Detección de comandos incompletos o sin nombre (`ent`, `rel`, `att`, `weak_ent`, `ident_rel`, etc.), asignaciones de atributo sin padre (`att Nombre ->`), enlaces huérfanos (`link`, `link Origen`) y coordenadas mal formadas.
-  - **Nivel 2 (Advertencias Pedagógicas / Semánticas):** Enlaces hacia nodos no declarados, entidades sin atributos clave (`key_att`) o identificadores duplicados.
-- [ ] **Estrategia Stale-while-error:** Si el usuario introduce un error de sintaxis al escribir, el Canvas EER y el Modelo Relacional conservan congelado el último estado compilado válido para evitar parpadeos o roturas.
-- [ ] **Barra de Diagnósticos Informativa en `CodePanel`:** Indicador inferior visual con icono, severidad (error/warning/éxito) y número de línea con mensaje explicativo pedagógico internacionalizado (ES/EN). Clic en el error enfoca la línea en el editor.
-- [ ] **Red de Seguridad en Profundidad:**
-  - `ErrorBoundary` de React a nivel de aplicación que atrapa excepciones imprevistas, muestra panel de recuperación y protege el contenido del editor contra pérdidas de datos.
-  - Normalización defensiva en `parser.ts` (nunca emitir nodos con `id` o `label` indefinidos).
-  - Sanitización segura en `eerToRelational.ts` (`sanitizeName` con fallback seguro ante cadenas vacías/nulas).
+### 3.5. Compilación, Linter EER y Tolerancia a Fallos (Zero-Crash & Stale-while-error)
+- [x] **Compilador y Linter EER**: Validación sintáctica y semántica de dos niveles previa a la propagación a Canvas y Modelo Relacional.
+- [x] **Estrategia Stale-while-error:** Conserva congelado el último estado válido del diagrama EER ante errores transitorios.
+- [x] **Barra de Diagnósticos Informativa en `CodePanel`:** Indicador inferior visual con icono, severidad y mensaje internacionalizado (ES/EN).
+- [x] **Red de Seguridad en Profundidad:** `ErrorBoundary` en React, guardas en `parser.ts` y sanitización segura en `eerToRelational.ts`.
+
+### 3.6. Compilador, Linter y Diagnósticos del Modelo Relacional (DSL Relacional) `[NUEVO]`
+- [ ] **Compilador y Linter Relacional (`compileRelationalDSL`)**:
+  - **Nivel 1 (Errores Bloqueantes):** Detección de tablas sin nombre (`table `), bloques no cerrados (falta `}`), columnas con sintaxis corrupta, claves foráneas con formato incompleto (`FK -> TABLA` sin columna destino o sin paréntesis) y opciones de cascada no válidas.
+  - **Nivel 2 (Advertencias Pedagógicas / Semánticas):** Integridad referencial (FK que apunta a una tabla o columna no declarada), tablas sin clave primaria (`PK`), identificadores de tabla duplicados y columnas duplicadas dentro de una misma tabla.
+- [ ] **Estrategia Stale-while-error en Modelo Relacional:**
+  - Evitar la desaparición inmediata de tarjetas en el canvas relacional (*visual flickering*) mientras el alumno edita o renombra tablas en el DSL.
+  - Retener el último `RelationalSchema` válido hasta que la sintaxis vuelva a compilar correctamente.
+- [ ] **Barra de Diagnósticos en `CodePanel` (Pestaña Relacional):**
+  - Barra inferior con icono y estado en vivo (`✓ Sintaxis relacional correcta (N tablas, M claves foráneas)` o `⚠️ Línea X: Error explicativo`).
+  - Navegación interactiva al hacer clic en el mensaje de error para posicionar el cursor en la línea correspondiente.
+- [ ] **Internacionalización:** Soporte completo en español e inglés (`es.ts`/`en.ts`) para todos los diagnósticos del modelo relacional.
 
 ## 🏗️ 4. Propuesta de Solución Técnica
 - **Modelos de Dominio:** `EERDiagram` (Conceptual) ↔ `RelationalSchema` (Lógico con DSL + Coordenadas) ↔ `SQLScript` (Físico Oracle / Multi-SGBD).

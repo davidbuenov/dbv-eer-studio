@@ -1,11 +1,29 @@
 # Backlog - eer-studio
 
 ## Contexto del Proyecto (Context Snapshot)
-* **Objetivo**: Implementar el Compilador / Linter EER con estrategia de resiliencia Stale-while-error, barra de diagnósticos pedagógicos en `CodePanel` y Red de Seguridad Zero-Crash (`ErrorBoundary` en React y defensas en `parser.ts` y `eerToRelational.ts`), evitando reinicios de la aplicación al editar entidades en texto.
-* **Estado actual**: Implementación y verificación completadas con éxito. Tests unitarios (31 tests) en verde, `npm run lint` y `npm run build` sin errores, y validación manual satisfactoria en navegador.
-* **Próximo paso**: Commit/push o siguiente requerimiento según indique el usuario.
+* **Objetivo**: Implementar el Compilador / Linter del Modelo Relacional (`compileRelationalDSL`), estrategia de resiliencia Stale-while-error en la pestaña relacional (evitar desaparición de tablas al editar) y barra de diagnósticos interactiva en `CodePanel` con feedback docente (integridad referencial, tablas sin PK, sintaxis de FKs).
+* **Estado actual**: Fase `/spec` completada (`SPECIFICATIONS.md` §3.6 y `ARCHITECTURE.md` §5 actualizados). Preparando la fase `/plan` (Adversarial Architect Review y desglose de tareas en `implementation_plan.md`).
+* **Próximo paso**: Ejecutar Adversarial Architect Review, redactar el `implementation_plan.md` y solicitar aprobación del usuario.
 
 ## Checklist de Tareas
+
+- [x] **Fase `/spec`: Compilador, Linter y Diagnósticos del Modelo Relacional**
+  - [x] Definir alcance en `SPECIFICATIONS.md` §3.6 (Validación 2 niveles, Stale-while-error relacional, feedback de integridad referencial).
+  - [x] Diseñar arquitectura en `ARCHITECTURE.md` §5 (`compileRelationalDSL`, diagnósticos en `CodePanel`, resiliencia).
+- [x] **Fase `/plan`: Planificación e Implementation Plan**
+  - [x] Ejecutar Adversarial Architect Review (debate en XML con términos formales de SPEC).
+  - [x] Crear `implementation_plan.md` con Frontmatter (dependencies, risks, rollback_strategy) y desglose de tareas.
+  - [x] Obtener aprobación explícita del usuario.
+- [x] **Fase `/build`: Implementación Incremental**
+  - [x] `src/types/compiler.ts`: Extensión de códigos de diagnóstico relacionales y tipos de retorno.
+  - [x] `src/utils/relational/relationalCompiler.ts`: Compilador del DSL relacional con diagnósticos sintácticos y linter semántico multi-pasada.
+  - [x] `src/utils/relational/relationalParser.ts`: Delegar en `compileRelationalDSL`.
+  - [x] `src/i18n/es.ts` & `src/i18n/en.ts`: Claves de internacionalización para diagnósticos relacionales y resumen de elementos.
+  - [x] `src/components/CodePanel.tsx`: Soporte para `countSummary` en la barra inferior de diagnósticos.
+  - [x] `src/EERDiagramer.tsx`: Conectar diagnósticos relacionales, validar y aplicar Stale-while-error en la pestaña relacional.
+- [x] **Fase `/test`: Pruebas Unitarias y Validación**
+  - [x] Tests unitarios en `src/utils/relational/relationalCompiler.test.ts` (10 tests cubriendo errores, advertencias pedagógicas, forward references e integridad referencial).
+  - [x] Suite completa de tests pasando (41/41 tests en verde), lint con 0 errores y build de producción verificado.
 
 - [x] **Fase `/spec`: Compilador / Linter EER y Tolerancia a Fallos**
   - [x] Actualizar `SPECIFICATIONS.md` con §3.5 (Linter 2 niveles, Stale-while-error, Barra Diagnósticos, Red de Seguridad).

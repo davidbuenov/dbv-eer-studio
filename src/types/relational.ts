@@ -64,6 +64,8 @@ export interface ForeignKeyConstraint {
   onUpdate: CascadeOption;
   /** Trazabilidad educativa del paso formal */
   stepTrace?: StepTrace;
+  /** Índice de línea en el DSL relacional */
+  lineIndex?: number;
 }
 
 /**

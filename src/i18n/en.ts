@@ -247,6 +247,17 @@ export const en: Record<TranslationKey, string> = {
   'compiler.undeclaredReference': "Node '{{name}}' referenced in link is not declared",
   'compiler.duplicateNode': "Identifier '{{name}}' has already been declared",
 
+  'compiler.relationalValid': 'Relational syntax valid',
+  'compiler.tablesAndFKs': '{{tables}} tables, {{fks}} foreign keys',
+  'compiler.missingTableName': "Expected table name after 'table' (e.g. table CUSTOMER {)",
+  'compiler.unclosedTableBlock': "Table '{{name}}' is missing closing bracket '}'",
+  'compiler.invalidFKSyntax': "Invalid foreign key syntax (expected format: FK -> TABLE(COLUMN))",
+  'compiler.undeclaredTargetTable': "Target table '{{table}}' referenced in foreign key does not exist",
+  'compiler.undeclaredTargetColumn': "Target column '{{col}}' does not exist in table '{{table}}'",
+  'compiler.tableWithoutPK': "Table '{{name}}' has no primary key (PK)",
+  'compiler.duplicateTableName': "Table name '{{name}}' has already been declared",
+  'compiler.duplicateColumnName': "Column '{{col}}' already exists in table '{{table}}'",
+
   'errorBoundary.title': 'An unexpected error occurred',
   'errorBoundary.subtitle': 'The editor has protected your code in memory to prevent data loss.',
   'errorBoundary.copyCode': 'Copy code to clipboard',

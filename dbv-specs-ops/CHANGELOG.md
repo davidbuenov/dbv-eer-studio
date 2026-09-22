@@ -7,14 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.5.0] — 2026-09-22
+
+### Added
+- **Compilador y Linter del Modelo Relacional (`src/utils/relational/relationalCompiler.ts`)**: Análisis multi-pasada del DSL relacional con verificación de sintaxis de tablas (`table NOMBRE { ... }`), columnas, claves primarias y foráneas (`FK -> TARGET(COL)`). Validación pedagógica en dos niveles con advertencias para tablas sin clave primaria, claves foráneas que apuntan a tablas/columnas no declaradas o nombres duplicados, resolviendo forward references de forma transparente.
+- **Barra de Diagnósticos en `CodePanel` para Modo Relacional**: Indicador visual interactivo al pie del editor con estado en vivo (verde con conteo de tablas y claves foráneas; ámbar/rojo con número de línea y mensaje formativo internacionalizado en ES/EN). Permite hacer clic en el diagnóstico para posicionar y seleccionar automáticamente la línea en el editor.
+- **Estrategia Stale-while-error en Modo Relacional**: Tolerancia a fallos durante la edición en vivo. Si el usuario borra o modifica temporalmente una tabla (`table `), el visor del Modelo Relacional retiene congelado el último esquema compilado válido, evitando parpadeos visuales (*flickering*), pérdida de flechas FK y la desaparición de elementos del canvas.
+- **Protección de interacción mixta**: El arrastre de tablas sobre el canvas relacional solo regenera el código DSL si el código actual es sintácticamente válido, evitando sobreescribir el trabajo en curso del estudiante.
+- **Suite de pruebas del compilador relacional (`relationalCompiler.test.ts`)**: 10 tests de cobertura específicos para compilación relacional, forward references y verificación de integridad referencial.
+
+### Fixed
+- **Parpadeo y desaparición de tablas al editar DSL relacional**: Al escribir o renombrar una tabla en el código relacional, la falta de compilador previo provocaba que la tabla desapareciera al instante del visor relacional y se rompieran las flechas FK asociadas. Resuelto con compilación previa y persistencia Stale-while-error.
+
 ## [1.4.1] — 2026-09-22
 
 ### Added
 - **Compilador y Linter EER (`src/utils/compiler.ts`)**: Análisis y validación léxico-sintáctica en dos niveles previa al renderizado visual y relacional. Diagnósticos tipados (`Diagnostic`) con severidad `error` (sintaxis bloqueante) y `warning` (semántica/pedagógica), e internacionalización de mensajes explicativos (ES/EN).
-- **Barra de Diagnósticos en `CodePanel`**: Indicador visual al pie del editor con icono y estado en vivo (verde para sintaxis válida con conteo de entidades/relaciones; ámbar/rojo para advertencias o errores con número de línea y mensaje explicativo). Permite hacer clic en el mensaje para posicionar y seleccionar automáticamente la línea errónea en el editor de texto.
+- **Barra de Diagnósticos en `CodePanel` (Modo EER)**: Indicador visual al pie del editor con icono y estado en vivo (verde para sintaxis válida con conteo de entidades/relaciones; ámbar/rojo para advertencias o errores con número de línea y mensaje explicativo). Permite hacer clic en el mensaje para posicionar y seleccionar automáticamente la línea errónea en el editor de texto.
 - **Estrategia Stale-while-error (`useEERParser`)**: Tolerancia a fallos durante la edición en vivo. Si el usuario borra o modifica temporalmente una entidad dejando la sintaxis incompleta (`ent `), el Canvas EER y el Modelo Relacional conservan congelado el último estado compilado válido, evitando parpadeos visuales (*flickering*) y la desaparición de nodos.
 - **Red de Seguridad Zero-Crash (`ErrorBoundary`)**: Componente `ErrorBoundary` de React envolviendo la aplicación en `App.tsx` para atrapar excepciones imprevistas, conservar el código fuente en memoria/localStorage y ofrecer una pantalla amigable de recuperación en lugar de un reinicio de la aplicación.
-- **Suite de pruebas unitarias del compilador (`compiler.test.ts`)**: 9 tests de cobertura para validación de líneas vacías, entidades sin nombre, relaciones sin nombre, atributos sin padre, enlaces incompletos, enlaces con nodos no declarados, identificadores duplicados y sintaxis válida.
+- **Suite de pruebas unitarias del compilador EER (`compiler.test.ts`)**: 9 tests de cobertura para validación de líneas vacías, entidades sin nombre, relaciones sin nombre, atributos sin padre, enlaces incompletos, enlaces con nodos no declarados, identificadores duplicados y sintaxis válida.
 
 ### Fixed
 - **Reinicio de la aplicación al editar y dejar una entidad sin nombre**: Si en el editor de texto se borraba el nombre de una entidad (`ent `), el parser generaba un `NodeData` con `label: undefined`, lo que provocaba un fallo fatal `TypeError: Cannot read properties of undefined (reading 'trim')` en `sanitizeName` dentro de `eerToRelational.ts`. Al no existir un `ErrorBoundary`, React desmontaba todo el árbol de componentes y la aplicación se reiniciaba al estado inicial (`SAMPLE_CODE`), perdiendo los cambios del usuario. Corregido con el paso previo de compilación, guardas defensivas en `sanitizeName` e `inferSQLType`, y contención de errores.

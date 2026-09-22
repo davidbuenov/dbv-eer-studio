@@ -245,6 +245,17 @@ export const es = {
   'compiler.undeclaredReference': "El nodo '{{name}}' referenciado en el enlace no está declarado",
   'compiler.duplicateNode': "El identificador '{{name}}' ya ha sido declarado",
 
+  'compiler.relationalValid': 'Sintaxis relacional correcta',
+  'compiler.tablesAndFKs': '{{tables}} tablas, {{fks}} claves foráneas',
+  'compiler.missingTableName': "Se esperaba el nombre de la tabla tras 'table' (ej: table CLIENTE {)",
+  'compiler.unclosedTableBlock': "La tabla '{{name}}' no tiene llave de cierre '}'",
+  'compiler.invalidFKSyntax': "Sintaxis de clave foránea inválida (formato esperado: FK -> TABLA(COLUMNA))",
+  'compiler.undeclaredTargetTable': "La tabla '{{table}}' referenciada en la clave foránea no existe",
+  'compiler.undeclaredTargetColumn': "La columna '{{col}}' no existe en la tabla destino '{{table}}'",
+  'compiler.tableWithoutPK': "La tabla '{{name}}' no tiene ninguna clave primaria (PK)",
+  'compiler.duplicateTableName': "El nombre de tabla '{{name}}' ya está declarado",
+  'compiler.duplicateColumnName': "La columna '{{col}}' ya existe en la tabla '{{table}}'",
+
   'errorBoundary.title': 'Se ha producido un error inesperado',
   'errorBoundary.subtitle': 'El editor ha protegido tu código en memoria para evitar pérdida de datos.',
   'errorBoundary.copyCode': 'Copiar código al portapapeles',

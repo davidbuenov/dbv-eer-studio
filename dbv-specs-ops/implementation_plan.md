@@ -3,20 +3,22 @@ dependencies:
   - "react: ^19.2.0"
   - "lucide-react: ^0.555.0"
 risks:
-  - "Divergencia entre la generación bidireccional de código desde el canvas y las reglas del compilador EER."
-  - "Retención de estado obsoleto en Stale-while-error si un error sintáctico oculta un cambio semántico intencionado."
-rollback_strategy: "Revertir los commits del branch o restaurar parser.ts y useEERParser.ts al commit previo a la introducción del compilador."
+  - "Falsos positivos de integridad referencial si el compilador relacional evalúa claves foráneas hacia tablas declaradas más abajo en el archivo (forward references)."
+  - "Desincronización entre el arrastre visual de tablas y el texto del DSL si el DSL se encuentra en estado sintáctico inválido."
+rollback_strategy: "Revertir el módulo relationalCompiler.ts y restaurar relationalParser.ts y EERDiagramer.tsx al commit v1.4.1."
 ---
 
-# Plan de Implementación: Compilador EER, Tolerancia a Fallos y Red de Seguridad Zero-Crash
+# Plan de Implementación: Compilador, Linter y Diagnósticos del Modelo Relacional
 
-Implementación de un compilador y linter de dos niveles para el DSL EER, con estrategia de resiliencia *Stale-while-error*, barra de estado y diagnósticos pedagógicos en `CodePanel`, defensas contra datos indefinidos en `parser.ts` y `eerToRelational.ts`, y `ErrorBoundary` global en React.
+Implementación del compilador sintáctico y semántico para el DSL de texto del Modelo Relacional (`table NOMBRE { ... }`), con diagnósticos interactivos en `CodePanel`, estrategia de resiliencia *Stale-while-error* (evitando que las tablas desaparezcan del canvas al editar) y advertencias pedagógicas docentes de integridad referencial y claves primarias.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Estrategia Stale-while-error**: Mientras haya errores de sintaxis bloqueantes en el editor (ej. al escribir `ent ` o borrar un nombre), el Canvas EER y el Modelo Relacional conservarán en pantalla el último diagrama válido.
-> - **Internacionalización**: Todos los mensajes pedagógicos del compilador (`error` y `warning`) dispondrán de soporte bilingüe en español e inglés (`src/i18n/es.ts`, `src/i18n/en.ts`).
+> - **Compilación multi-pasada para referencias hacia adelante (*forward references*)**:
+>   Si una tabla `EMPLEADO` declara `FK -> DEPARTAMENTO(ID)` antes de que `table DEPARTAMENTO` aparezca escrita en el texto, el compilador registrará primero todas las tablas en un pase preliminar para **no emitir falsos positivos** de tabla inexistente.
+> - **Resiliencia visual en arrastre**:
+>   Si el alumno arrastra una tarjeta relacional en el canvas mientras el DSL contiene un error sintáctico transitorio, la posición se actualiza en memoria sin sobreescribir destructivamente el texto incompleto del alumno.
 
 ---
 
@@ -25,16 +27,17 @@ Implementación de un compilador y linter de dos niveles para el DSL EER, con es
 ```xml
 <architect_review>
   <builder>
-    Proponemos desacoplar la validación léxica/sintáctica del cálculo visual y relacional creando un módulo <code>compileEER(code)</code>. Si la compilación falla (por ejemplo, al dejar una <code>entity</code> sin nombre), el hook <code>useEERParser</code> congela los <code>nodes</code> y <code>links</code> en su último estado válido, mientras que la barra inferior de <code>CodePanel</code> notifica el error exacto con el número de línea. Adicionalmente, blindamos <code>eerToRelational</code> con defensas nulas en <code>sanitizeName</code> e instalamos un <code>ErrorBoundary</code> en React.
+    Proponemos crear <code>compileRelationalDSL(code)</code> con un pipeline de validación en dos niveles. Si el alumno borra el nombre de una tabla (ej. <code>table  {</code>) o se olvida de cerrar una llave <code>}</code>, la función marca <code>isValid: false</code> y emite diagnósticos con número de línea. En <code>EERDiagramer.tsx</code>, la vista relacional aplica <strong>Stale-while-error</strong> para mantener las tarjetas en pantalla sin parpadeos, y la barra inferior de <code>CodePanel</code> muestra el error con salto a la línea afectada.
   </builder>
   <adversary>
-    Riesgo específico al dominio EER: ¿Qué ocurre si el usuario tiene un diagrama con <code>identifying_relationship</code> y <code>weak_entity</code>, pero mientras edita deja el <code>link</code> a medias o renombra la entidad fuerte propietaria? Si el linter clasifica ese enlace roto solo como un <code>warning</code> semántico y permite la regeneración, <code>eerToRelational</code> en su Paso 2 intentará resolver el propietario de la entidad débil mediante <code>getNeighborNodeIds</code>, no encontrará ninguna tabla propietaria y podría generar una PK incompleta o una tabla puente espuria. Además, si el usuario borra por completo el texto del editor para empezar de cero, ¿la política Stale-while-error impedirá que el canvas se limpie porque un archivo vacío o una línea en blanco se interprete como estado no válido?
+    Riesgo específico al dominio Relacional:
+    1. ¿Qué ocurre con las <strong>referencias cruzadas y hacia adelante</strong> entre tablas? En modelos relacionales es habitual que la tabla <code>PEDIDO</code> esté escrita antes que <code>CLIENTE</code> o que existan relaciones 1:1 reflexivas/cruzadas. Si el linter valida la existencia de <code>TARGET_TABLE</code> línea a línea en una sola pasada, marcará falsos avisos de "tabla inexistente" en tablas perfectamente válidas.
+    2. ¿Qué ocurre con las <strong>coordenadas visuales</strong> <code>[x: N, y: N]</code> y el arrastre de tablas? Si el alumno tiene un error de sintaxis en la línea 12 y arrastra la tabla de la línea 1 en el canvas, ¿el evento de arrastre llamará a <code>generateRelationalDSL</code> y borrará el código con error del alumno?
   </adversary>
   <builder>
     Resolución rigurosa:
-    1. Un documento vacío o compuesto solo por comentarios y espacios en blanco es formalmente <strong>válido</strong> (emite 0 nodos, 0 enlaces y 0 errores). En ese caso, la política Stale-while-error no retiene nada y limpia el canvas inmediatamente como se espera.
-    2. El Paso 2 de <code>eerToRelational</code> ya dispone de defensas contra entidades débiles huérfanas documentadas en la Fase 3 previa. No obstante, para enlaces rotos, el linter advertirá al alumno: <em>"El enlace hace referencia a un nodo no declarado"</em>, y en el motor de compilación, los enlaces que apunten a nodos inexistentes se descartarán del grafo de <code>links</code> activos hasta que ambos extremos existan.
-    3. Para evitar cualquier excepción en <code>eerToRelational</code>, <code>sanitizeName</code> devolverá <code>_SIN_NOMBRE</code> si recibe un valor nulo o vacío, y cualquier acceso a propiedades de nodos se protegerá con optional chaining.
+    1. <strong>Compilación en dos pasadas</strong>: El Pase 1 analiza las cabeceras de todas las tablas (<code>table NOMBRE [x, y] {</code>) y cataloga todos los nombres de tabla y sus columnas. El Pase 2 valida las columnas, tipos y resuelve las restricciones de clave ajena (<code>foreignKeys</code>), comprobando que la tabla y columna destino existan. Esto elimina el 100% de falsos positivos por orden de declaración.
+    2. <strong>Blindaje del generador de DSL en arrastre</strong>: Si <code>isRelationalValid === false</code>, el arrastre de tarjetas en el canvas actualiza la posición visual local en <code>relationalPositions</code>, pero <strong>no</strong> regenera el texto del DSL hasta que el alumno corrija los errores de sintaxis, protegiendo su texto en edición.
   </builder>
 </architect_review>
 ```
@@ -43,126 +46,114 @@ Implementación de un compilador y linter de dos niveles para el DSL EER, con es
 
 ## Proposed Changes
 
-### 1. Capa de Tipos y Diagnósticos
+### 1. Capa de Tipos
 
-#### [NEW] [compiler.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/types/compiler.ts)
-- Definición de tipos:
-  - `DiagnosticSeverity = 'error' | 'warning' | 'info'`
-  - `DiagnosticCode`: códigos formales tipados (ej: `MISSING_NODE_NAME`, `INCOMPLETE_ARROW`, `INCOMPLETE_LINK`, `UNKNOWN_COMMAND`, `UNDECLARED_NODE_REFERENCE`, etc.).
-  - `Diagnostic`: `{ line: number; column?: number; severity: DiagnosticSeverity; code: DiagnosticCode; messageKey: string; params?: Record<string, string | number>; rawMessage?: string }`.
-  - `CompileResult`: `{ isValid: boolean; nodes: NodeData[]; links: LinkData[]; diagnostics: Diagnostic[] }`.
-
----
-
-### 2. Motor de Compilación y Validación
-
-#### [NEW] [compiler.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/utils/compiler.ts)
-- Función `compileEER(code: string): CompileResult`:
-  - Análisis línea a línea con índice 1-indexed para el usuario.
-  - Comprobaciones sintácticas bloqueantes (`severity: 'error'`):
-    - Comandos de nodo sin nombre (`ent`, `weak_ent`, `rel`, `ident_rel`, `att`, `key_att`, `derived_att`, `multivalued_attribute`, `multivalued_att`).
-    - Atributos con flecha sin entidad padre (`att Nombre ->`).
-    - Enlaces incompletos (`link`, `link Origen`).
-    - Coordenadas no numéricas o mal cerradas.
-  - Comprobaciones semánticas (`severity: 'warning'`):
-    - Enlace a un nodo que no ha sido declarado.
-    - Identificador de entidad/relación duplicado.
-  - Solo construye y devuelve `NodeData` si el nombre es válido (garantiza `id` y `label` definidos y no vacíos).
-  - Descarta enlaces hacia nodos inexistentes para evitar alimentar enlaces huérfanos a `eerToRelational`.
+#### [MODIFY] [compiler.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/types/compiler.ts)
+- Ampliar `DiagnosticCode` con los códigos del DSL relacional:
+  - `'MISSING_TABLE_NAME'`
+  - `'UNCLOSED_TABLE_BLOCK'`
+  - `'INVALID_COLUMN_DEFINITION'`
+  - `'INVALID_FOREIGN_KEY_SYNTAX'`
+  - `'UNDECLARED_TARGET_TABLE'`
+  - `'UNDECLARED_TARGET_COLUMN'`
+  - `'TABLE_WITHOUT_PK'`
+  - `'DUPLICATE_TABLE_NAME'`
+  - `'DUPLICATE_COLUMN_NAME'`
+- Crear interfaz `CompileRelationalResult`:
+  ```ts
+  export interface CompileRelationalResult {
+    isValid: boolean;
+    schema: RelationalSchema;
+    diagnostics: Diagnostic[];
+  }
+  ```
 
 ---
 
-### 3. Red de Seguridad Defensiva en Motores Existentes
+### 2. Motor de Compilación del DSL Relacional
 
-#### [MODIFY] [parser.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/utils/parser.ts)
-- Agregar guardas defensivas en `parseCode`: si `parts[1]` es falsy, no generar el nodo ni inyectar `id: undefined`.
+#### [NEW] [relationalCompiler.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/utils/relational/relationalCompiler.ts)
+- Función `compileRelationalDSL(code: string): CompileRelationalResult`:
+  - **Pase 1 (Indexación de Tablas)**:
+    - Detecta `table NOMBRE [x: N, y: N] {`.
+    - Error si falta el nombre de tabla o si no abre llave.
+    - Warning si el nombre de tabla está duplicado.
+  - **Pase 2 (Análisis de Contenido de Tablas)**:
+    - Valida cada columna: `NOMBRE TIPO [PK] [NOT NULL] [FK -> TABLA(COL)] [ON DELETE ...]`.
+    - Detecta error si la sintaxis de `FK` está rota (ej: falta tabla destino, faltan paréntesis de columna o formato inválido).
+    - Valida cierre de bloques: si el archivo termina sin `}`, emite error bloqueante `UNCLOSED_TABLE_BLOCK` en la línea de inicio de la tabla.
+  - **Pase 3 (Linter Semántico e Integridad Referencial)**:
+    - Valida que la tabla destino referenciada en cada FK exista en el esquema.
+    - Valida que la columna destino exista dentro de la tabla destino.
+    - Emite warning si una tabla no tiene ninguna columna `PK`.
+    - Emite warning si hay columnas con nombres duplicados dentro de la misma tabla.
+  - Retorna `{ isValid, schema, diagnostics }`.
 
-#### [MODIFY] [eerToRelational.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/utils/relational/eerToRelational.ts)
-- Modificar `sanitizeName(name?: string)` para que compruebe `if (!name || typeof name !== 'string') return '_SIN_NOMBRE';`.
-- Envolver la ejecución del transformador en salvaguardas para garantizar que nunca lance una excepción al exterior.
-
----
-
-### 4. Hook React con Tolerancia a Fallos (Stale-while-error)
-
-#### [MODIFY] [useEERParser.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/hooks/useEERParser.ts)
-- Integrar `compileEER(code)`.
-- Manejar referencias a `lastValidNodesRef` y `lastValidLinksRef`.
-- Si `isValid === true`: actualizar nodos, enlaces y los refs del último estado válido.
-- Si `isValid === false` y hay errores bloqueantes: retener `lastValidNodesRef.current` y `lastValidLinksRef.current` para que el Canvas y el Modelo Relacional sigan renderizando sin mutar bruscamente.
-- Exponer `{ nodes, links, setNodes, diagnostics, isValid }`.
-
----
-
-### 5. Límite de Errores React y Preservación de Estado
-
-#### [NEW] [ErrorBoundary.tsx](file:///d:/Programacion/github-davidbuenov/eer-studio/src/components/ErrorBoundary.tsx)
-- Componente de clase React `ErrorBoundary` con métodos `getDerivedStateFromError` y `componentDidCatch`.
-- En caso de error inesperado:
-  - Muestra una pantalla amigable de rescate (sin perder el trabajo del alumno).
-  - Guarda automáticamente el contenido del editor en `localStorage` (`eer_studio_emergency_backup`).
-  - Proporciona botones para "Copiar código DSL al portapapeles", "Recargar aplicación" o "Restaurar estado anterior".
-
-#### [MODIFY] [App.tsx](file:///d:/Programacion/github-davidbuenov/eer-studio/src/App.tsx)
-- Envolver `<EERDiagrammer />` con `<ErrorBoundary>`.
+#### [MODIFY] [relationalParser.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/utils/relational/relationalParser.ts)
+- Hacer que `parseRelationalDSL(code)` delegue en `compileRelationalDSL(code).schema`.
 
 ---
 
-### 6. Interfaz de Usuario: Barra de Diagnósticos en `CodePanel`
-
-#### [MODIFY] [CodePanel.tsx](file:///d:/Programacion/github-davidbuenov/eer-studio/src/components/CodePanel.tsx)
-- Añadir sección inferior (footer bar):
-  - Estado OK: icono verde de verificación (`CheckCircle2`), texto: `Sintaxis correcta (N entidades, M relaciones)`.
-  - Estado Error: icono ámbar/rojo (`AlertTriangle` / `AlertCircle`), texto: `Línea {line}: {message}`.
-  - Clic en el diagnóstico: colocar el cursor del textarea en la línea del error o seleccionarla.
-- Soporte para recibir `diagnostics: Diagnostic[]` y `isValid: boolean` desde `EERDiagramer.tsx`.
-
-#### [MODIFY] [EERDiagramer.tsx](file:///d:/Programacion/github-davidbuenov/eer-studio/src/EERDiagramer.tsx)
-- Conectar `diagnostics` y `isValid` de `useEERParser` con `CodePanel`.
-- Envolver la sincronización de `eerToRelational` en un bloque `try/catch` defensivo.
-
----
-
-### 7. Internacionalización (ES / EN)
+### 3. Internacionalización (ES / EN)
 
 #### [MODIFY] [es.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/i18n/es.ts) & [en.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/i18n/en.ts)
-- Claves de mensajes del compilador:
-  - `compiler.valid`: "Sintaxis correcta" / "Syntax valid"
-  - `compiler.entitiesAndRelations`: "{entities} entidades, {relations} relaciones" / "{entities} entities, {relations} relationships"
-  - `compiler.missingEntityName`: "Se esperaba el nombre de la entidad tras '{command}' (ej: {command} CLIENTE)" / "Expected entity name after '{command}' (e.g. {command} CUSTOMER)"
-  - `compiler.missingRelationshipName`: "Se esperaba el nombre de la relación tras '{command}' (ej: {command} COMPRA)" / "Expected relationship name after '{command}' (e.g. {command} PURCHASES)"
-  - `compiler.missingAttributeName`: "Se esperaba el nombre del atributo tras '{command}'" / "Expected attribute name after '{command}'"
-  - `compiler.incompleteAttributeArrow`: "Falta la entidad padre tras '->' (ej: att {name} -> ENTIDAD)" / "Missing parent entity after '->' (e.g. att {name} -> ENTITY)"
-  - `compiler.incompleteLink`: "Falta el nodo origen o destino en el enlace (ej: link ENTIDAD RELACION)" / "Missing source or target node in link (e.g. link ENTITY RELATION)"
-  - `compiler.unknownCommand`: "Comando '{command}' no reconocido" / "Unrecognized command '{command}'"
-  - `compiler.undeclaredReference`: "El nodo '{name}' referenciado en el enlace no está declarado" / "Node '{name}' referenced in link is not declared"
-  - `compiler.duplicateNode`: "El identificador '{name}' ya ha sido declarado" / "Identifier '{name}' has already been declared"
+- Nuevas claves para diagnósticos relacionales:
+  - `compiler.relationalValid`: "Sintaxis relacional correcta" / "Relational syntax valid"
+  - `compiler.tablesAndFKs`: "{{tables}} tablas, {{fks}} claves foráneas" / "{{tables}} tables, {{fks}} foreign keys"
+  - `compiler.missingTableName`: "Se esperaba el nombre de la tabla tras 'table' (ej: table CLIENTE {)" / "Expected table name after 'table' (e.g. table CUSTOMER {)"
+  - `compiler.unclosedTableBlock`: "La tabla '{{name}}' no tiene llave de cierre '}'" / "Table '{{name}}' is missing closing bracket '}'"
+  - `compiler.invalidFKSyntax`: "Sintaxis de clave foránea inválida (formato esperado: FK -> TABLA(COLUMNA))" / "Invalid foreign key syntax (expected format: FK -> TABLE(COLUMN))"
+  - `compiler.undeclaredTargetTable`: "La tabla '{{table}}' referenciada en la clave foránea no existe" / "Target table '{{table}}' referenced in foreign key does not exist"
+  - `compiler.undeclaredTargetColumn`: "La columna '{{col}}' no existe en la tabla destino '{{table}}'" / "Target column '{{col}}' does not exist in table '{{table}}'"
+  - `compiler.tableWithoutPK`: "La tabla '{{name}}' no tiene ninguna clave primaria (PK)" / "Table '{{name}}' has no primary key (PK)"
+  - `compiler.duplicateTableName`: "El nombre de tabla '{{name}}' ya está declarado" / "Table name '{{name}}' has already been declared"
+  - `compiler.duplicateColumnName`: "La columna '{{col}}' ya existe en la tabla '{{table}}'" / "Column '{{col}}' already exists in table '{{table}}'"
+
+---
+
+### 4. Integración en UI y Tolerancia a Fallos (EERDiagramer.tsx)
+
+#### [MODIFY] [EERDiagramer.tsx](file:///d:/Programacion/github-davidbuenov/eer-studio/src/EERDiagramer.tsx)
+- Estado de diagnósticos relacionales:
+  - `relationalDiagnostics: Diagnostic[]`
+  - `isRelationalValid: boolean`
+  - `lastValidRelationalSchemaRef`
+- En `handleRelationalCodeChange`:
+  - Ejecutar `compileRelationalDSL(newDSL)`.
+  - Si `result.isValid`: actualizar `relationalSchema` y guardar en `lastValidRelationalSchemaRef`.
+  - Si `!result.isValid`: retener el último esquema válido en pantalla para evitar que desaparezcan las tablas.
+- En la pestaña `activeTab === 'relational'`:
+  - Pasar a `<CodePanel />`:
+    - `diagnostics={relationalDiagnostics}`
+    - `isValid={isRelationalValid}`
+    - `elementCount={{ entities: relationalSchema.tables.length, relations: totalForeignKeys }}`
 
 ---
 
 ## Verification Plan
 
 ### Automated Tests
-- Ejecutar suite de pruebas con Vitest:
+- Ejecutar tests existentes y nuevos:
   ```bash
   npm test
   ```
-- Crear fichero de tests unitarios: `src/utils/compiler.test.ts`:
-  - Prueba 1: Código con entidad sin nombre (`ent ` o `ent`) genera `isValid: false`, diagnóstico en la línea correspondiente y ningún nodo con `id: undefined`.
-  - Prueba 2: Atributo sin padre (`att DNI ->`) genera error en esa línea.
-  - Prueba 3: Enlace con solo un argumento (`link EMPLEADO`) genera error.
-  - Prueba 4: Código válido devuelve `isValid: true` y genera la lista correcta de nodos y enlaces.
-  - Prueba 5: Documento vacío devuelve `isValid: true` con 0 nodos y 0 errores.
-  - Prueba 6: `sanitizeName` maneja `undefined`, `""`, `null` y cadenas raras sin lanzar excepciones.
+- Crear fichero `src/utils/relational/relationalCompiler.test.ts`:
+  - Test 1: Tabla sin nombre (`table {`) detecta error bloqueante.
+  - Test 2: Bloque sin llave de cierre `}` detecta `UNCLOSED_TABLE_BLOCK`.
+  - Test 3: Sintaxis de FK rota (`FK -> TABLA`) sin paréntesis detecta `INVALID_FOREIGN_KEY_SYNTAX`.
+  - Test 4: Referencia hacia adelante (*forward reference*) entre dos tablas válidas no emite falsos positivos.
+  - Test 5: FK hacia tabla no existente emite advertencia `UNDECLARED_TARGET_TABLE`.
+  - Test 6: Tabla sin PK emite advertencia `TABLE_WITHOUT_PK`.
+  - Test 7: Código válido devuelve `isValid: true` y genera el esquema relacional con tablas, columnas y FKs correctas.
 
 ### Manual Verification
-1. Arrancar dev server: `npm run dev`.
-2. En el editor de texto, borrar el nombre de una entidad existente (ej. dejar `ent `):
-   - Verificar que la aplicación **no se reinicia**.
-   - Verificar que en el pie de `CodePanel` aparece el mensaje: `⚠️ Línea X: Se esperaba el nombre de la entidad tras 'ent'`.
-   - Verificar que el Canvas y el Modelo Relacional conservan la vista anterior sin parpadear ni romperse.
-3. Escribir un nuevo nombre de entidad (ej: `ent PROVEEDOR`):
-   - Verificar que el error desaparece de inmediato y se muestra `✓ Sintaxis correcta`.
-   - Verificar que el Canvas y el Modelo Relacional se actualizan con la nueva entidad.
-4. Cambiar de idioma a English:
-   - Verificar que los mensajes de error y la barra se muestran en inglés correctamente.
+1. Arrancar `npm run dev` y abrir `http://localhost:5173/`.
+2. Ir a la pestaña **Modelo Relacional**.
+3. Verificar que la barra inferior muestra: `✓ Sintaxis relacional correcta (N tablas, M claves foráneas)`.
+4. En el editor de texto relacional, borrar el nombre de una tabla (ej: cambiar `table EMPLEADO {` por `table  {`):
+   - Verificar que la tarjeta de la tabla **no desaparece** del canvas (Stale-while-error).
+   - Verificar que la barra inferior muestra en rojo: `⚠️ Línea X: Se esperaba el nombre de la tabla tras 'table'`.
+   - Clic en la barra para comprobar que selecciona la línea del error.
+5. Restaurar el nombre y escribir una FK inválida (`FK -> INVENTADA(ID)`):
+   - Verificar que la barra muestra el aviso en ámbar/amarillo sobre la tabla inexistente.
+6. Cambiar el idioma a English y verificar que todos los diagnósticos se leen correctamente en inglés.

@@ -36,11 +36,12 @@ import { ResizableDivider } from './components/ResizableDivider';
 import { eerToRelational } from './utils/relational/eerToRelational';
 import { exportRelationalToSVG } from './utils/relational/exportRelationalSVG';
 import { generateRelationalDSL } from './utils/relational/relationalCodeGenerator';
-import { parseRelationalDSL } from './utils/relational/relationalParser';
+import { compileRelationalDSL } from './utils/relational/relationalCompiler';
 import { RelationalViewer } from './components/relational/RelationalViewer';
 import { StepInspectorModal } from './components/relational/StepInspectorModal';
 import { SQLPreviewModal } from './components/sql/SQLPreviewModal';
 import type { RelationalTable, RelationalSchema } from './types/relational';
+import type { Diagnostic } from './types/compiler';
 import { useLanguage } from './i18n/language';
 import { downloadTextFile } from './utils/download';
 
@@ -78,6 +79,10 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   
   // Estado del esquema relacional y modales educativos
   const [relationalSchema, setRelationalSchema] = useState<RelationalSchema>({ tables: [], config: { inheritanceOptions: {}, oneToOneOptions: {} } });
+  const [relationalDiagnostics, setRelationalDiagnostics] = useState<Diagnostic[]>([]);
+  const [isRelationalValid, setIsRelationalValid] = useState<boolean>(true);
+  const isRelationalValidRef = useRef<boolean>(true);
+  const lastValidRelationalSchemaRef = useRef<RelationalSchema>({ tables: [], config: { inheritanceOptions: {}, oneToOneOptions: {} } });
   const [showStepInspector, setShowStepInspector] = useState(false);
   const [showSQLModal, setShowSQLModal] = useState(false);
   const [inspectedTable, setInspectedTable] = useState<RelationalTable | null>(null);
@@ -102,6 +107,14 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     relations: nodes.filter(n => n.type === 'relationship' || n.type === 'identifying_relationship').length,
   }), [nodes]);
 
+  const relationalCountSummary = useMemo(() => {
+    const totalFKs = relationalSchema.tables.reduce((acc, t) => acc + t.foreignKeys.length, 0);
+    return t('compiler.tablesAndFKs', {
+      tables: relationalSchema.tables.length,
+      fks: totalFKs,
+    });
+  }, [relationalSchema, t]);
+
   // Ref para controlar la regeneración reactiva solo cuando cambia el diagrama EER
   const lastEERCodeRef = useRef<string>('');
 
@@ -114,6 +127,10 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setRelationalSchema(derived);
         setRelationalCode(generateRelationalDSL(derived));
+        lastValidRelationalSchemaRef.current = derived;
+        setRelationalDiagnostics([]);
+        setIsRelationalValid(true);
+        isRelationalValidRef.current = true;
       } catch (err) {
         console.error('[EERDiagramer] Error al convertir EER a Relacional:', err);
       }
@@ -203,21 +220,35 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
       }
       const updatedTables = prev.tables.map(t => (t.id === tableId ? { ...t, x: newX, y: newY } : t));
       const newSchema = { ...prev, tables: updatedTables };
-      setRelationalCode(generateRelationalDSL(newSchema));
+      lastValidRelationalSchemaRef.current = newSchema;
+      if (isRelationalValidRef.current) {
+        setRelationalCode(generateRelationalDSL(newSchema));
+      }
       return newSchema;
     });
   }, []);
 
-  // Manejador de la edición directa del código DSL Relacional por el usuario
+  // Manejador de la edición directa del código DSL Relacional por el usuario con tolerancia a fallos (Stale-while-error)
   const handleRelationalCodeChange = useCallback((newDSL: string) => {
     setRelationalCode(newDSL);
-    const parsed = parseRelationalDSL(newDSL);
-    setRelationalSchema(parsed);
-    const newPositions: Record<string, { x: number; y: number }> = {};
-    parsed.tables.forEach(t => {
-      newPositions[t.name] = { x: t.x, y: t.y };
-    });
-    setRelationalPositions(newPositions);
+    const result = compileRelationalDSL(newDSL);
+    setRelationalDiagnostics(result.diagnostics);
+    setIsRelationalValid(result.isValid);
+    isRelationalValidRef.current = result.isValid;
+
+    if (result.isValid) {
+      lastValidRelationalSchemaRef.current = result.schema;
+      setRelationalSchema(result.schema);
+      const newPositions: Record<string, { x: number; y: number }> = {};
+      result.schema.tables.forEach(t => {
+        newPositions[t.name] = { x: t.x, y: t.y };
+      });
+      setRelationalPositions(newPositions);
+    } else {
+      // Stale-while-error: si el alumno borra 'table ' o introduce sintaxis rota,
+      // mantenemos el último esquema válido en el visor para evitar parpadeos y reinicios
+      setRelationalSchema(lastValidRelationalSchemaRef.current);
+    }
   }, []);
 
   // Modal state hook
@@ -697,8 +728,14 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             <CodePanel
               code={relationalCode}
               onCodeChange={handleRelationalCodeChange}
-              onClear={() => setRelationalCode('')}
+              onClear={() => {
+                setRelationalCode('');
+                handleRelationalCodeChange('');
+              }}
               onEditStart={() => {}}
+              diagnostics={relationalDiagnostics}
+              isValid={isRelationalValid}
+              countSummary={relationalCountSummary}
             />
           </div>
 
