@@ -1,7 +1,7 @@
 # 🏬 Publicación en Microsoft Store: dbv-eer-studio
 
-> **Estado:** 🟢 Reservado en Partner Center — Identidad configurada en `bundle.config.json` y empaquetado MSIX completado (`dbv-eer-studio_1.4.0.0.msixbundle`).
-> **Última revisión:** 2026-08-24
+> **Estado:** 🟢 Reservado en Partner Center — Identidad configurada en `bundle.config.json` y empaquetado MSIX completado (`dbv-eer-studio_1.5.0.0.msixbundle`).
+> **Última revisión:** 2026-09-22
 
 Documento operativo (no una especificación de producto): checklist accionable para publicar `dbv-eer-studio` en la Microsoft Store, y registro de las decisiones técnicas que llevan hasta aquí. Complementa al instalador NSIS/MSI ya existente (GitHub Releases) sin sustituirlo — ambos canales de distribución coexisten.
 
@@ -61,7 +61,7 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 - [x] Crear/usar cuenta de desarrollador en Partner Center.
 - [x] Reservar el nombre → `davidbuenov.dbv-eer-studio` (Id de Store: `9NFHVXW7ZRJC`).
 - [x] Copiar Publisher CN (`CN=13EE2A5D-F49E-48C9-8873-941069B15D63`) a `bundle.config.json` (§2).
-- [x] Generar el paquete MSIX bundle `dbv-eer-studio_1.4.0.0.msixbundle`.
+- [x] Generar el paquete MSIX bundle `dbv-eer-studio_1.5.0.0.msixbundle`.
 - [x] Política de privacidad creada en [`docs/store/PRIVACY_POLICY.md`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/PRIVACY_POLICY.md).
 - [x] Capturas de pantalla para la ficha en [`docs/store/screenshots/`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/screenshots/).
 - [x] Metadatos de Store creados en [`docs/store/MICROSOFT_STORE_METADATA_ES.md`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/MICROSOFT_STORE_METADATA_ES.md) y `_EN.md`.
@@ -70,11 +70,11 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 
 1. Reservar nombre → `davidbuenov.dbv-eer-studio` (Completado ✅).
 2. Configurar `bundle.config.json` con la identidad del Partner Center (Completado ✅).
-3. Generar el `.msixbundle` final con esa identidad (Completado ✅ — `src-tauri/target/msix/dbv-eer-studio_1.4.0.0.msixbundle`).
+3. Generar el `.msixbundle` final con esa identidad (Completado ✅ — `src-tauri/target/msix/dbv-eer-studio_1.5.0.0.msixbundle`).
 4. Publicar política de privacidad (Completado ✅ — `docs/store/PRIVACY_POLICY.md`).
 5. Propiedades del producto: Categoría `Developer tools` / Subcategoría `Database tools`.
 6. Ficha de la Store: Descripción, capturas y edad recomendada.
-7. Subir el paquete `dbv-eer-studio_1.4.0.0.msixbundle` a la submission en Partner Center.
+7. Subir el paquete `dbv-eer-studio_1.5.0.0.msixbundle` a la submission en Partner Center.
 8. (Recomendado) Pasar el Windows App Certification Kit (WACK) local antes de enviar.
 9. **Verificar que ningún asset de `Assets/*.png` sea un placeholder** (§3).
 10. Enviar a certificación.
