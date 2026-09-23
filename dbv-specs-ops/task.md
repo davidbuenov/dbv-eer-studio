@@ -1,9 +1,9 @@
 # Backlog - eer-studio
 
 ## Contexto del Proyecto (Context Snapshot)
-* **Objetivo**: Implementar el Compilador / Linter del Modelo Relacional (`compileRelationalDSL`), estrategia de resiliencia Stale-while-error en la pestaña relacional (evitar desaparición de tablas al editar) y barra de diagnósticos interactiva en `CodePanel` con feedback docente (integridad referencial, tablas sin PK, sintaxis de FKs).
-* **Estado actual**: Fase `/spec` completada (`SPECIFICATIONS.md` §3.6 y `ARCHITECTURE.md` §5 actualizados). Preparando la fase `/plan` (Adversarial Architect Review y desglose de tareas en `implementation_plan.md`).
-* **Próximo paso**: Ejecutar Adversarial Architect Review, redactar el `implementation_plan.md` y solicitar aprobación del usuario.
+* **Objetivo**: Editor EER ↔ Modelo Relacional ↔ Oracle SQL DDL con compiladores interactivos, linter de 2 niveles y tolerancia a fallos Stale-while-error.
+* **Estado actual**: Versión v1.5.0 completada, suite de 41 tests pasando en verde, y paquete MSIX bundle (`dbv-eer-studio_1.5.0.0.msixbundle`) subido a Microsoft Partner Center en proceso de certificación.
+* **Próximo paso**: Monitorizar el estado de certificación en Microsoft Partner Center y publicar releases en GitHub.
 
 ## Checklist de Tareas
 
@@ -100,7 +100,7 @@
 - [x] **Bug del Paso 8A: PK sintética no retirada al heredar**: RESUELTO (2026-08-24). Retirada la PK sintética `STEP1_DEFAULT_PK` de las subclases al heredar en el Paso 8A y reordenado el pipeline para procesar el Paso 8 antes de las relaciones. Cubierto con tests TDD en `eerToRelational.test.ts`.
 - [ ] **Deuda técnica — Build multiplataforma**: el empaquetado Tauri solo se ha compilado y probado en Windows; falta validar macOS/Linux.
 - [x] **GitHub Releases**: `v1.2.0` publicado en https://github.com/davidbuenov/dbv-eer-studio/releases/tag/v1.2.0 con `.msi` y `-setup.exe`.
-- [ ] **Microsoft Store**: empaquetado MSIX listo y probado (ver Hito 5); falta reservar identidad real en Partner Center (acción del usuario, no automatizable), capturas, política de privacidad y descripción de la ficha. Ver `dbv-specs-ops/docs/MICROSOFT_STORE.md`.
+- [x] **Microsoft Store**: Paquete MSIX bundle (`dbv-eer-studio_1.5.0.0.msixbundle`) generado con identidad oficial, metadatos y capturas completadas, y subido a Partner Center para certificación (2026-09-23).
 - [ ] **Uptodown u otro catálogo**: no iniciado.
 - [ ] **Decisión pendiente — firma en CI**: los 3 workflows de release están sin firmar/sin auto-actualización a propósito. Firmar en CI implicaría subir la clave privada del updater como secret de GitHub Actions, a diferencia de `dbv-md-reader` (que firma Windows siempre en local). Sin decidir todavía.
 - [x] **Internacionalización (ES/EN)** — implementada (2026-08-23). Ver desglose Fase 1 abajo.
@@ -164,9 +164,9 @@
 
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
-> **Last update / Última actualización:** 2026-08-24
-> **Punto exacto:** Sesión v1.4.0 & Kit de Publicación en Marketplace: (1) Fix del Paso 8A y pipeline, (2) tests unitarios TDD (22 pasados), (3) kit de publicación para Microsoft Store y Uptodown en `docs/store/` (descripciones ES/EN, capturas 1920x1080, política de privacidad `PRIVACY_POLICY.md` e imagen de cabecera promocional en ES/EN), (4) reserva de identidad en Partner Center (`davidbuenov.dbv-eer-studio`), paquete MSIX `.msixbundle` compilado, y (5) actualización del **nuevo logo oficial** (red EER + cilindro DB relacional brillante) propagado en alta resolución (1024x1024) a todos los tamaños e iconos de la aplicación (Tauri desktop, web favicons, PWA y Microsoft Store MSIX assets).
-> **Estado:** `npx vitest run` (22 tests), `npx tsc -b`, `npx eslint .`, `npm run build` y empaquetado `.msixbundle` verificados con éxito.
+> **Last update / Última actualización:** 2026-09-23
+> **Punto exacto:** Versión v1.5.0 completada e implementada: Compilador del Modelo Relacional multi-pasada, linter interactivo con barra de diagnósticos en `CodePanel`, resiliencia Stale-while-error ante ediciones en tiempo real y red de seguridad Zero-Crash. Paquete `dbv-eer-studio_1.5.0.0.msixbundle` generado y subido a Microsoft Partner Center en estado de revisión y certificación oficial.
+> **Estado:** 41 tests pasando (Vitest), `tsc -b` limpio, `eslint .` 0 errores, build de producción y empaquetado `.msixbundle` verificados con éxito. Subida a Microsoft Store completada.
 
 ### 1️⃣ PRIMERO: Bug del Paso 8A — PK sintética no retirada al heredar
 

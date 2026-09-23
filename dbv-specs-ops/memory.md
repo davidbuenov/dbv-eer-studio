@@ -7,8 +7,8 @@
 > *Instrucción para la IA: Consulta este archivo al inicio de cada sesión para recuperar el hilo técnico.*
 
 ## 🎯 Contexto Activo
-- **Estado actual del desarrollo:** v1.4.0 listo para commit/tag. i18n ES/EN completa, exportación SVG del Modelo Relacional, fix de la relación identificativa del Paso 2 y fix de la PK sintética de subclases del Paso 8A implementados y probados.
-- **Foco inmediato:** Revisar y realizar commit y tag `v1.4.0` ("Version v1.4.0"); reservar identidad real en Microsoft Partner Center para Microsoft Store; revisar y hacer push de los commits de documentación pendientes en repositorios secundarios.
+- **Estado actual del desarrollo:** Versión v1.5.0 completada, taggeada y probada (41 tests en verde). Paquete MSIX bundle (`dbv-eer-studio_1.5.0.0.msixbundle`) subido con éxito a Microsoft Partner Center en estado de certificación y revisión oficial. Metadatos de la tienda (descripciones, capturas, políticas de privacidad y notas de versión en español e inglés) completamente sincronizados.
+- **Foco inmediato:** Seguimiento del proceso de certificación de Microsoft Store (estimado 24-72h) y sincronización de commits/tags con GitHub (`git push origin main --tags`).
 
 ## 🏗️ Log de Decisiones Técnicas (ADR Ligero)
 - **2026-09-22 — Compilador / Linter del Modelo Relacional y Tolerancia a Fallos en DSL Relacional:**

@@ -1,7 +1,7 @@
 # 🏬 Publicación en Microsoft Store: dbv-eer-studio
 
-> **Estado:** 🟢 Reservado en Partner Center — Identidad configurada en `bundle.config.json` y empaquetado MSIX completado (`dbv-eer-studio_1.5.0.0.msixbundle`).
-> **Última revisión:** 2026-09-22
+> **Estado:** 🟡 Subido a Partner Center (v1.5.0.0) — En proceso de certificación/revisión por Microsoft.
+> **Última revisión:** 2026-09-23
 
 Documento operativo (no una especificación de producto): checklist accionable para publicar `dbv-eer-studio` en la Microsoft Store, y registro de las decisiones técnicas que llevan hasta aquí. Complementa al instalador NSIS/MSI ya existente (GitHub Releases) sin sustituirlo — ambos canales de distribución coexisten.
 
@@ -72,12 +72,12 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 2. Configurar `bundle.config.json` con la identidad del Partner Center (Completado ✅).
 3. Generar el `.msixbundle` final con esa identidad (Completado ✅ — `src-tauri/target/msix/dbv-eer-studio_1.5.0.0.msixbundle`).
 4. Publicar política de privacidad (Completado ✅ — `docs/store/PRIVACY_POLICY.md`).
-5. Propiedades del producto: Categoría `Developer tools` / Subcategoría `Database tools`.
-6. Ficha de la Store: Descripción, capturas y edad recomendada.
-7. Subir el paquete `dbv-eer-studio_1.5.0.0.msixbundle` a la submission en Partner Center.
-8. (Recomendado) Pasar el Windows App Certification Kit (WACK) local antes de enviar.
-9. **Verificar que ningún asset de `Assets/*.png` sea un placeholder** (§3).
-10. Enviar a certificación.
+5. Propiedades del producto: Categoría `Developer tools` / Subcategoría `Database tools` (Completado ✅).
+6. Ficha de la Store: Descripción, capturas, edad recomendada y novedades v1.5.0 (Completado ✅).
+7. Subir el paquete `dbv-eer-studio_1.5.0.0.msixbundle` a la submission en Partner Center (Completado ✅).
+8. (Recomendado) Pasar el Windows App Certification Kit (WACK) local antes de enviar (Completado ✅).
+9. **Verificar que ningún asset de `Assets/*.png` sea un placeholder** (§3) (Completado ✅).
+10. Enviar a certificación (Completado ✅ — 2026-09-23).
 
 ## 6. Fuera de alcance de esta fase
 
