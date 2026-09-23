@@ -43,8 +43,8 @@ Combina un editor gráfico de diagramas **Entidad-Relación Extendido (EER)** co
 
 ---
 
-## 🆕 Novedades de la Versión v1.4.0
-- Motor de conversión corregido para el Paso 8A (herencia de claves secundarias sin acumular claves sintéticas).
-- Interfaz e Inspector Pedagógico completamente bilingües (Español / Inglés).
-- Exportador SVG dedicado para la vista del Modelo Relacional.
-- Mejoras de fluidez en el arrastre gráfico de tablas relacionales.
+## 🆕 Novedades de la Versión v1.5.0
+- Compilador y Linter interactivo para el Modelo Relacional con verificación de integridad referencial.
+- Barra inferior de diagnósticos en vivo con navegación directa a la línea con error o advertencia.
+- Tolerancia a fallos Stale-while-error: eliminación de parpadeos y desaparición de tablas al editar.
+- Red de seguridad Zero-Crash con ErrorBoundary y blindaje ante edición de entidades incompletas.

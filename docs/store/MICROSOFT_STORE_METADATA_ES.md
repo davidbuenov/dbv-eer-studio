@@ -85,8 +85,9 @@ Permite diseñar diagramas Entidad-Relación Extendido (EER) mediante un lenguaj
 
 ---
 
-## 📜 Notas de la Versión v1.4.0 (Release Notes)
-- Corrección del algoritmo del Paso 8A: Retirada automática de PKs sintéticas al heredar claves primarias de superclases y reordenación del pipeline.
-- Cobertura completa de internacionalización (ES/EN) en la interfaz estática e Inspector Pedagógico.
-- Nuevo motor de exportación a SVG vectorial para el Modelo Relacional.
-- Mejoras de rendimiento en el arrastre nativo de tarjetas en WebView2.
+## 📜 Novedades de la Versión v1.5.0 (Release Notes - "What's new in this version")
+- **Compilador y Linter del Modelo Relacional**: Validación sintáctica y semántica multi-pasada en tiempo real para el lenguaje DSL relacional (`table NOMBRE { ... }`).
+- **Verificación de Integridad Referencial**: Detección formativa de claves foráneas hacia tablas o columnas no declaradas, resolución transparente de referencias hacia adelante (*forward references*) y advertencias pedagógicas para tablas sin clave primaria.
+- **Barra de Diagnósticos interactiva en el editor**: Indicador en vivo de estado (sintaxis correcta con conteo de tablas/FKs o advertencias/errores con número de línea) y salto automático a la línea con fallo al hacer clic.
+- **Tolerancia a fallos Stale-while-error**: Prevención total de parpadeos y desaparición de tablas y flechas FK al editar o renombrar código en tiempo real.
+- **Red de seguridad Zero-Crash y corrección de edición de entidades**: Corrección del reinicio accidental al dejar entidades incompletas en el editor y contención de errores con ErrorBoundary.

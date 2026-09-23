@@ -43,8 +43,8 @@ It pairs an **Extended Entity-Relationship (EER)** visual diagram editor with a 
 
 ---
 
-## 🆕 What's New in Version v1.4.0
-- Refined Step 8A mapping engine (proper primary key inheritance without accumulating synthetic default keys).
-- Fully bilingual UI and Educational Inspector (English / Spanish).
-- Dedicated SVG vector exporter for the Relational Model tab.
-- Smoother table dragging performance in desktop native WebView2.
+## 🆕 What's New in Version v1.5.0
+- Interactive compiler and linter for the Relational Model with referential integrity checks.
+- Live editor diagnostics bar with one-click direct jump to error and warning lines.
+- Stale-while-error fault tolerance: eliminates visual flickering and table loss during editing.
+- Zero-Crash safety net with React ErrorBoundary and hardening against incomplete entity editing.

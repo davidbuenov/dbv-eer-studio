@@ -85,8 +85,9 @@ Design Extended Entity-Relationship (EER) diagrams using a lightweight text DSL 
 
 ---
 
-## 📜 Version v1.4.0 Release Notes
-- Step 8A mapping fix: Automatic synthetic PK removal upon superclass PK inheritance and pipeline reordering.
-- Comprehensive ES/EN internationalization coverage across static UI and Educational Inspector.
-- New standalone SVG vector exporter for the Relational Model.
-- Performance enhancements for native table card dragging in WebView2.
+## 📜 Version v1.5.0 Release Notes ("What's new in this version")
+- **Relational Model Compiler & Linter**: Multi-pass real-time syntax and semantic validation for the relational DSL (`table NAME { ... }`).
+- **Referential Integrity Verification**: Real-time diagnostic feedback for foreign keys referencing undeclared tables or columns, seamless forward-reference resolution, and pedagogical warnings for tables missing primary keys.
+- **Interactive Diagnostics Bar in Editor**: Live status bar showing syntax validity (tables/FKs count) or line-level errors/warnings with one-click navigation directly to the error line.
+- **Stale-While-Error Visual Resilience**: Eliminates visual flickering, card disappearance, and broken FK arrows while typing or editing table code in real time.
+- **Zero-Crash Safety Net & Entity Editing Fix**: Fixed app restarting when clearing entity names in the DSL editor, backed by a global React ErrorBoundary.
