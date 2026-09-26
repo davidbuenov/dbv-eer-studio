@@ -88,6 +88,7 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 La entrega de una versión **no termina en el commit + tag**. Cada `/ship` incluye además:
 
 1. **Publicar en GitHub:** `git push origin main --tags` (dispara GitHub Pages y los workflows de release de Windows/Linux/macOS).
+   - Los workflows crean la release como **borrador**: cuando terminen, revisar `gh release list` y publicarla (`gh release edit vX.Y.Z --draft=false --latest`) con confirmación del autor.
 2. **Generar el MSIX:**
    - Cerrar cualquier instancia de `dbv-eer-studio.exe` (Windows bloquea el binario y el build falla con "Acceso denegado").
    - Comprobar que `src-tauri/gen/windows/Assets/*.png` no son placeholders (§3).

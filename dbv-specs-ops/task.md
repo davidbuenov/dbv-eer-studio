@@ -2,8 +2,8 @@
 
 ## Contexto del Proyecto (Context Snapshot)
 * **Objetivo**: Editor EER ↔ Modelo Relacional ↔ Oracle SQL DDL con compiladores interactivos, linter de 2 niveles y tolerancia a fallos Stale-while-error.
-* **Estado actual**: Versión **v1.6.0** entregada (2026-09-26): propuestas de Enrique Soler Castillo (`SPECIFICATIONS.md §3.7`), selección por rectángulo y navegación estilo draw.io, y Centro de Ayuda unificado (§3.8). 138 tests en verde, lint y build limpios, smoke tests Playwright superados y `.exe` validado por el autor. Commit y tag `v1.6.0` publicados en GitHub; MSIX `1.6.0.0` generado y documentación de la tienda preparada.
-* **Próximo paso**: el autor envía la actualización v1.6.0 en Partner Center siguiendo `docs/store/SUBMISSION_GUIDE_v1.6.0.md` (MSIX ya generado en `src-tauri/target/msix/`); después, v1.7.0 — soporte táctil.
+* **Estado actual**: **v1.6.0 entregada y publicada en GitHub** (2026-09-26): commits `51eab62` (feat) y `8229a4e` (docs store), tag `v1.6.0`, GitHub Pages desplegado y workflows de release Windows/Linux/macOS en verde. MSIX `dbv-eer-studio_1.6.0.0.msixbundle` generado y verificado (`src-tauri/target/msix/`, no versionado). Documentación de Microsoft Store lista en `docs/store/`. 138 tests en verde.
+* **Próximo paso**: (1) publicar los borradores de release de GitHub (v1.6.0, y decidir sobre v1.5.0/v1.4.1, que también siguen en borrador: la última release pública es v1.4.0, así que el auto-updater de las instalaciones fuera de la Store no ve versiones nuevas); (2) enviar la actualización v1.6.0 en Partner Center con `docs/store/SUBMISSION_GUIDE_v1.6.0.md`; (3) iniciar `/spec` de la v1.7.0 — soporte táctil.
 
 ## Checklist de Tareas
 
@@ -186,9 +186,15 @@
 
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
-> **Last update / Última actualización:** 2026-09-26
-> **Punto exacto:** v1.6.0 entregada en local (commit + tag `v1.6.0`, sin push). Ver `walkthrough.md` para el resumen completo.
-> **Estado:** 138 tests (Vitest), `tsc -b` limpio, `eslint .` 0 errores, build de producción y `.exe` Tauri recompilados. Para retomar: 1) `git push origin main --tags`; 2) generar `dbv-eer-studio_1.6.0.0.msixbundle` (`npm run tauri:windows:build`) y subirlo a Partner Center siguiendo `docs/MICROSOFT_STORE.md` y `docs/MARKETPLACE_PUBLISHING.md`; 3) iniciar `/spec` de la v1.7.0 (soporte táctil, ver roadmap).
+> **Last update / Última actualización:** 2026-09-26 (cierre de sesión)
+> **Punto exacto:** v1.6.0 cerrada: código, tag y documentación de tienda publicados en GitHub; MSIX 1.6.0.0 generado. Resumen completo del ciclo en `walkthrough.md`.
+> **Estado:** 138 tests (Vitest), `tsc -b` y `eslint .` limpios, build y `.exe`/MSIX compilados. Workflows de release v1.6.0 en verde, con artefactos (`.exe`/`.msi`, `.deb`/`.rpm`/`.AppImage`, `.dmg`) en una release **en borrador**.
+>
+> **Para retomar, en este orden:**
+> 1. **Releases de GitHub en borrador:** v1.6.0, v1.5.0 y v1.4.1 están como *Draft*; la pública (*Latest*) es v1.4.0. Publicar la v1.6.0 (`gh release edit v1.6.0 --draft=false --latest`) tras revisar sus notas, y decidir si las intermedias se publican o se eliminan. Pedir confirmación al autor antes: es una acción visible para los usuarios y activa el auto-updater de las instalaciones NSIS/MSI.
+> 2. **Microsoft Store:** el autor envía la actualización v1.6.0 siguiendo `docs/store/SUBMISSION_GUIDE_v1.6.0.md`; al publicarse, actualizar `docs/MICROSOFT_STORE.md` §4.
+> 3. **v1.7.0 — soporte táctil:** empezar por `/spec` (ver roadmap más abajo y `SPECIFICATIONS.md §3.7` fuera de alcance).
+> 4. **Regla de `/ship`** (autor, 2026-09-26): toda entrega incluye push, MSIX y documentación completa de la Store — `docs/MICROSOFT_STORE.md` §7.
 
 > *Histórico del snapshot anterior (v1.5.0) a continuación.*
 
