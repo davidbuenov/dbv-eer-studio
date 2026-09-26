@@ -7,8 +7,8 @@
 > *Instrucción para la IA: Consulta este archivo al inicio de cada sesión para recuperar el hilo técnico.*
 
 ## 🎯 Contexto Activo
-- **Estado actual del desarrollo:** v1.6.0 publicada en GitHub el 2026-09-26 (tag `v1.6.0`, Pages desplegado, releases compiladas en borrador) y MSIX 1.6.0.0 generado con su documentación de tienda. En Microsoft Store está publicada la v1.5.0. 138 tests en verde.
-- **Foco inmediato:** publicar las releases de GitHub que siguen en borrador (v1.4.1, v1.5.0, v1.6.0 — la última pública es v1.4.0), enviar la v1.6.0 a Microsoft Store y abrir la v1.7.0 (soporte táctil).
+- **Estado actual del desarrollo:** v1.6.0 publicada en GitHub (release *Latest* con Linux y macOS) y MSIX 1.6.0.0 listo para la Store, que es el único canal de Windows desde esta versión. En Microsoft Store está publicada la v1.5.0. 138 tests en verde.
+- **Foco inmediato:** enviar la v1.6.0 a Microsoft Store (único canal de Windows desde esta versión), decidir sobre el auto-updater roto y abrir la v1.7.0 (soporte táctil). Releases de GitHub al día: v1.6.0 es la *Latest*.
 
 ## 🏗️ Log de Decisiones Técnicas (ADR Ligero)
 - **2026-09-26 — Windows solo por Microsoft Store (desde v1.6.0):** como en `dbv-md-reader`. Eliminado `release-windows.yml`; las Releases de GitHub solo llevan Linux y macOS; el README envía a la Store. Se publicaron los borradores pendientes (v1.4.1, v1.5.0, v1.6.0) con notas detalladas, y se completaron las de v1.4.0. Hallazgo sin corregir: el auto-updater (`plugins.updater`) nunca ha funcionado porque los workflows usan `includeUpdaterJson: false` y ninguna release contiene `latest.json`.
