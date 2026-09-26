@@ -7,27 +7,32 @@ interface ModalDeleteConfirmProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  node: NodeData | null;
+  nodes: NodeData[];
 }
 
+// Indexado por `NodeType` (el tipo real del nodo), no por el nombre de la herramienta de la toolbar.
 const NODE_TYPE_KEYS: Record<string, TranslationKey> = {
   entity: 'nodeType.entity',
   weak_entity: 'nodeType.weak_entity',
   relationship: 'nodeType.relationship',
-  ident_rel: 'nodeType.ident_rel',
+  identifying_relationship: 'nodeType.ident_rel',
   attribute: 'nodeType.attribute',
-  key_attr: 'nodeType.key_attr',
-  derived_attr: 'nodeType.derived_attr',
-  multivalued_attr: 'nodeType.multivalued_attr',
+  key_attribute: 'nodeType.key_attr',
+  derived_attribute: 'nodeType.derived_attr',
+  multivalued_attribute: 'nodeType.multivalued_attr',
   specialization: 'nodeType.specialization',
+  union: 'nodeType.union',
 };
 
-export function ModalDeleteConfirm({ isOpen, onClose, onConfirm, node }: ModalDeleteConfirmProps) {
+export function ModalDeleteConfirm({ isOpen, onClose, onConfirm, nodes }: ModalDeleteConfirmProps) {
   const { t } = useLanguage();
 
-  if (!isOpen || !node) return null;
+  if (!isOpen || nodes.length === 0) return null;
 
-  const typeName = t(NODE_TYPE_KEYS[node.type] ?? 'nodeType.default');
+  const [first] = nodes;
+  const message = nodes.length === 1
+    ? t('modalDeleteConfirm.message', { typeName: t(NODE_TYPE_KEYS[first!.type] ?? 'nodeType.default'), label: first!.label })
+    : t('modalDeleteConfirm.messageMultiple', { count: nodes.length, labels: nodes.map(n => n.label).join(', ') });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -45,9 +50,7 @@ export function ModalDeleteConfirm({ isOpen, onClose, onConfirm, node }: ModalDe
         </div>
 
         <div className="mb-6">
-          <p className="text-slate-700">
-            {t('modalDeleteConfirm.message', { typeName, label: node.label })}
-          </p>
+          <p className="text-slate-700 break-words">{message}</p>
           <p className="text-sm text-slate-500 mt-2">
             {t('modalDeleteConfirm.subMessage')}
           </p>
@@ -61,6 +64,7 @@ export function ModalDeleteConfirm({ isOpen, onClose, onConfirm, node }: ModalDe
             {t('common.cancel')}
           </button>
           <button
+            autoFocus
             onClick={() => {
               onConfirm();
               onClose();

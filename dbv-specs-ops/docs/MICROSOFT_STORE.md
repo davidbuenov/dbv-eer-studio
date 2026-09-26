@@ -62,6 +62,7 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 - [x] Reservar el nombre → `davidbuenov.dbv-eer-studio` (Id de Store: `9NFHVXW7ZRJC`).
 - [x] Copiar Publisher CN (`CN=13EE2A5D-F49E-48C9-8873-941069B15D63`) a `bundle.config.json` (§2).
 - [x] Generar el paquete MSIX bundle `dbv-eer-studio_1.5.0.0.msixbundle`.
+- [ ] Generar y subir `dbv-eer-studio_1.6.0.0.msixbundle` (v1.6.0, notas de versión ya actualizadas en `docs/store/`).
 - [x] Política de privacidad creada en [`docs/store/PRIVACY_POLICY.md`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/PRIVACY_POLICY.md).
 - [x] Capturas de pantalla para la ficha en [`docs/store/screenshots/`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/screenshots/).
 - [x] Metadatos de Store creados en [`docs/store/MICROSOFT_STORE_METADATA_ES.md`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/MICROSOFT_STORE_METADATA_ES.md) y `_EN.md`.

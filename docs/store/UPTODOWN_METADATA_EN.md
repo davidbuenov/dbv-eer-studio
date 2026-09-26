@@ -43,8 +43,12 @@ It pairs an **Extended Entity-Relationship (EER)** visual diagram editor with a 
 
 ---
 
-## 🆕 What's New in Version v1.5.0
-- Interactive compiler and linter for the Relational Model with referential integrity checks.
-- Live editor diagnostics bar with one-click direct jump to error and warning lines.
-- Stale-while-error fault tolerance: eliminates visual flickering and table loss during editing.
-- Zero-Crash safety net with React ErrorBoundary and hardening against incomplete entity editing.
+## 🆕 What's New in Version v1.6.0
+- Edit elements with double-click or F2; renaming updates every reference.
+- Selection rectangle, Ctrl + click and group moves; attributes follow their entity.
+- draw.io-style navigation: right button to pan and Ctrl + wheel to zoom.
+- The selected element is highlighted in the code.
+- "Add and create another" and relationship attributes from the form.
+- M:N relationship key attributes in the PK and a rigorous per-step ON DELETE policy.
+- Specialization defining attribute: `spec d -> EMPLOYEE [JobType]`.
+- Unified Help Center (F1) in Spanish and English.

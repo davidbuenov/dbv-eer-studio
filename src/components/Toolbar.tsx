@@ -116,14 +116,6 @@ function ToolbarComponent({ selectedTool, onToolSelect }: ToolbarProps) {
       
       {/* Hierarchy */}
       {renderButtonGroup('hierarchy', toolButtons)}
-      
-      <div className="w-px bg-slate-200 mx-1 h-6"></div>
-      
-      {/* Instrucción sobre Shift */}
-      <div className="text-xs text-slate-500 ml-auto flex items-center gap-2" title={t('toolbar.shiftHint.title')}>
-        <kbd className="px-2 py-1 bg-slate-100 border border-slate-300 rounded text-xs font-mono">Shift</kbd>
-        <span>{t('toolbar.shiftHint.text')}</span>
-      </div>
     </div>
   );
 }

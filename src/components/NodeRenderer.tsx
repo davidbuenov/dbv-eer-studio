@@ -7,7 +7,8 @@ interface NodeRendererProps {
   isDragged: boolean;
   isSelected: boolean;
   onMouseDown: (e: React.MouseEvent, id: string) => void;
-  onClick: (id: string) => void;
+  onClick: (e: React.MouseEvent, id: string) => void;
+  onDoubleClick: (id: string) => void;
 }
 
 /**
@@ -26,14 +27,18 @@ interface NodeRendererProps {
  * 
  * Optimizado con React.memo para evitar re-renders innecesarios cuando las props no cambian.
  */
-function NodeRendererComponent({ node, isDragged, isSelected, onMouseDown, onClick }: NodeRendererProps) {
+function NodeRendererComponent({ node, isDragged, isSelected, onMouseDown, onClick, onDoubleClick }: NodeRendererProps) {
   const { STROKE_COLOR, STROKE_WIDTH, FILL_COLOR, TEXT_COLOR } = NODE_STYLES;
 
   const commonProps = {
     onMouseDown: (e: React.MouseEvent) => onMouseDown(e, node.id),
     onClick: (e: React.MouseEvent) => {
       e.stopPropagation();
-      onClick(node.id);
+      onClick(e, node.id);
+    },
+    onDoubleClick: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onDoubleClick(node.id);
     },
     style: { cursor: 'move' }
   };
@@ -86,8 +91,8 @@ function NodeRendererComponent({ node, isDragged, isSelected, onMouseDown, onCli
             const isDerived = node.type === 'derived_attribute';
             return (
               <>
-                <ellipse cx="0" cy="0" rx="45" ry="25" fill="#f1f5f9" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} strokeDasharray={isDerived ? "4" : "0"} className="drop-shadow-sm"/>
-                {isMulti && <ellipse cx="0" cy="0" rx="38" ry="18" fill="none" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} />}
+                <ellipse cx="0" cy="0" rx="45" ry="25" fill="#f1f5f9" stroke={strokeColor} strokeWidth={strokeWidth} strokeDasharray={isDerived ? "4" : "0"} className="drop-shadow-sm"/>
+                {isMulti && <ellipse cx="0" cy="0" rx="38" ry="18" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} />}
                 <text x="0" y="4" textAnchor="middle" fill={TEXT_COLOR} fontSize="11" textDecoration={isKey ? "underline" : "none"} style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
               </>
             );

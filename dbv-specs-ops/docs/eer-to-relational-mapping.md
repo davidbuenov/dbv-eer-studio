@@ -60,6 +60,7 @@ Mapea relaciones de correspondencia uno-a-uno entre dos relaciones $S$ y $T$. Ex
 - **Regla:** Seleccionar la relación que representa la participación total (ej. $S$) e incluir en ella, como clave ajena (FK), la clave primaria de la otra relación (ej. $T$). 
 - **Atributos de Relación:** Si la relación 1:1 posee atributos propios, se mapean como columnas de la tabla que contiene la FK ($S$).
 - **Restricciones:** El atributo FK en $S$ debe configurarse como `UNIQUE` para asegurar la restricción 1:1, y como `NOT NULL` si la participación es total.
+- **Acción referencial:** si la FK es `NOT NULL` (participación total), `ON DELETE NO ACTION`: no se puede borrar la fila referenciada mientras exista su pareja obligatoria. Si la FK admite nulos (participación parcial), `ON DELETE SET NULL`: al borrar la fila referenciada, la pareja pierde el vínculo pero sigue existiendo.
 
 #### Opción 3.2: Metodología de la Relación Mezclada (Merged Relation)
 - **Cuándo aplicar:** Únicamente apropiado cuando **ambas** participaciones en la relación son totales (obligatorias), lo que implica que las entidades están íntimamente ligadas.
@@ -81,7 +82,11 @@ Representa relaciones de correspondencia uno-a-muchos (donde una entidad del lad
 2. **Propagación de Clave:** Incluir como clave ajena (FK) en $S$ (tabla del lado N) la clave primaria de $T$ (tabla del lado 1).
 3. **Atributos de Relación:** Incluir los atributos simples de la relación 1:N como columnas de $S$ (tabla del lado N).
 4. **Justificación:** Se realiza la propagación hacia el lado N porque cada instancia en el lado N se asocia como máximo con una única instancia en el lado 1.
-5. **Alternativa (Relación de Relación):** Si la participación del lado N es muy baja (ej. solo el 5% de los empleados tiene asignado un coche de empresa), se puede optar por crear una tercera tabla de referencia cruzada con $\text{PK} = \{\text{PK del lado N}\}$ para evitar columnas llenas de valores `NULL`.
+5. **Nulabilidad y acción referencial:** la FK es `NOT NULL` si el lado N tiene participación total, y admite nulos si es parcial. En consecuencia:
+   - Participación **total** del lado N ⇒ `ON DELETE NO ACTION`. Ejemplo: no se permite borrar un departamento mientras tenga profesores; primero hay que reasignarlos o darlos de baja.
+   - Participación **parcial** del lado N ⇒ `ON DELETE SET NULL`. Ejemplo: al borrar un coche de empresa, el empleado sigue existiendo sin coche asignado.
+   - `ON DELETE CASCADE` **no** es adecuado en general en una 1:N: borraría en cadena entidades independientes (profesores) como efecto colateral de borrar otra (su departamento).
+6. **Alternativa (Relación de Relación):** Si la participación del lado N es muy baja (ej. solo el 5% de los empleados tiene asignado un coche de empresa), se puede optar por crear una tercera tabla de referencia cruzada con $\text{PK} = \{\text{PK del lado N}\}$ para evitar columnas llenas de valores `NULL`.
 
 ---
 
@@ -97,9 +102,8 @@ Representa relaciones muchos-a-muchos. Debido a la naturaleza combinatoria de la
    - Incluir cualquier atributo simple (o componentes simples de compuestos) perteneciente al tipo de relación M:N.
 3. **Definición de la Clave Primaria (PK):** La PK de $S$ es la combinación de las FKs de ambas entidades participantes:
    $$\text{PK}(S) = \{\text{FK}_1 \cup \text{FK}_2\}$$
-4. **Reglas de Integridad Referencial:** Ambas FKs deben configurarse con:
-   - `ON UPDATE CASCADE`
-   - `ON DELETE CASCADE` (la eliminación de una entidad participante elimina automáticamente sus enlaces de relación correspondientes).
+4. **Atributos clave de la relación:** si la relación M:N tiene un atributo clave (ej. `VUELTA` en `CIRCULA(PILOTO, TRAMO)`, porque un piloto puede recorrer el mismo tramo varias veces), ese atributo se añade a la PK: $\text{PK}(S) = \{\text{FK}_1 \cup \text{FK}_2 \cup \text{atributos clave de } R\}$.
+5. **Reglas de Integridad Referencial:** Ambas FKs se configuran con `ON DELETE NO ACTION` (en Oracle, omitiendo la cláusula): no se permite borrar una entidad participante mientras tenga filas de relación asociadas. Borrar esos enlaces es una decisión de negocio que debe tomarse explícitamente, no un efecto colateral silencioso. Si el diseñador decide que los enlaces carecen de sentido sin la entidad, puede cambiarla a `CASCADE` en el DSL relacional.
 
 ---
 
@@ -133,7 +137,9 @@ Mapea tipos de relación que vinculan a tres o más tipos de entidades de forma 
    - Incluir cualquier atributo propio de la relación n-aria.
 3. **Definición de la Clave Primaria (PK):**
    - **Regla General:** Por defecto, la PK de $S$ es la combinación de todas las FKs que referencian a las entidades participantes.
+   - **Atributos clave de la relación:** si la relación n-aria tiene atributos clave propios, forman parte también de la PK.
    - **Excepción por Restricción de Cardinalidad:** Si la restricción de cardinalidad de alguno de los tipos de entidad participantes $E$ en la relación $R$ es **1** (lo que significa que para una combinación de las otras entidades solo puede asociarse una única instancia de $E$), entonces la PK de $S$ **no** debe incluir la FK que referencia a $E$. En su lugar, el resto de las FKs formarán la PK, y la FK de $E$ será una columna común no-clave en $S$.
+4. **Reglas de Integridad Referencial:** como en el Paso 5, cada FK se configura con `ON DELETE NO ACTION`.
 
 ---
 
@@ -154,6 +160,11 @@ Una superclase $C$ tiene una clave primaria $k$ y atributos simples $\{a_1, \dot
          |                       |
    [ Subclase S1 ]        [ Subclase S2 ]
 ```
+
+**Especialización definida por atributo vs. definida por el usuario:**
+- **Definida por atributo (attribute-defined):** la pertenencia a cada subclase la determina el valor de un atributo de la superclase, llamado **atributo definidor** (ej. `TipoTrabajo` en `EMPLEADO`). En el diagrama se escribe junto a la arista que une la superclase con el círculo de especialización. En el DSL de EER Studio: `spec d -> EMPLEADO [TipoTrabajo]`.
+- **Definida por el usuario:** no existe ningún atributo que determine la subclase; el usuario decide a qué subclase pertenece cada entidad. En el DSL basta con omitir los corchetes: `spec d -> EMPLEADO`.
+- **Mapeo en EER Studio (opción 8A):** si hay atributo definidor y la superclase no lo declara ya como atributo, se añade como columna de la tabla de la superclase. Sin atributo definidor no se genera ninguna columna discriminante.
 
 ---
 
@@ -256,16 +267,31 @@ Cuando las superclases de la categoría ya comparten el mismo atributo de clave 
 
 ---
 
+## Política de Acciones Referenciales (`ON DELETE`)
+
+`ON DELETE CASCADE` solo se justifica cuando la fila hija **no tiene existencia propia** sin la padre. En los demás casos, borrar en cascada hace desaparecer datos independientes como efecto colateral.
+
+| Caso | `ON DELETE` | Motivo |
+| :--- | :--- | :--- |
+| Entidad débil (Paso 2), atributo multivalorado (Paso 6), subclase 8A (Paso 8) | `CASCADE` | Dependencia existencial: la fila hija es parte de la padre. |
+| FK obligatoria (`NOT NULL`) en 1:1 / 1:N (Pasos 3 y 4) | `NO ACTION` | Impide dejar huérfanos: hay que reasignar o borrar antes los hijos. |
+| FK opcional (nullable) en 1:1 / 1:N (Pasos 3 y 4) y categorías (Paso 9) | `SET NULL` | El hijo sobrevive sin vínculo. |
+| Tablas de relación M:N y n-arias (Pasos 5 y 7) | `NO ACTION` | Los vínculos registran hechos del negocio; su borrado debe ser explícito. |
+
+**Oracle** solo admite `ON DELETE CASCADE` y `ON DELETE SET NULL`; `NO ACTION` es su comportamiento por defecto y se expresa **omitiendo** la cláusula (no existe `ON DELETE RESTRICT`). `ON UPDATE` no existe en Oracle: las claves primarias no deberían modificarse.
+
+---
+
 ## Tabla de Resumen de Correspondencias
 
 | Modelo EER | Modelo Relacional | Elementos de Integridad y Restricciones |
 | :--- | :--- | :--- |
 | **Tipo de entidad fuerte (regular)** | Relación de entidad (Tabla) | PK (Atributo único o compuesto). |
-| **Tipo de entidad débil** | Tabla con clave ajena propagada | $\text{PK} = \{\text{PK Propietario} \cup \text{Clave Parcial}\}$. FK referenciada con `ON DELETE CASCADE`. |
-| **Relación Binaria 1:1** | Clave ajena propagada o tabla de relación | FK en la tabla con participación total (con restricción `UNIQUE` y opcionalmente `NOT NULL`). |
-| **Relación Binaria 1:N** | Clave ajena en el lado N | FK en el lado N referenciando la PK del lado 1. Atributos de relación migran al lado N. |
-| **Relación Binaria M:N** | Relación de relación (Tabla puente) | $\text{PK} = \{\text{FK}_1 \cup \text{FK}_2\}$. Ambas FKs con `ON DELETE CASCADE`. |
-| **Relación n-aria ($n > 2$)** | Tabla de relación de n-vías | $\text{PK} = \{\text{FK}_1 \cup \dots \cup \text{FK}_n\}$ (por defecto). Exclusiones en la PK si hay cardinalidad 1. |
+| **Tipo de entidad débil** | Tabla con clave ajena propagada | $\text{PK} = \{\text{PK Propietario} \cup \text{Clave Parcial}\}$. FK referenciada con `ON DELETE CASCADE` (dependencia existencial). |
+| **Relación Binaria 1:1** | Clave ajena propagada o tabla de relación | FK en la tabla con participación total (`UNIQUE`, `NOT NULL`, `ON DELETE NO ACTION`); si ninguna es total, FK nullable con `ON DELETE SET NULL`. |
+| **Relación Binaria 1:N** | Clave ajena en el lado N | FK en el lado N referenciando la PK del lado 1. Atributos de relación migran al lado N. Participación total ⇒ `NOT NULL` + `ON DELETE NO ACTION`; parcial ⇒ nullable + `ON DELETE SET NULL`. |
+| **Relación Binaria M:N** | Relación de relación (Tabla puente) | $\text{PK} = \{\text{FK}_1 \cup \text{FK}_2 \cup \text{atributos clave de la relación}\}$. Ambas FKs con `ON DELETE NO ACTION`. |
+| **Relación n-aria ($n > 2$)** | Tabla de relación de n-vías | $\text{PK} = \{\text{FK}_1 \cup \dots \cup \text{FK}_n\}$ (por defecto) más los atributos clave de la relación. Exclusiones en la PK si hay cardinalidad 1. FKs con `ON DELETE NO ACTION`. |
 | **Atributo multivalor** | Relación de atributo independiente | $\text{PK} = \{\text{FK de la entidad} \cup \text{Valor del atributo}\}$. FK con `ON DELETE CASCADE`. |
 | **Especialización / Generalización** | Opciones de mapeo: 8A, 8B, 8C, 8D | Ver condiciones específicas de disyunción/solapamiento y total/parcial. |
 | **Categorías (Tipos de Unión)** | Tabla propia con Clave Sustituta | PK sustituta en la tabla de categoría, añadida como FK en las tablas de las superclases. |

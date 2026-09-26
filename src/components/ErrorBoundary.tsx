@@ -7,6 +7,12 @@
 
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 import { AlertOctagon, Copy, Check, RotateCcw } from 'lucide-react';
+import type { TranslationKey } from '../i18n/es';
+import { translate, readStoredLanguage } from '../i18n/translate';
+
+// El ErrorBoundary envuelve al LanguageProvider (debe atrapar también sus fallos), así que
+// traduce leyendo directamente el idioma persistido en lugar del contexto.
+const tr = (key: TranslationKey) => translate(readStoredLanguage(), key);
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -71,11 +77,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <div className="flex items-center gap-3 text-red-600 mb-3">
               <AlertOctagon className="h-8 w-8 shrink-0" />
               <h2 className="text-lg font-bold text-slate-800">
-                Se ha producido un error inesperado
+                {tr('errorBoundary.title')}
               </h2>
             </div>
             <p className="text-sm text-slate-600 mb-4">
-              El editor ha contenido el error para proteger el trabajo. Puedes copiar el reporte técnico o recargar la aplicación.
+              {tr('errorBoundary.subtitle')}
             </p>
 
             {this.state.error && (
@@ -90,14 +96,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
               >
                 {this.state.copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                {this.state.copied ? '¡Reporte copiado!' : 'Copiar reporte'}
+                {this.state.copied ? tr('errorBoundary.copied') : tr('errorBoundary.copyCode')}
               </button>
               <button
                 onClick={this.handleReload}
                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow transition-colors"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                Recargar aplicación
+                {tr('errorBoundary.restore')}
               </button>
             </div>
           </div>

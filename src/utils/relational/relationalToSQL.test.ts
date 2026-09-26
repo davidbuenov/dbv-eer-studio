@@ -93,3 +93,25 @@ describe('relationalToSQL', () => {
     expect(pedidoIndex).toBeGreaterThan(clienteIndex);
   });
 });
+
+describe('relationalToSQL — acciones referenciales por dialecto (v1.6.0)', () => {
+  function schemaWith(onDelete: 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION') {
+    const schema = buildSchema();
+    schema.tables[1]!.foreignKeys[0]!.onDelete = onDelete;
+    return schema;
+  }
+
+  it('Oracle emite SET NULL (antes se perdía)', () => {
+    expect(relationalToSQL(schemaWith('SET NULL'), 'oracle')).toContain('REFERENCES CLIENTE (ID_CLIENTE) ON DELETE SET NULL');
+  });
+
+  it.each(['NO ACTION', 'RESTRICT'] as const)('Oracle omite la cláusula para %s (evita ORA-00905)', action => {
+    const sql = relationalToSQL(schemaWith(action), 'oracle');
+    expect(sql).toContain('REFERENCES CLIENTE (ID_CLIENTE)');
+    expect(sql).not.toContain('ON DELETE');
+  });
+
+  it.each(['postgres', 'mysql', 'sqlite', 'ansi'] as const)('%s escribe NO ACTION de forma explícita', dialect => {
+    expect(relationalToSQL(schemaWith('NO ACTION'), dialect)).toContain('ON DELETE NO ACTION');
+  });
+});

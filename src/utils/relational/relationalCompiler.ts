@@ -13,6 +13,17 @@ import type {
 } from '../../types/relational';
 import type { Diagnostic, CompileRelationalResult } from '../../types/compiler';
 
+const REFERENTIAL_ACTIONS: readonly CascadeOption[] = ['CASCADE', 'SET NULL', 'RESTRICT', 'NO ACTION'];
+
+/**
+ * Normaliza el texto que sigue a `ON DELETE` (mayúsculas, espacios simples) y lo valida
+ * contra las acciones referenciales del estándar SQL. Devuelve `null` si no es ninguna.
+ */
+function parseReferentialAction(text: string): CascadeOption | null {
+  const normalized = text.trim().replace(/\s+/g, ' ').toUpperCase();
+  return REFERENTIAL_ACTIONS.find(action => action === normalized) ?? null;
+}
+
 /**
  * Compila y valida el código DSL del Modelo Relacional línea a línea.
  *
@@ -180,7 +191,7 @@ export function compileRelationalDSL(code: string): CompileRelationalResult {
       // Comprobar formato de clave foránea si contiene 'FK'
       if (hasFKKeyword) {
         const fkMatch = trimmed.match(
-          /^([A-Za-z0-9_]+)\s+([A-Za-z0-9_(),]+).*?\bFK\s*->\s*([A-Za-z0-9_]+)\(([A-Za-z0-9_]+)\)(?:\s+ON\s+DELETE\s+(CASCADE|SET NULL|RESTRICT))?/i
+          /^([A-Za-z0-9_]+)\s+([A-Za-z0-9_(),]+).*?\bFK\s*->\s*([A-Za-z0-9_]+)\(([A-Za-z0-9_]+)\)/i
         );
 
         if (!fkMatch) {
@@ -194,11 +205,29 @@ export function compileRelationalDSL(code: string): CompileRelationalResult {
           continue;
         }
 
+        // Omitida ⇒ NO ACTION, el valor por defecto del estándar SQL: nunca se asume CASCADE
+        // en silencio, porque borraría en cadena filas que el alumno no ha decidido borrar.
+        let cascadeOpt: CascadeOption = 'NO ACTION';
+        const onDeleteClause = trimmed.match(/\bON\s+DELETE\b(.*)$/i);
+        if (onDeleteClause) {
+          const action = parseReferentialAction(onDeleteClause[1] ?? '');
+          if (!action) {
+            diagnostics.push({
+              line: lineNum,
+              severity: 'error',
+              code: 'INVALID_REFERENTIAL_ACTION',
+              messageKey: 'compiler.invalidReferentialAction',
+              params: { action: (onDeleteClause[1] ?? '').trim() },
+            });
+            continue;
+          }
+          cascadeOpt = action;
+        }
+
         const colName = fkMatch[1]!.toUpperCase();
         const dataType = fkMatch[2]!.toUpperCase();
         const targetTable = fkMatch[3]!.toUpperCase();
         const targetCol = fkMatch[4]!.toUpperCase();
-        const cascadeOpt = (fkMatch[5]?.toUpperCase() ?? 'CASCADE') as CascadeOption;
 
         if (currentColumns.some(c => c.name === colName)) {
           diagnostics.push({

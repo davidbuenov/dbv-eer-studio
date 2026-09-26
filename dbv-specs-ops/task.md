@@ -2,10 +2,28 @@
 
 ## Contexto del Proyecto (Context Snapshot)
 * **Objetivo**: Editor EER ↔ Modelo Relacional ↔ Oracle SQL DDL con compiladores interactivos, linter de 2 niveles y tolerancia a fallos Stale-while-error.
-* **Estado actual**: Versión v1.5.0 completada, suite de 41 tests pasando en verde, y paquete MSIX bundle (`dbv-eer-studio_1.5.0.0.msixbundle`) subido a Microsoft Partner Center en proceso de certificación.
-* **Próximo paso**: Monitorizar el estado de certificación en Microsoft Partner Center y publicar releases en GitHub.
+* **Estado actual**: Versión **v1.6.0** entregada (2026-09-26): propuestas de Enrique Soler Castillo (`SPECIFICATIONS.md §3.7`), selección por rectángulo y navegación estilo draw.io, y Centro de Ayuda unificado (§3.8). 138 tests en verde, lint y build limpios, smoke tests Playwright superados y `.exe` validado por el autor. Commit y tag `v1.6.0` creados en local (sin push).
+* **Próximo paso**: `git push origin main --tags`; generar el MSIX v1.6.0.0 y publicarlo (Microsoft Store / Uptodown, notas ya en `docs/store/`); después, v1.7.0 — soporte táctil.
 
 ## Checklist de Tareas
+
+- [x] **Fase `/spec` v1.6.0: Usabilidad del editor EER y rigor del mapeo**
+  - [x] `SPECIFICATIONS.md` §3.7 (PK con key_att de relación, política ON DELETE, `[ATTR]`, edición, selección múltiple, resaltado DSL, crear otro).
+  - [x] `ARCHITECTURE.md` §6 y `eer-to-relational-mapping.md` (política referencial y atributo definidor).
+- [x] **Fase `/plan` v1.6.0**: Adversarial Review + `implementation_plan.md` (aprobación previa del usuario para ejecutar todas las fases hasta /code-simplify).
+- [x] **Fase `/build` v1.6.0**
+  - [x] Bloque 1: Motor relacional (key_att en PK Pasos 5/7, atributos Paso 3, ON DELETE/nulabilidad, DSL relacional, SQL por dialecto).
+  - [x] Bloque 2: Atributo definidor `[ATTR]` (tipos, compilador, render, Paso 8A) + `LinkData.lineIndex` + nudge de coordenadas duplicadas.
+  - [x] Bloque 3: Utilidades puras `layout.ts` y `dslEditing.ts`; generadores con coordenadas.
+  - [x] Bloque 4: UI (modo edición, crear otro, atributos de relación, resaltado DSL, selección múltiple, arrastre de grupo).
+  - [x] Bloque 5: Documentación (ayuda integrada, prompt IA, README ES/EN con agradecimiento, CHANGELOG).
+  - [x] Bloque 6 (añadido tras la validación del usuario; 3 tests unitarios + smoke Playwright de 12 comprobaciones): rectángulo de selección con el botón izquierdo, desplazar con el derecho o el central, rueda para desplazar, Ctrl+rueda para zoom al cursor.
+- [x] **Fase `/test` v1.6.0**: 60 tests nuevos (101 total; los clave verificados en rojo sin el fix) + lint + build + smoke test Playwright de los gestos del canvas.
+- [x] **Fase `/code-simplify` v1.6.0**: parámetro duplicado eliminado; `toDslIdentifier` neutraliza caracteres con significado en el DSL; security review sin hallazgos (sin dependencias nuevas, sin secretos ni sinks HTML).
+- [x] **Fase `/spec` + `/plan` v1.6.0 — Centro de Ayuda** (`SPECIFICATIONS.md §3.8`, `ARCHITECTURE.md §7`, anexo en `implementation_plan.md`).
+- [x] **Fase `/build` Centro de Ayuda**: HelpCenter + 5 pestañas, useHelpCenter, prompt IA bilingüe, versión desde package.json, F1, acceso contextual, toolbar sin pista, retirada de modales antiguos.
+- [x] **Fase `/test` + `/code-simplify` Centro de Ayuda**: 138 tests (34 nuevos; el de sintaxis verificado en rojo con los ejemplos antiguos), lint, build y smoke Playwright de 18 comprobaciones (F1, pestañas, pestaña recordada, ES/EN, acceso contextual). Además se tradujeron textos fijos que quedaban: menú Archivo, ErrorBoundary y tooltip de diagnósticos.
+- [x] **Validación manual del usuario** → `/ship` (v1.6.0): versión 1.6.0 en package.json/Cargo/tauri.conf, CHANGELOG `[1.6.0]`, notas de tienda, `walkthrough.md`, commit + tag.
 
 - [x] **Fase `/spec`: Compilador, Linter y Diagnósticos del Modelo Relacional**
   - [x] Definir alcance en `SPECIFICATIONS.md` §3.6 (Validación 2 niveles, Stale-while-error relacional, feedback de integridad referencial).
@@ -94,6 +112,10 @@
 - [x] **Fase `/ship`**: Versión 1.2.0. README, CHANGELOG, créditos y scripts actualizados; commit/tag pendientes de confirmación del usuario.
 
 ## 📌 Tareas Pendientes / Roadmap Futuro
+
+- [ ] **v1.7.0 — Soporte táctil (tablets)** (decidido con el usuario el 2026-09-26, ver `SPECIFICATIONS.md §3.7` fuera de alcance): migrar `Canvas`/`useCanvasInteraction` a Pointer Events con `touch-action: none`; un dedo en nodo = arrastrar, un dedo en fondo = desplazar, dos dedos = pellizco zoom/desplazamiento, mantener pulsado + arrastrar = rectángulo de selección, doble toque = editar. Requiere prueba en dispositivo táctil real.
+
+- [ ] **Deuda técnica (detectada en v1.6.0, pre-existente)**: el compilador del DSL relacional parte las FK compuestas en una FK por columna; el motor solo implementa la opción 8A (8B/8C/8D en la especificación); dos `spec d` en el mismo diagrama comparten la etiqueta `d` y `link d X` se asocia siempre a la primera; `LinkRenderer` resuelve extremos solo por id, así que `link ENTIDAD atributo` (sin `->`) no se dibuja.
 - [x] **Rename del Repositorio a `dbv-eer-studio`**: hecho en GitHub (`gh repo rename`), remote local, workflow de Pages y README.
 - [x] **Paso 7 (relaciones n-arias) implementado**: confirmado que el DSL (`link relacion entidad cardinalidad`) y el parser ya soportaban conectar 3+ entidades a una relación sin cambios; solo faltaba el motor de conversión. Añadido en `eerToRelational.ts` siguiendo la regla formal de `eer-to-relational-mapping.md` (PK = combinación de FKs, excepto la de la entidad con cardinalidad 1).
 - [x] **Deuda técnica — Exportar SVG del Modelo Relacional**: RESUELTA (2026-08-23). Las tarjetas siguen siendo HTML en pantalla, pero ahora existe un renderer SVG puro dedicado (`exportRelationalSVG.ts`) que reconstruye la vista completa para exportación — ver Fase 2 abajo.
@@ -164,9 +186,11 @@
 
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
-> **Last update / Última actualización:** 2026-09-23
-> **Punto exacto:** Versión v1.5.0 completada e implementada: Compilador del Modelo Relacional multi-pasada, linter interactivo con barra de diagnósticos en `CodePanel`, resiliencia Stale-while-error ante ediciones en tiempo real y red de seguridad Zero-Crash. Paquete `dbv-eer-studio_1.5.0.0.msixbundle` generado y subido a Microsoft Partner Center en estado de revisión y certificación oficial.
-> **Estado:** 41 tests pasando (Vitest), `tsc -b` limpio, `eslint .` 0 errores, build de producción y empaquetado `.msixbundle` verificados con éxito. Subida a Microsoft Store completada.
+> **Last update / Última actualización:** 2026-09-26
+> **Punto exacto:** v1.6.0 entregada en local (commit + tag `v1.6.0`, sin push). Ver `walkthrough.md` para el resumen completo.
+> **Estado:** 138 tests (Vitest), `tsc -b` limpio, `eslint .` 0 errores, build de producción y `.exe` Tauri recompilados. Para retomar: 1) `git push origin main --tags`; 2) generar `dbv-eer-studio_1.6.0.0.msixbundle` (`npm run tauri:windows:build`) y subirlo a Partner Center siguiendo `docs/MICROSOFT_STORE.md` y `docs/MARKETPLACE_PUBLISHING.md`; 3) iniciar `/spec` de la v1.7.0 (soporte táctil, ver roadmap).
+
+> *Histórico del snapshot anterior (v1.5.0) a continuación.*
 
 ### 1️⃣ PRIMERO: Bug del Paso 8A — PK sintética no retirada al heredar
 

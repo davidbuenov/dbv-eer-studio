@@ -2,7 +2,7 @@
 
 > **Fase:** `/spec` (Especificación)
 > **Estado:** Validado (Requisitos ampliados con feedback universitario: Oracle SQL, Ayuda Pedagógica de 9 Pasos, DSL Relacional bidireccional con coordenadas)
-> **Última Revisión:** 2026-08-23
+> **Última Revisión:** 2026-09-26 (§3.7 — v1.6.0)
 
 ---
 
@@ -29,7 +29,7 @@
 ### 3.1. Mapeo Conceptual a Lógico (EER ➔ Modelo Relacional) & Ayuda Universitaria
 - [ ] **Motor de Conversión de 9 Pasos Formales** (`dbv-specs-ops/docs/eer-to-relational-mapping.md`):
   - **Paso 1:** Entidades Fuertes ➔ Tablas + PK.
-  - **Paso 2:** Entidades Débiles ➔ PK combinada + FK con `ON DELETE CASCADE`.
+  - **Paso 2:** Entidades Débiles ➔ PK combinada + FK con `ON DELETE CASCADE` (dependencia existencial; ver política completa en §3.7).
   - **Paso 3:** Relaciones 1:1 Binarias (FK propagada / Mezclada / Cruzada).
   - **Paso 4:** Relaciones 1:N Binarias ➔ Propagación de FK a lado N.
   - **Paso 5:** Relaciones M:N Binarias ➔ Tabla puente de correspondencia.
@@ -67,6 +67,77 @@
   - Barra inferior con icono y estado en vivo (`✓ Sintaxis relacional correcta (N tablas, M claves foráneas)` o `⚠️ Línea X: Error explicativo`).
   - Navegación interactiva al hacer clic en el mensaje de error para posicionar el cursor en la línea correspondiente.
 - [ ] **Internacionalización:** Soporte completo en español e inglés (`es.ts`/`en.ts`) para todos los diagnósticos del modelo relacional.
+
+### 3.7. Usabilidad del Editor EER y Rigor del Mapeo (v1.6.0) `[NUEVO]`
+> Origen: propuestas del colaborador **Enrique Soler Castillo** tras probar la app con un caso real (PILOTO / TRAMO / CIRCULA).
+
+**A. Rigor del mapeo EER ➔ Relacional**
+- [ ] **Atributos clave de relación en la PK:** un `key_att` colgado de una relación M:N (Paso 5) o n-aria (Paso 7) forma parte de la PK compuesta de la tabla de relación y es `NOT NULL` (ej. `CIRCULA(PILOTO_ID, TRAMO_ID, VUELTA)`). En relaciones 1:1 / 1:N un atributo clave no tiene sentido formal: se mapea como columna normal y el linter EER emite la advertencia `KEY_ATTRIBUTE_ON_NON_MN_RELATIONSHIP`.
+- [ ] **Atributos de relaciones 1:1 (Paso 3):** migran a la tabla que recibe la FK (hoy se perdían).
+- [ ] **Política `ON DELETE` según la semántica del paso** (sustituye al `CASCADE` universal):
+
+  | Origen de la FK | `ON DELETE` | Nulabilidad de la FK |
+  | --- | --- | --- |
+  | Paso 2 (entidad débil), Paso 6 (multivalorado), Paso 8A (subclase) | `CASCADE` — dependencia existencial | `NOT NULL` (forma parte de la PK) |
+  | Paso 3 / Paso 4 con participación **parcial** del lado que recibe la FK | `SET NULL` | Nullable |
+  | Paso 3 / Paso 4 con participación **total** del lado que recibe la FK | `NO ACTION` — impide borrar el padre con hijos (ej. un departamento con profesores) | `NOT NULL` |
+  | Paso 5 (tabla puente M:N) y Paso 7 (n-aria) | `NO ACTION` | `NOT NULL` (forma parte de la PK) |
+  | Paso 9 (categoría) | `SET NULL` | Nullable |
+
+- [ ] **Paso 3 (1:1):** la FK se coloca en el lado de participación total (sea el primero o el segundo enlace); si ninguno es total, en el segundo, nullable.
+- [ ] **DSL relacional y SQL respetan la acción referencial elegida:** `ON DELETE CASCADE | SET NULL | RESTRICT | NO ACTION` se genera y se parsea en el DSL relacional (omitida ⇒ `NO ACTION`, el valor por defecto del estándar SQL). El SQL la emite en cada dialecto; en **Oracle**, que solo admite `CASCADE` y `SET NULL`, `NO ACTION`/`RESTRICT` se expresan omitiendo la cláusula. Las FK `NOT NULL` que no son PK se marcan `NOT NULL` en el DSL relacional para que la nulabilidad sobreviva al ida-y-vuelta.
+- [ ] **Textos pedagógicos corregidos:** la Guía de 9 Pasos, el Inspector y la documentación explican *por qué* cada paso usa su acción referencial, en lugar de presentar `CASCADE` como regla general.
+
+**B. Atributo definidor en especializaciones**
+- [ ] **Sintaxis `spec d -> EMPLEADO [TIPO]`:** el nombre entre corchetes declara una especialización **definida por atributo** (Elmasri); sin corchetes es **definida por el usuario** (no hay discriminante). Corchetes vacíos o con un identificador inválido ⇒ error `INVALID_DEFINING_ATTRIBUTE`.
+- [ ] **Representación visual:** el atributo definidor se muestra como etiqueta sobre la arista superclase–círculo.
+- [ ] **Mapeo (Paso 8A):** si la superclase no declara ya ese atributo, se añade como columna de la tabla de la superclase (traza `STEP8_DEFINING_ATTR`). Sin atributo definidor no se genera columna discriminante.
+- [ ] **Formulario visual:** campo opcional *Atributo definidor* al crear/editar una especialización.
+
+**C. Productividad en el canvas EER**
+- [ ] **Atributos de relación desde el canvas:** el selector de "elemento propietario" del formulario de atributo incluye relaciones además de entidades.
+- [ ] **"Añadir y crear otro":** en el formulario de atributo, un segundo botón inserta el atributo y deja el formulario abierto con la misma entidad y tipo, un nombre nuevo y la posición desplazada +100 px en X.
+- [ ] **Anti-solapamiento de atributos:** al crear un atributo en el canvas, si su posición choca con otro nodo, se desplaza +100 px en X hasta encontrar hueco. En el DSL, un atributo pegado con **exactamente las mismas coordenadas** que un nodo anterior se dibuja desplazado +100 px en X (el código no se reescribe hasta que el usuario lo arrastra).
+- [ ] **Edición de elementos existentes:** doble clic sobre un nodo (o `F2`/`Enter` con un nodo seleccionado) abre el mismo formulario en modo edición, precargado:
+  - Entidad: nombre, fuerte/débil.
+  - Atributo: nombre, tipo, elemento propietario.
+  - Relación binaria: nombre, identificativa sí/no, entidades, cardinalidades y participación total. Relación n-aria: nombre e identificativa.
+  - Especialización: tipo `d`/`o`, superclase, subclases y atributo definidor.
+  - Unión: superclases y categoría.
+  - Renombrar actualiza todas las referencias en el DSL (`link`, `->`). Las coordenadas se conservan.
+- [ ] **Localizar el elemento en el DSL:** al seleccionar un nodo, su línea de declaración (y las líneas `link` que le pertenecen) se resaltan en el editor y este se desplaza hasta ella. El editor de texto deja de ajustar líneas (scroll horizontal) para que el resaltado coincida siempre con la línea.
+- [ ] **Selección múltiple:** `Ctrl`/`Cmd` + clic añade o quita nodos de la selección; clic en el fondo del canvas (sin arrastrar) la vacía. Arrastrar un nodo seleccionado mueve todo el grupo. `Supr` elimina todos los nodos seleccionados tras confirmación.
+- [ ] **Los atributos siguen a su propietario:** arrastrar una entidad o relación mueve también sus atributos (recursivamente, incluidos los componentes de compuestos). `Alt` + arrastrar mueve solo el nodo. Sustituye al antiguo "Shift + arrastrar".
+- [ ] **Navegación y selección por rectángulo (convención draw.io / Office), decidida con el usuario:**
+
+  | Gesto (ratón / touchpad) | Acción |
+  | --- | --- |
+  | Arrastrar con el botón **izquierdo** en el fondo | Rectángulo de selección: selecciona los nodos que quedan **enteros dentro** (como Word/PowerPoint/Visio). `Ctrl` + rectángulo añade a la selección. Un clic sin arrastrar vacía la selección. |
+  | Arrastrar con el botón **derecho** o **central** | Desplazar el lienzo (sin menú contextual del navegador sobre el canvas). |
+  | **Rueda** / `Shift` + rueda | Desplazar en vertical / horizontal (el touchpad con dos dedos funciona igual). |
+  | `Ctrl` + rueda (o pellizco en touchpad) | Zoom centrado en el cursor, sin ampliar la ventana completa. |
+
+  No se añaden botones de modo Seleccionar/Desplazar: el botón derecho cubre el desplazamiento.
+
+**D. Documentación**
+- [ ] Guía de sintaxis integrada, prompt de IA, README (ES/EN) y `eer-to-relational-mapping.md` documentan la sintaxis `[ATRIBUTO]`, la política `ON DELETE` y los nuevos gestos del canvas. Se corrige la guía integrada, que mostraba una sintaxis de atributos (`att DNI [key]`) que el compilador no reconoce.
+- [ ] Agradecimiento en el README a **Enrique Soler Castillo** como colaborador por sus propuestas.
+
+**Fuera de alcance de 3.7:** implementar las opciones 8B/8C/8D (el motor solo aplica 8A), deshacer/rehacer y el **soporte táctil** (tablets), planificado para la v1.7.0: hoy el canvas solo escucha eventos de ratón, así que en una tablet se puede tocar para seleccionar pero no arrastrar nodos ni desplazar el lienzo. La v1.7.0 migrará el canvas a Pointer Events (`touch-action: none`) con la convención táctil habitual: un dedo sobre un nodo lo arrastra, un dedo en el fondo desplaza, dos dedos hacen zoom/desplazamiento, mantener pulsado y arrastrar dibuja el rectángulo de selección y doble toque edita.
+
+### 3.8. Centro de Ayuda Unificado (v1.6.0) `[NUEVO]`
+> Origen: petición del usuario tras validar §3.7 — la app no tenía una ayuda de uso y los gestos nuevos solo se explicaban en un tooltip de la toolbar.
+
+- [ ] **Un único botón "Ayuda"** en la cabecera (también con `F1`) sustituye a "Guía 9 Pasos", "Sintaxis", "Prompt IA" y "Créditos". Abre un modal con pestañas:
+  1. **Uso del editor** (nueva): crear elementos, "Añadir y crear otro", seleccionar (clic, `Ctrl` + clic, rectángulo), editar (doble clic, `F2`/`Enter`), borrar (`Supr`), mover (atributos que siguen, `Alt`), navegar (botón derecho, rueda, `Ctrl` + rueda), código DSL (resaltado, diagnósticos), modelo relacional y exportación, y una **tabla de atajos**.
+  2. **Sintaxis**: guía del DSL EER y relacional (subpestañas). Todos sus ejemplos deben compilar sin errores (se corrigen `entity`/`weak_entity`/`relationship`/`identifying_relationship`, que el compilador no reconoce: son `ent`/`weak_ent`/`rel`/`ident_rel`).
+  3. **Guía de 9 Pasos**: resumen teórico, con la política `ON DELETE`.
+  4. **Prompt IA**: prompt para copiar e instrucciones. El prompt deja de ser solo en español: hay versión ES y EN según el idioma activo.
+  5. **Acerca de**: autor, colaboradores (Enrique Soler Castillo), referencia académica, herramientas de IA, versión (leída de `package.json`, no fija en el código) y "Buscar actualizaciones".
+- [ ] **Acceso contextual**: el icono 📖 de cada tabla del Modelo Relacional abre la Ayuda en "Guía de 9 Pasos" con esa tabla inspeccionada.
+- [ ] **Recuerda la última pestaña** abierta (almacenamiento local, tolerante a que esté bloqueado).
+- [ ] **Multiidioma ES/EN completo** en todas las pestañas.
+- [ ] **Toolbar más limpia**: se elimina la pista de gestos de la barra (su contenido pasa a "Uso del editor").
 
 ## 🏗️ 4. Propuesta de Solución Técnica
 - **Modelos de Dominio:** `EERDiagram` (Conceptual) ↔ `RelationalSchema` (Lógico con DSL + Coordenadas) ↔ `SQLScript` (Físico Oracle / Multi-SGBD).

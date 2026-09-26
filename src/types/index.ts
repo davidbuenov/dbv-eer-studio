@@ -25,6 +25,7 @@ export interface NodeData {
   meta?: string; // Para 'd', 'o', 'u' en especializaciones/uniones
   lineIndex: number; // Índice de línea en el código fuente
   parentEntity?: string; // ID de la entidad padre para atributos
+  definingAttribute?: string; // Atributo definidor de una especialización: `spec d -> SUPER [ATTR]`
 }
 
 /**
@@ -35,6 +36,7 @@ export interface LinkData {
   target: string;
   label?: string; // Cardinalidad o Rol
   style?: 'double' | 'solid'; // Para participación total
+  lineIndex?: number; // Línea del DSL que declara el enlace (para resaltarla o reescribirla)
 }
 
 /**

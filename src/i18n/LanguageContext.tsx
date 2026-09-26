@@ -8,30 +8,15 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import type { TranslationKey } from './es';
 import { LanguageContext, type Language, type LanguageContextValue } from './language';
-import { translate } from './translate';
-
-const STORAGE_KEY = 'eer-studio-language';
-
-/**
- * Lee el idioma persistido. El acceso va en `try/catch` porque `localStorage` lanza
- * excepción —no devuelve null— en modo privado o con los datos de sitio bloqueados,
- * y esto se ejecuta al inicializar el estado: sin el guard, la app entera no arranca.
- */
-function getInitialLanguage(): Language {
-  try {
-    return window.localStorage.getItem(STORAGE_KEY) === 'en' ? 'en' : 'es';
-  } catch {
-    return 'es';
-  }
-}
+import { translate, readStoredLanguage, LANGUAGE_STORAGE_KEY } from './translate';
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Language>(getInitialLanguage);
+  const [lang, setLangState] = useState<Language>(readStoredLanguage);
 
   const setLang = useCallback((next: Language) => {
     setLangState(next);
     try {
-      window.localStorage.setItem(STORAGE_KEY, next);
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
     } catch {
       // Persistir el idioma es una comodidad, no un requisito: si el navegador
       // bloquea el almacenamiento, la sesión actual sigue funcionando igual.

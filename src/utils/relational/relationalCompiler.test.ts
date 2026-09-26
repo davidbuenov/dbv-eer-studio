@@ -181,3 +181,34 @@ describe('Relational Compiler & Linter (compileRelationalDSL)', () => {
     expect(warn?.severity).toBe('warning');
   });
 });
+
+describe('compileRelationalDSL — acciones referenciales (v1.6.0)', () => {
+  const dsl = (clause: string) => `table DEPTO {\n  ID NUMBER(10) PK\n}\n\ntable PROFESOR {\n  ID NUMBER(10) PK\n  DEPTO_ID NUMBER(10) FK -> DEPTO(ID)${clause}\n}`;
+
+  it('sin cláusula ON DELETE asume NO ACTION (nunca CASCADE en silencio)', () => {
+    const result = compileRelationalDSL(dsl(''));
+    expect(result.schema.tables[1]!.foreignKeys[0]!.onDelete).toBe('NO ACTION');
+  });
+
+  it.each(['CASCADE', 'SET NULL', 'RESTRICT', 'NO ACTION'] as const)('acepta ON DELETE %s', action => {
+    const result = compileRelationalDSL(dsl(` ON DELETE ${action}`));
+    expect(result.isValid).toBe(true);
+    expect(result.schema.tables[1]!.foreignKeys[0]!.onDelete).toBe(action);
+  });
+
+  it('tolera espacios múltiples y minúsculas en la acción', () => {
+    const result = compileRelationalDSL(dsl(' on delete set   null'));
+    expect(result.schema.tables[1]!.foreignKeys[0]!.onDelete).toBe('SET NULL');
+  });
+
+  it('marca error bloqueante ante una acción desconocida', () => {
+    const result = compileRelationalDSL(dsl(' ON DELETE BORRAR'));
+    expect(result.isValid).toBe(false);
+    expect(result.diagnostics.map(d => d.code)).toContain('INVALID_REFERENTIAL_ACTION');
+  });
+
+  it('una FK marcada NOT NULL no es nullable', () => {
+    const result = compileRelationalDSL(dsl('').replace('NUMBER(10) FK', 'NUMBER(10) NOT NULL FK'));
+    expect(result.schema.tables[1]!.columns[1]!.isNullable).toBe(false);
+  });
+});

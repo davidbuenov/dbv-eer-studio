@@ -38,12 +38,19 @@ export function useToolbar(
     setSelectedTool(null);
   }, []);
 
+  // Recoloca el punto de inserción (anti-solapamiento y "Añadir y crear otro").
+  const setClickPosition = useCallback((point: { x: number; y: number }) => {
+    setClickX(Math.round(point.x));
+    setClickY(Math.round(point.y));
+  }, []);
+
   return {
     selectedTool,
     setSelectedTool,
     clickX,
     clickY,
     handleCanvasClick,
-    resetTool
+    resetTool,
+    setClickPosition
   };
 }

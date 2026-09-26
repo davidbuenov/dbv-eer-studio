@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6.0] — 2026-09-26
+
+> Propuestas del colaborador **Enrique Soler Castillo** (`SPECIFICATIONS.md §3.7`).
+
+### Added
+- **Edición de elementos desde el diagrama**: doble clic (o `F2`/`Enter`) sobre un nodo abre el formulario precargado para renombrar entidades (y marcarlas como débiles), cambiar tipo y propietario de atributos, editar relaciones binarias (entidades, cardinalidades, participación total, identificativa), especializaciones (tipo, superclase, subclases, atributo definidor) y uniones. Renombrar actualiza todas las referencias del DSL; las coordenadas se conservan. Transformaciones puras en `src/utils/dslEditing.ts`.
+- **Localizar el elemento en el DSL**: al seleccionar un nodo se resaltan su línea de declaración y sus líneas `link` en el editor, que se desplaza hasta ellas.
+- **Selección múltiple**: `Ctrl`/`Cmd` + clic añade o quita nodos; arrastrar mueve el grupo; `Supr` elimina todos los seleccionados; `Escape` o clic en el fondo vacía la selección.
+- **Los atributos siguen a su entidad o relación** al arrastrarla, recursivamente (`Alt` + arrastrar mueve solo el nodo). Sustituye a "Shift + arrastrar".
+- **Rectángulo de selección** arrastrando con el botón izquierdo en el fondo: selecciona los nodos que quedan enteros dentro (criterio de Office); `Ctrl` lo suma a la selección.
+- **Navegación estilo draw.io:** botón derecho o central + arrastrar desplaza el lienzo; la rueda desplaza (`Shift` = horizontal) y `Ctrl` + rueda / pellizco de touchpad hace zoom centrado en el cursor.
+- **"Añadir y crear otro"** en el formulario de atributo: inserta y deja el formulario abierto con el mismo propietario y tipo, colocando el siguiente 100 px a la derecha.
+- **Anti-solapamiento de atributos**: al crearlos en el canvas se desplazan si caen sobre otro nodo; en el DSL, un atributo pegado con las mismas coordenadas que otro nodo se dibuja desplazado +100 px.
+- **Atributos de relación desde el formulario visual** (el propietario puede ser una entidad o una relación).
+- **Atributo definidor de especializaciones**: sintaxis `spec d -> EMPLEADO [TipoTrabajo]`; se rotula en la arista superclase–círculo y se mapea como columna de la superclase (`STEP8_DEFINING_ATTR`). Sin corchetes, la especialización es definida por el usuario (sin discriminante).
+- **Centro de Ayuda unificado** (`src/components/help/`): un botón **Ayuda** (o `F1`) sustituye a "Guía 9 Pasos", "Sintaxis", "Prompt IA" y "Créditos" con pestañas *Uso del editor* (nueva: gestos, atajos y flujo de trabajo), *Sintaxis*, *Guía de 9 Pasos*, *Prompt IA* y *Acerca de* (con colaboradores y la versión leída de `package.json`). El icono 📖 de cada tabla abre la Guía con esa tabla inspeccionada. Recuerda la última pestaña.
+- **Prompt IA en inglés**: el prompt sigue el idioma de la interfaz (los comandos del DSL no se traducen).
+- **Linter EER**: aviso `KEY_ATTRIBUTE_ON_NON_MN_RELATIONSHIP` y error `INVALID_DEFINING_ATTRIBUTE`. **Linter relacional**: error `INVALID_REFERENTIAL_ACTION`.
+
+### Changed
+- **Política `ON DELETE` según la semántica de cada paso** (antes `CASCADE` universal): `CASCADE` solo en dependencia existencial (Pasos 2, 6 y 8A); `NO ACTION` en FKs obligatorias de 1:1/1:N y en tablas M:N y n-arias; `SET NULL` en FKs opcionales y categorías. Textos de la Guía de 9 Pasos, del Inspector y de `eer-to-relational-mapping.md` explican el porqué de cada acción.
+- **DSL relacional**: siempre escribe `ON DELETE <acción>` y `NOT NULL` en FKs obligatorias; acepta `CASCADE | SET NULL | RESTRICT | NO ACTION` y, si se omite, asume `NO ACTION` (antes `CASCADE`).
+- **Interfaz más limpia**: la toolbar pierde la pista de gestos (su contenido está en *Ayuda → Uso del editor*) y la cabecera la etiqueta "Suite Docente de Bases de Datos".
+- **Editor de código sin ajuste de línea** (scroll horizontal) para que el resaltado coincida con cada línea.
+
+### Fixed
+- **Textos sin traducir**: el menú *File* y sus opciones aparecían en inglés con la interfaz en español, y la pantalla de error (`ErrorBoundary`) y el tooltip de la barra de diagnósticos estaban fijos en español.
+- **La guía de sintaxis mostraba comandos que el compilador no reconoce** (`entity`, `weak_entity`, `relationship`, `identifying_relationship`, `FK UNIQUE`); ahora un test compila cada ejemplo.
+- **"Acerca de" mostraba una versión escrita a mano** (`v1.5.0`); ahora se inyecta desde `package.json`.
+- **`Ctrl` + rueda ampliaba toda la ventana** (zoom del navegador/WebView) en lugar del diagrama.
+- **Los atributos clave de una relación M:N o n-aria no entraban en la PK** (`CIRCULA(PILOTO, TRAMO, VUELTA)` generaba la PK solo con las dos FKs).
+- **El SQL perdía cualquier acción referencial distinta de `CASCADE`** (el `SET NULL` del Paso 9 desaparecía). Ahora se emite por dialecto; en Oracle `NO ACTION`/`RESTRICT` se expresan omitiendo la cláusula (evita ORA-00905).
+- **Paso 3 (1:1)**: los atributos de la relación se perdían, y la FK quedaba nullable aunque el lado que la recibe tuviese participación total.
+- **Paso 4 (1:N)**: la FK era siempre `NOT NULL`, incluso con participación parcial del lado N.
+- **Borrar un atributo eliminaba sus homónimos de otras entidades** (p. ej. todos los `Nombre`).
+- **La guía de sintaxis integrada mostraba `att DNI [key]`**, una sintaxis que el compilador no reconoce (la correcta es `key_att`).
+- **Los atributos no mostraban el resaltado de selección**, y el diálogo de borrado no traducía el tipo de los atributos ni de las uniones.
+- **Clic en los botones de zoom con una herramienta activa** creaba un elemento en el canvas.
+
 ## [1.5.0] — 2026-09-22
 
 ### Added

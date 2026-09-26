@@ -147,13 +147,18 @@ It implements the **9 formal steps** algorithm presented in *"Fundamentals of Da
 - **Bidirectional DSL ↔ Canvas editor:** write the code and the diagram is drawn instantly; drag a node on the canvas and the coordinates update themselves in the code.
 - **Visual toolbar:** insert entities, relationships, and attributes with a click on the canvas and configure them through forms, without writing a line of DSL.
 - **Full Chen notation:** strong and weak entities, regular and identifying relationships, simple/key/derived/multivalued attributes, cardinalities (1, N, M), total participation, specialization hierarchies (disjoint and overlapping), and union types/categories.
-- **Shift + drag** an entity to move its attributes along with it, preserving relative distances.
-- **Zoom and pan** with +/− controls, reset, and fit-to-content.
+- **Edit directly on the diagram:** double-click (or `F2`) any element to open its form and rename it, change a relationship's cardinalities and participation, turn an entity into a weak one, change an attribute's owner, etc. Renaming updates every reference in the DSL.
+- **Locate every element in the code:** selecting a node highlights its DSL lines and scrolls the editor to them.
+- **Multi-selection:** drag on the background to draw a **selection rectangle** (it selects what is fully inside) or use `Ctrl` + click to add or remove nodes; dragging moves the whole group and `Delete` removes it.
+- **Attributes follow their entity or relationship** when you drag it (`Alt` + drag moves only the node).
+- **Attributes in a row:** "Add and create another" keeps the form open for the next attribute and places it 100 px to the right; attributes are never created on top of another node.
+- **Relationship attributes** from the visual form (key ones too, which join the PK in M:N and n-ary relationships).
+- **draw.io-style navigation:** right (or middle) button + drag pans the canvas, so does the wheel (`Shift` = horizontal), and `Ctrl` + wheel (or touchpad pinch) zooms towards the cursor. Plus +/− controls, reset, and fit-to-content.
 
 ### Relational Model conversion
 
 - **9 formal steps engine** with full traceability: every table, column, and foreign key records which step generated it.
-- **Teaching inspector:** the "9-Step Guide" button opens the theoretical summary of the algorithm, and every table card links to the specific explanation of the rule that created it.
+- **Teaching inspector:** the "9-Step Guide" tab in Help summarises the algorithm, and the 📖 icon on every table opens the specific explanation of the rule that created it.
 - **Dedicated relational editor:** the Relational Model has its own text DSL, also bidirectional and with persistent coordinates.
 - **Interactive highlighting:** hovering a table highlights its referential integrity connections.
 
@@ -165,9 +170,8 @@ It implements the **9 formal steps** algorithm presented in *"Fundamentals of Da
 
 ### Interface
 
-- **Spanish and English**, switchable from the header; the chosen language is remembered.
-- **Built-in AI prompt:** copy an optimized prompt so ChatGPT, Claude, or Gemini can generate the DSL from a natural-language problem statement.
-- **Built-in syntax guide** with a complete reference for both DSLs.
+- **Unified Help Center** (**Help** button or `F1`), with tabs: *Using the editor* (gestures, keyboard shortcuts and workflow), *Syntax* of both DSLs, *9-Step Guide*, *AI Prompt* (so ChatGPT, Claude, or Gemini can generate the DSL from a problem statement) and *About*.
+- **Spanish and English** across the whole interface, help and AI prompt, switchable from the header; the chosen language is remembered.
 - **Always on top** (desktop only) to keep the diagram visible next to another application.
 
 ---
@@ -177,14 +181,16 @@ It implements the **9 formal steps** algorithm presented in *"Fundamentals of Da
 | Step | Rule | Result |
 | --- | --- | --- |
 | **1** | Strong entities | One table per entity, with its primary key |
-| **2** | Weak entities | Table with composite PK: owner's FK + partial key (`ON DELETE CASCADE`) |
-| **3** | 1:1 relationships | FK propagated to the total-participation side, with a `UNIQUE` constraint |
-| **4** | 1:N relationships | FK propagated from the 1 side to the N side; relationship attributes migrate to the N side |
-| **5** | M:N relationships | Bridge table whose PK combines the FKs of both entities |
+| **2** | Weak entities | Table with composite PK: owner's FK + partial key (`ON DELETE CASCADE`: the weak entity cannot exist without its owner) |
+| **3** | 1:1 relationships | FK propagated to the total-participation side, with a `UNIQUE` constraint (`NO ACTION` if mandatory, `SET NULL` if optional) |
+| **4** | 1:N relationships | FK propagated from the 1 side to the N side; relationship attributes migrate to the N side. Total participation ⇒ `NOT NULL` + `ON DELETE NO ACTION`; partial ⇒ `ON DELETE SET NULL` |
+| **5** | M:N relationships | Bridge table whose PK combines the FKs of both entities and the relationship's key attributes (`ON DELETE NO ACTION`) |
 | **6** | Multivalued attributes | Separate table, to avoid violating 1NF |
 | **7** | N-ary relationships (n > 2) | N-way table; the PK combines the FKs of entities without cardinality 1 |
-| **8** | Specialization / generalization | Inheritance mapping options 8A–8D |
+| **8** | Specialization / generalization | Inheritance mapping options 8A–8D; the defining attribute is a column of the superclass |
 | **9** | Categories (union types) | Category table with a surrogate key |
+
+`ON DELETE CASCADE` is only used when the child row cannot exist without its parent (Steps 2, 6 and 8A); otherwise `SET NULL` or `NO ACTION` is used so independent data is never deleted in a chain. You can change the action of any FK in the relational DSL (`ON DELETE CASCADE | SET NULL | RESTRICT | NO ACTION`).
 
 The complete formal specification lives in [`dbv-specs-ops/docs/eer-to-relational-mapping.md`](./dbv-specs-ops/docs/eer-to-relational-mapping.md).
 
@@ -192,7 +198,7 @@ The complete formal specification lives in [`dbv-specs-ops/docs/eer-to-relationa
 
 ## ⌨️ DSL syntax
 
-Quick reference — the complete guide is built into the app (**Syntax** button).
+Quick reference — the complete guide is built into the app (**Help → Syntax**).
 
 ```text
 // Entities
@@ -204,6 +210,7 @@ key_att DNI -> EMPLEADO (350, 220)
 att Nombre -> EMPLEADO (450, 220)
 derived_att Edad -> EMPLEADO (400, 180)
 multivalued_att Telefono -> EMPLEADO (300, 180)
+key_att Vuelta -> CIRCULA (700, 120)   // key attribute of an M:N relationship
 
 // Relationships and connections
 rel TRABAJA_PARA (550, 300)
@@ -216,7 +223,8 @@ link EMPLEADO TIENE_DEP "1"
 link DEPENDIENTE TIENE_DEP "N" [total]
 
 // Hierarchies
-spec d -> EMPLEADO      // 'd' disjoint, 'o' overlapping
+spec d -> EMPLEADO                  // 'd' disjoint, 'o' overlapping; user-defined
+spec d -> EMPLEADO [TipoTrabajo]    // attribute-defined (defining attribute)
 link d INGENIERO
 
 // Categories
@@ -362,6 +370,10 @@ Copyright (c) 2025-2026 David Bueno Vallejo
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-davidbueno-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/davidbueno/)
 [![Website](https://img.shields.io/badge/Web-davidbuenov.com-6366f1?logo=googlechrome&logoColor=white)](https://davidbuenov.com)
 [![GitHub](https://img.shields.io/badge/GitHub-davidbuenov-181717?logo=github&logoColor=white)](https://github.com/davidbuenov)
+
+### 🤝 Contributors
+
+- **Enrique Soler Castillo** — thank you for testing the application thoroughly and for your proposals, which shaped version 1.6.0: editing elements from the diagram, multi-selection, locating each element in the DSL, fast attribute creation, relationship key attributes in the PK, the specialization defining attribute, and a rigorous `ON DELETE` policy instead of a blanket `CASCADE`.
 
 ### 📚 Academic reference
 

@@ -85,9 +85,12 @@ Permite diseñar diagramas Entidad-Relación Extendido (EER) mediante un lenguaj
 
 ---
 
-## 📜 Novedades de la Versión v1.5.0 (Release Notes - "What's new in this version")
-- **Compilador y Linter del Modelo Relacional**: Validación sintáctica y semántica multi-pasada en tiempo real para el lenguaje DSL relacional (`table NOMBRE { ... }`).
-- **Verificación de Integridad Referencial**: Detección formativa de claves foráneas hacia tablas o columnas no declaradas, resolución transparente de referencias hacia adelante (*forward references*) y advertencias pedagógicas para tablas sin clave primaria.
-- **Barra de Diagnósticos interactiva en el editor**: Indicador en vivo de estado (sintaxis correcta con conteo de tablas/FKs o advertencias/errores con número de línea) y salto automático a la línea con fallo al hacer clic.
-- **Tolerancia a fallos Stale-while-error**: Prevención total de parpadeos y desaparición de tablas y flechas FK al editar o renombrar código en tiempo real.
-- **Red de seguridad Zero-Crash y corrección de edición de entidades**: Corrección del reinicio accidental al dejar entidades incompletas en el editor y contención de errores con ErrorBoundary.
+## 📜 Novedades de la Versión v1.6.0 (Release Notes - "What's new in this version")
+- **Edición directa en el diagrama**: doble clic (o F2) sobre cualquier elemento para renombrarlo, cambiar cardinalidades y participación, convertir una entidad en débil o cambiar el propietario de un atributo. Renombrar actualiza todas las referencias del código.
+- **Selección como en otras aplicaciones**: rectángulo de selección arrastrando en el fondo, Ctrl + clic para selección múltiple y movimiento del grupo; los atributos siguen a su entidad al arrastrarla.
+- **Navegación estilo draw.io**: botón derecho para desplazar, rueda para desplazar y Ctrl + rueda (o pellizco en el touchpad) para hacer zoom sobre el diagrama.
+- **Localiza cada elemento en el código**: al seleccionarlo se resaltan sus líneas en el editor.
+- **Atributos más rápidos**: "Añadir y crear otro", atributos de relación desde el formulario y colocación automática sin solapes.
+- **Mapeo más riguroso**: los atributos clave de una relación M:N entran en la PK, y la política ON DELETE se elige según cada paso (CASCADE, SET NULL o NO ACTION) en lugar de CASCADE universal.
+- **Atributo definidor en especializaciones**: `spec d -> EMPLEADO [TipoTrabajo]`.
+- **Centro de Ayuda unificado** (F1): uso del editor, sintaxis, guía de 9 pasos, prompt de IA y créditos, todo en español e inglés.

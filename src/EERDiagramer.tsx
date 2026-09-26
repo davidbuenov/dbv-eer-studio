@@ -6,26 +6,20 @@
 // =============================================================================
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
-import { BookOpen, Code, Share2, HelpCircle, Info, Database, Layers, FileText, Pin, PinOff } from 'lucide-react';
+import { BookOpen, Share2, HelpCircle, Database, Layers, FileText, Pin, PinOff } from 'lucide-react';
 import type { EERDiagramerHandle } from './types';
 import { runningInTauri } from './utils/platform';
 import { SAMPLE_CODE } from './constants';
-import { 
-  generateEntityCode, 
-  generateAttributeCode, 
-  generateRelationshipCode, 
-  generateSpecializationCode, 
-  generateUnionCode 
-} from './utils/codeGenerator';
-import { deleteNodeFromCode } from './utils/deleteNode';
+import { deleteNodesFromCode } from './utils/deleteNode';
+import { getOwnedLineIndices } from './utils/dslEditing';
 import { useEERParser } from './hooks/useEERParser';
 import { useFileOperations } from './hooks/useFileOperations';
 import { useCanvasInteraction } from './hooks/useCanvasInteraction';
 import { useToolbar } from './hooks/useToolbar';
 import { useModalState } from './hooks/useModalState';
-import { ModalAIPrompt } from './components/ModalAIPrompt';
-import { ModalCredits } from './components/ModalCredits';
-import { ModalHelp } from './components/ModalHelp';
+import { usePropertiesForm } from './hooks/usePropertiesForm';
+import { HelpCenter } from './components/help/HelpCenter';
+import { useHelpCenter } from './hooks/useHelpCenter';
 import { ModalClearConfirm } from './components/ModalClearConfirm';
 import { ModalDeleteConfirm } from './components/ModalDeleteConfirm';
 import { ModalProperties } from './components/ModalProperties';
@@ -38,9 +32,8 @@ import { exportRelationalToSVG } from './utils/relational/exportRelationalSVG';
 import { generateRelationalDSL } from './utils/relational/relationalCodeGenerator';
 import { compileRelationalDSL } from './utils/relational/relationalCompiler';
 import { RelationalViewer } from './components/relational/RelationalViewer';
-import { StepInspectorModal } from './components/relational/StepInspectorModal';
 import { SQLPreviewModal } from './components/sql/SQLPreviewModal';
-import type { RelationalTable, RelationalSchema } from './types/relational';
+import type { RelationalSchema } from './types/relational';
 import type { Diagnostic } from './types/compiler';
 import { useLanguage } from './i18n/language';
 import { downloadTextFile } from './utils/download';
@@ -51,14 +44,14 @@ const SVG_MIME = 'image/svg+xml;charset=utf-8';
 
 /**
  * Componente principal del editor de diagramas EER
- * 
+ *
  * Gestiona el estado global de la aplicación:
  * - Código DSL del diagrama
  * - Nodos y enlaces (parseados del código)
  * - Herramienta seleccionada en la toolbar
  * - Modales de propiedades y ayuda
  * - Transformaciones del canvas (zoom, pan)
- * 
+ *
  * Expone métodos imperativos vía ref para control externo (desktop mode).
  */
 function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
@@ -68,7 +61,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   // ESTADO DEL COMPONENTE Y PESTAÑAS
   // ==========================================
   const [activeTab, setActiveTab] = useState<ActiveViewTab>('eer');
-  
+
   // Estado del código EER DSL
   const [code, setCode] = useState(SAMPLE_CODE);
   const codeRef = useRef(code);
@@ -76,29 +69,26 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   // Estado del código Relacional DSL y Coordenadas Relacionales Persistidas
   const [relationalCode, setRelationalCode] = useState('');
   const [relationalPositions, setRelationalPositions] = useState<Record<string, { x: number; y: number }>>({});
-  
+
   // Estado del esquema relacional y modales educativos
   const [relationalSchema, setRelationalSchema] = useState<RelationalSchema>({ tables: [], config: { inheritanceOptions: {}, oneToOneOptions: {} } });
   const [relationalDiagnostics, setRelationalDiagnostics] = useState<Diagnostic[]>([]);
   const [isRelationalValid, setIsRelationalValid] = useState<boolean>(true);
   const isRelationalValidRef = useRef<boolean>(true);
   const lastValidRelationalSchemaRef = useRef<RelationalSchema>({ tables: [], config: { inheritanceOptions: {}, oneToOneOptions: {} } });
-  const [showStepInspector, setShowStepInspector] = useState(false);
   const [showSQLModal, setShowSQLModal] = useState(false);
-  const [inspectedTable, setInspectedTable] = useState<RelationalTable | null>(null);
-  
-  // Estado de selección y eliminación
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  // Estado de eliminación (la selección vive en useCanvasInteraction)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
   // Estado del ancho del panel de código
   const [codePanelWidth, setCodePanelWidth] = useState(400);
-  
+
   // Actualizar codeRef cuando cambia el código EER
   useEffect(() => {
     codeRef.current = code;
   }, [code]);
-  
+
   // Parser hook - compila el código EER y genera nodos y enlaces con tolerancia a fallos
   const { nodes, links, setNodes, diagnostics, isValid } = useEERParser(code);
 
@@ -136,7 +126,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
       }
     }
   }, [code, nodes, links, relationalPositions, isValid]);
-  
+
   // File operations hook
   const {
     showFileMenu,
@@ -183,10 +173,13 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     setRelationalPositions(newPositions);
     setCode(eerLines.join('\n').trim());
   }, [setCode]);
-  
+
   // Canvas interaction hook
   const {
     draggedNodeId,
+    selectedNodeIds,
+    primaryNodeId,
+    selectOnly,
     scale,
     setScale,
     offset,
@@ -195,9 +188,26 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-    handleCanvasMouseDown
+    handleNodeClick,
+    handleCanvasMouseDown,
+    handleWheel,
+    marquee,
+    isPanning
   } = useCanvasInteraction({ nodes, setNodes, code, setCode });
-  
+
+  const selectedNodes = useMemo(
+    () => nodes.filter(n => selectedNodeIds.includes(n.id)),
+    [nodes, selectedNodeIds]
+  );
+
+  // Líneas del DSL del elemento seleccionado. Solo con código válido: con Stale-while-error
+  // los nodos en pantalla pueden venir de un texto anterior y sus índices no corresponderían.
+  const highlightedLines = useMemo(
+    () => (isValid ? [...new Set(selectedNodes.flatMap(n => getOwnedLineIndices(n, nodes, links)))] : []),
+    [isValid, selectedNodes, nodes, links]
+  );
+  const focusLine = isValid ? (nodes.find(n => n.id === primaryNodeId)?.lineIndex ?? null) : null;
+
   // Toolbar hook
   const {
     selectedTool,
@@ -205,7 +215,8 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     clickX,
     clickY,
     handleCanvasClick: toolbarCanvasClick,
-    resetTool
+    resetTool,
+    setClickPosition
   } = useToolbar(svgRef, scale, offset, draggedNodeId);
 
   // Manejador del arrastre de posicionamiento de tablas en el Canvas Relacional
@@ -252,72 +263,81 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   }, []);
 
   // Modal state hook
+  const modal = useModalState();
   const {
-    showHelp,
-    setShowHelp,
-    showCredits,
-    setShowCredits,
-    showAIPrompt,
-    setShowAIPrompt,
     showClearConfirm,
     setShowClearConfirm,
     showPropertiesModal,
     setShowPropertiesModal,
-    elementType,
-    setElementType,
-    elementName,
-    setElementName,
-    elementType2,
-    setElementType2,
-    selectedEntity,
-    setSelectedEntity,
-    selectedEntity1,
-    setSelectedEntity1,
-    selectedEntity2,
-    setSelectedEntity2,
-    cardinalityE1,
-    setCardinalityE1,
-    cardinalityE2,
-    setCardinalityE2,
-    customCard1,
-    setCustomCard1,
-    customCard2,
-    setCustomCard2,
-    totalE1,
-    setTotalE1,
-    totalE2,
-    setTotalE2,
-    specType,
-    setSpecType,
-    specSuperclass,
-    setSpecSuperclass,
-    specSubclasses,
-    setSpecSubclasses,
-    unionName,
-    setUnionName,
-    unionSuperclasses,
-    setUnionSuperclasses,
-    unionCategory,
-    setUnionCategory,
-    resetPropertiesModal
-  } = useModalState();
+  } = modal;
+
+  const clearSelection = useCallback(() => selectOnly(null), [selectOnly]);
+
+  // Centro de Ayuda: uso del editor, sintaxis, 9 pasos, prompt IA y créditos
+  const help = useHelpCenter();
+
+  const {
+    openCreate,
+    openEdit,
+    confirm: handleConfirmProperties,
+    confirmAndContinue: handleConfirmAndContinue,
+    formKey,
+    isEditBlocked,
+  } = usePropertiesForm({
+    modal,
+    nodes,
+    links,
+    code,
+    setCode,
+    isValid,
+    clickX,
+    clickY,
+    setClickPosition,
+    resetTool,
+    onEdited: clearSelection,
+  });
+
+  // `NodeRenderer` está memoizado sin comparar callbacks: el doble clic debe ser estable.
+  const openEditRef = useRef(openEdit);
+  useEffect(() => {
+    openEditRef.current = openEdit;
+  });
+  const handleNodeDoubleClick = useCallback((id: string) => openEditRef.current(id), []);
 
   useImperativeHandle(ref, () => ({
     getCode: () => codeRef.current,
     setCode: (c: string) => setCode(c),
   }));
 
-  // Manejar tecla Delete para eliminar nodo seleccionado
+  // Atajos del canvas: Supr/Retroceso elimina la selección, F2/Enter edita el nodo principal,
+  // Escape vacía la selección. Se ignoran mientras se escribe en un campo o hay un modal abierto.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId && !showPropertiesModal) {
+      const target = e.target as HTMLElement | null;
+      const isTyping = !!target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+      // F1 abre la ayuda en cualquier contexto (también escribiendo en el código), como en las
+      // aplicaciones de escritorio; sin preventDefault el navegador abriría su propia ayuda.
+      if (e.key === 'F1') {
+        e.preventDefault();
+        if (!showPropertiesModal && !showDeleteConfirm) help.openHelp();
+        return;
+      }
+      if (isTyping || showPropertiesModal || showDeleteConfirm || help.isOpen || activeTab !== 'eer') return;
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0 && isValid) {
+        e.preventDefault();
         setShowDeleteConfirm(true);
+      } else if ((e.key === 'F2' || e.key === 'Enter') && primaryNodeId) {
+        e.preventDefault();
+        openEdit(primaryNodeId);
+      } else if (e.key === 'Escape') {
+        selectOnly(null);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeId, showPropertiesModal]);
+  }, [selectedNodeIds, primaryNodeId, showPropertiesModal, showDeleteConfirm, activeTab, isValid, openEdit, selectOnly, help]);
 
   // Puente entre el menú nativo de macOS (Abrir/Guardar/Guardar como, ver
   // src-tauri/src/lib.rs `macos_menu`) y el mismo flujo que ya usan los
@@ -365,126 +385,13 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   }, []);
 
   const handleCanvasClickInternal = useCallback((e: React.MouseEvent) => {
-    if (!selectedTool || draggedNodeId) return;
+    // Sin herramienta activa el clic en el fondo lo gestiona el rectángulo de selección
+    // (un clic sin arrastrar vacía la selección al soltar).
+    if (draggedNodeId || !selectedTool || e.button !== 0) return;
     const coords = toolbarCanvasClick(e);
     if (!coords) return;
-
-    const timestamp = Date.now() % 1000;
-
-    if (['entity', 'weak_entity'].includes(selectedTool!)) {
-      setElementType(selectedTool);
-      setElementName(selectedTool === 'entity' ? `ENTIDAD_${timestamp}` : `ENTIDAD_DEBIL_${timestamp}`);
-      setShowPropertiesModal(true);
-      return;
-    }
-
-    if (['relationship', 'ident_rel'].includes(selectedTool!)) {
-      setElementType(selectedTool);
-      setElementName(selectedTool === 'relationship' ? `RELACION_${timestamp}` : `RELACION_IDENT_${timestamp}`);
-      resetPropertiesModal();
-      setShowPropertiesModal(true);
-      return;
-    }
-
-    if (['attribute', 'key_attr', 'derived_attr', 'multivalued_attr'].includes(selectedTool!)) {
-      setElementType(selectedTool);
-      setElementName(`Atributo_${timestamp}`);
-      setElementType2(selectedTool === 'key_attr' ? 'key' : selectedTool === 'derived_attr' ? 'derived' : selectedTool === 'multivalued_attr' ? 'multivalued' : 'simple');
-      setSelectedEntity('');
-      setShowPropertiesModal(true);
-      return;
-    }
-
-    if (selectedTool === 'specialization') {
-      setElementType('specialization');
-      setSpecType('d');
-      setSpecSuperclass('');
-      setSpecSubclasses([]);
-      setShowPropertiesModal(true);
-      return;
-    }
-
-    if (selectedTool === 'union') {
-      setElementType('union');
-      setUnionName('u');
-      setUnionSuperclasses([]);
-      setUnionCategory('');
-      setShowPropertiesModal(true);
-      return;
-    }
-  }, [selectedTool, draggedNodeId, toolbarCanvasClick, setElementType, setElementName, setShowPropertiesModal, resetPropertiesModal, setElementType2, setSelectedEntity, setSpecType, setSpecSuperclass, setSpecSubclasses, setUnionName, setUnionSuperclasses, setUnionCategory]);
-
-  const handleConfirmProperties = useCallback(() => {
-    if (!elementType) return;
-
-    let newLines = '';
-
-    if (['entity', 'weak_entity'].includes(elementType)) {
-      if (!elementName) return;
-      newLines = generateEntityCode({
-        name: elementName,
-        x: clickX,
-        y: clickY,
-        isWeak: elementType === 'weak_entity'
-      });
-    }
-
-    if (['attribute', 'key_attr', 'derived_attr', 'multivalued_attr'].includes(elementType)) {
-      if (!elementName || !selectedEntity) return;
-      newLines = generateAttributeCode({
-        name: elementName,
-        entity: selectedEntity,
-        x: clickX,
-        y: clickY,
-        type: elementType2 as 'simple' | 'key' | 'derived' | 'multivalued'
-      });
-    }
-
-    if (['relationship', 'ident_rel'].includes(elementType)) {
-      if (!elementName || !selectedEntity1 || !selectedEntity2) return;
-      const card1 = cardinalityE1 === 'custom' ? customCard1 : cardinalityE1;
-      const card2 = cardinalityE2 === 'custom' ? customCard2 : cardinalityE2;
-      newLines = generateRelationshipCode({
-        name: elementName,
-        x: clickX,
-        y: clickY,
-        isIdentifying: elementType === 'ident_rel',
-        entity1: selectedEntity1,
-        entity2: selectedEntity2,
-        cardinality1: card1,
-        cardinality2: card2,
-        isTotal1: totalE1,
-        isTotal2: totalE2
-      });
-    }
-
-    if (elementType === 'specialization') {
-      if (!specSuperclass || specSubclasses.length === 0) return;
-      newLines = generateSpecializationCode({
-        type: specType as 'd' | 'o',
-        superclass: specSuperclass,
-        subclasses: specSubclasses
-      });
-    }
-
-    if (elementType === 'union') {
-      if (!unionName || unionSuperclasses.length === 0 || !unionCategory) return;
-      newLines = generateUnionCode({
-        name: unionName,
-        superclasses: unionSuperclasses,
-        category: unionCategory
-      });
-    }
-
-    if (newLines) {
-      const newCode = code + '\n' + newLines;
-      setCode(newCode);
-    }
-
-    setShowPropertiesModal(false);
-    resetTool();
-    resetPropertiesModal();
-  }, [elementType, elementName, selectedEntity1, selectedEntity2, cardinalityE1, cardinalityE2, customCard1, customCard2, totalE1, totalE2, elementType2, selectedEntity, specType, specSuperclass, specSubclasses, unionName, unionSuperclasses, unionCategory, code, setCode, resetTool, resetPropertiesModal, clickX, clickY, setShowPropertiesModal]);
+    openCreate(selectedTool, coords);
+  }, [selectedTool, draggedNodeId, toolbarCanvasClick, openCreate]);
 
   // Exporta a SVG la pestaña activa: el canvas EER se serializa desde el DOM (ya es SVG
   // nativo); el Modelo Relacional se reconstruye, porque en pantalla son tarjetas HTML.
@@ -512,14 +419,11 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     setOffset({ x: 0, y: 0 });
   }, [setScale, setOffset]);
 
-  const handleDeleteNode = useCallback(() => {
-    if (!selectedNodeId) return;
-    const nodeToDelete = nodes.find(n => n.id === selectedNodeId);
-    if (!nodeToDelete) return;
-    const newCode = deleteNodeFromCode(code, nodeToDelete.label);
-    setCode(newCode);
-    setSelectedNodeId(null);
-  }, [selectedNodeId, nodes, code]);
+  const handleDeleteNodes = useCallback(() => {
+    if (selectedNodes.length === 0 || !isValid) return;
+    setCode(deleteNodesFromCode(code, selectedNodes, nodes));
+    selectOnly(null);
+  }, [selectedNodes, isValid, code, nodes, selectOnly]);
 
   const handleFitToContent = useCallback(() => {
     if (!nodes || nodes.length === 0 || !svgRef.current) return;
@@ -549,14 +453,11 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         <div className="flex items-center gap-3">
           <BookOpen className="h-6 w-6 text-indigo-600" />
           <h1 className="text-xl font-bold text-slate-800">EER Studio</h1>
-          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
-            {t('header.subtitle')}
-          </span>
 
           {/* Menú Archivo */}
           <div className="relative ml-2" onMouseDown={e => e.stopPropagation()}>
             <button onClick={() => setShowFileMenu(s => !s)} className="rounded-md px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-slate-200">
-              File
+              {t('header.fileMenu.label')}
             </button>
             {showFileMenu && (
               <div className="absolute left-0 mt-1 w-40 rounded-md border border-slate-200 bg-white shadow-lg z-40">
@@ -640,24 +541,14 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             </button>
           )}
 
+
           <button
-            onClick={() => setShowStepInspector(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition"
+            onClick={() => help.openHelp()}
+            title={t('header.helpTooltip')}
+            className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100"
           >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>{t('header.stepGuide')}</span>
-          </button>
-
-          <button onClick={() => setShowHelp(true)} className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-            <HelpCircle className="h-4 w-4" /> {t('header.syntax')}
-          </button>
-
-          <button onClick={() => setShowAIPrompt(true)} className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-            <Code className="h-4 w-4" /> {t('header.aiPrompt')}
-          </button>
-
-          <button onClick={() => setShowCredits(true)} className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-            <Info className="h-4 w-4" /> {t('header.credits')}
+            <HelpCircle className="h-4 w-4" />
+            <span>{t('header.help')}</span>
           </button>
 
           {activeTab !== 'sql' && (
@@ -683,14 +574,16 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
                 code={code}
                 onCodeChange={setCode}
                 onClear={() => setShowClearConfirm(true)}
-                onEditStart={() => setSelectedNodeId(null)}
+                onEditStart={clearSelection}
                 diagnostics={diagnostics}
                 isValid={isValid}
                 elementCount={elementCount}
+                highlightedLines={highlightedLines}
+                focusLine={focusLine}
               />
             </div>
 
-            <ResizableDivider 
+            <ResizableDivider
               onResize={setCodePanelWidth}
               minLeftWidth={200}
               minRightWidth={300}
@@ -705,13 +598,17 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
                 offset={offset}
                 selectedTool={selectedTool}
                 draggedNodeId={draggedNodeId}
-                selectedNodeId={selectedNodeId}
+                selectedNodeIds={selectedNodeIds}
+                marquee={marquee}
+                isPanning={isPanning}
+                onWheel={handleWheel}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onClick={handleCanvasClickInternal}
-                onMouseDown={handleCanvasMouseDown}
+                onMouseDown={(e) => handleCanvasMouseDown(e, !selectedTool)}
                 onNodeMouseDown={handleMouseDown}
-                onNodeClick={(id) => setSelectedNodeId(id)}
+                onNodeClick={handleNodeClick}
+                onNodeDoubleClick={handleNodeDoubleClick}
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
                 onResetZoom={handleResetZoom}
@@ -739,7 +636,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             />
           </div>
 
-          <ResizableDivider 
+          <ResizableDivider
             onResize={setCodePanelWidth}
             minLeftWidth={200}
             minRightWidth={300}
@@ -749,108 +646,50 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             <RelationalViewer
               schema={relationalSchema}
               onTablePositionChange={handleRelationalTableMove}
-              onSelectTableForInspection={table => {
-                setInspectedTable(table);
-                setShowStepInspector(true);
-              }}
+              onSelectTableForInspection={table => help.openHelp('steps', table)}
             />
           </div>
         </div>
       )}
 
       {/* Modales */}
-      <StepInspectorModal
-        isOpen={showStepInspector}
-        onClose={() => {
-          setShowStepInspector(false);
-          setInspectedTable(null);
-        }}
-        selectedTable={inspectedTable}
-      />
-
       <SQLPreviewModal
         isOpen={showSQLModal}
         onClose={() => setShowSQLModal(false)}
         schema={relationalSchema}
       />
 
-      <ModalAIPrompt 
-        isOpen={showAIPrompt} 
-        onClose={() => setShowAIPrompt(false)} 
+      <HelpCenter
+        isOpen={help.isOpen}
+        tab={help.tab}
+        onTabChange={help.setTab}
+        onClose={help.close}
+        inspectedTable={help.inspectedTable}
       />
-      
-      <ModalCredits 
-        isOpen={showCredits} 
-        onClose={() => setShowCredits(false)} 
-      />
-      
-      <ModalHelp 
-        isOpen={showHelp} 
-        onClose={() => setShowHelp(false)} 
-      />
-      
-      <ModalClearConfirm 
-        isOpen={showClearConfirm} 
+
+      <ModalClearConfirm
+        isOpen={showClearConfirm}
         onClose={() => setShowClearConfirm(false)}
         onConfirm={() => setCode('')}
       />
-      
-      <ModalDeleteConfirm 
+
+      <ModalDeleteConfirm
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={handleDeleteNode}
-        node={nodes.find(n => n.id === selectedNodeId) || null}
+        onConfirm={handleDeleteNodes}
+        nodes={selectedNodes}
       />
-      
+
       <ModalProperties
+        key={formKey}
         isOpen={showPropertiesModal}
         onClose={() => setShowPropertiesModal(false)}
         nodes={nodes}
-        modalState={{
-          elementType,
-          elementName,
-          elementType2,
-          selectedEntity,
-          selectedEntity1,
-          selectedEntity2,
-          cardinalityE1,
-          cardinalityE2,
-          customCard1,
-          customCard2,
-          totalE1,
-          totalE2,
-          specType,
-          specSuperclass,
-          specSubclasses,
-          unionName,
-          unionSuperclasses,
-          unionCategory,
-          showHelp: false,
-          showCredits: false,
-          showAIPrompt: false,
-          showClearConfirm: false,
-          showPropertiesModal: false
-        }}
-        setters={{
-          setElementName,
-          setElementType2,
-          setSelectedEntity,
-          setSelectedEntity1,
-          setSelectedEntity2,
-          setCardinalityE1,
-          setCardinalityE2,
-          setCustomCard1,
-          setCustomCard2,
-          setTotalE1,
-          setTotalE2,
-          setSpecType,
-          setSpecSuperclass,
-          setSpecSubclasses,
-          setUnionName,
-          setUnionSuperclasses,
-          setUnionCategory
-        }}
+        modalState={modal}
+        isEditBlocked={isEditBlocked}
+        setters={modal}
         onConfirm={handleConfirmProperties}
+        onConfirmAndContinue={handleConfirmAndContinue}
       />
     </div>
   );

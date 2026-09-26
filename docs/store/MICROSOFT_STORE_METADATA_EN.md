@@ -85,9 +85,12 @@ Design Extended Entity-Relationship (EER) diagrams using a lightweight text DSL 
 
 ---
 
-## 📜 Version v1.5.0 Release Notes ("What's new in this version")
-- **Relational Model Compiler & Linter**: Multi-pass real-time syntax and semantic validation for the relational DSL (`table NAME { ... }`).
-- **Referential Integrity Verification**: Real-time diagnostic feedback for foreign keys referencing undeclared tables or columns, seamless forward-reference resolution, and pedagogical warnings for tables missing primary keys.
-- **Interactive Diagnostics Bar in Editor**: Live status bar showing syntax validity (tables/FKs count) or line-level errors/warnings with one-click navigation directly to the error line.
-- **Stale-While-Error Visual Resilience**: Eliminates visual flickering, card disappearance, and broken FK arrows while typing or editing table code in real time.
-- **Zero-Crash Safety Net & Entity Editing Fix**: Fixed app restarting when clearing entity names in the DSL editor, backed by a global React ErrorBoundary.
+## 📜 Version v1.6.0 Release Notes ("What's new in this version")
+- **Edit directly on the diagram**: double-click (or F2) any element to rename it, change cardinalities and participation, turn an entity into a weak one, or change an attribute's owner. Renaming updates every reference in the code.
+- **Selection like other apps**: drag a selection rectangle on the background, Ctrl + click for multi-selection and group moves; attributes follow their entity when dragged.
+- **draw.io-style navigation**: right button to pan, wheel to scroll and Ctrl + wheel (or touchpad pinch) to zoom the diagram.
+- **Locate every element in the code**: selecting it highlights its lines in the editor.
+- **Faster attributes**: "Add and create another", relationship attributes from the form and automatic overlap-free placement.
+- **More rigorous mapping**: key attributes of an M:N relationship join the PK, and the ON DELETE policy is chosen per step (CASCADE, SET NULL or NO ACTION) instead of a blanket CASCADE.
+- **Specialization defining attribute**: `spec d -> EMPLOYEE [JobType]`.
+- **Unified Help Center** (F1): editor usage, syntax, 9-step guide, AI prompt and credits, all in Spanish and English.

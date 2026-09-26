@@ -9,6 +9,12 @@ import type { NodeData, LinkData, NodeType } from '../types';
 import type { CompileResult, Diagnostic } from '../types/compiler';
 import { COORD_REGEX } from '../constants';
 import { extractCoordinates, createSpiralPositionGenerator } from './parser';
+import { findFreePosition, ATTRIBUTE_STEP_X } from './layout';
+
+const DEFINING_ATTRIBUTE_REGEX = /\[([^\]]*)\]/;
+// Admite letras con tilde: los alumnos nombran atributos en español (`Categoría`).
+const IDENTIFIER_REGEX = /^[\p{L}_][\p{L}\p{N}_]*$/u;
+const ONE_CARDINALITIES = ['1', '0..1', '1..1'];
 
 const KNOWN_NODE_COMMANDS = [
   'ent',
@@ -110,8 +116,13 @@ export function compileEER(code: string): CompileResult {
       }
       existingIds.add(id);
 
-      // Determinar posición final
-      const { x, y } = coords || getDefaultPos();
+      // Determinar posición final. Un atributo pegado con las mismas coordenadas exactas que un
+      // nodo anterior (copiar/pegar una línea en el DSL) se dibuja desplazado para que no quede
+      // oculto debajo; el texto no se reescribe hasta que el usuario lo arrastre.
+      let { x, y } = coords || getDefaultPos();
+      if (isAttribute && coords && newNodes.some(n => n.x === coords.x && n.y === coords.y)) {
+        ({ x, y } = findFreePosition({ x: coords.x + ATTRIBUTE_STEP_X, y: coords.y }, newNodes));
+      }
 
       // Determinar tipo de nodo
       let type: NodeType = 'entity';
@@ -153,7 +164,28 @@ export function compileEER(code: string): CompileResult {
 
     // 2. Especialización / Unión
     if (['spec', 'union'].includes(command)) {
-      const meta = parts[1] && parts[1] !== '->' ? parts[1].trim() : command === 'union' ? 'u' : 'd';
+      // Atributo definidor opcional: `spec d -> EMPLEADO [TipoTrabajo]`. Sin corchetes la
+      // especialización es definida por el usuario (no hay discriminante).
+      let definingAttribute: string | undefined;
+      let specParts = parts;
+      const definingMatch = command === 'spec' ? lineWithoutCoords.match(DEFINING_ATTRIBUTE_REGEX) : null;
+      if (definingMatch) {
+        const candidate = definingMatch[1]!.trim();
+        if (!IDENTIFIER_REGEX.test(candidate)) {
+          diagnostics.push({
+            line: lineNum,
+            severity: 'error',
+            code: 'INVALID_DEFINING_ATTRIBUTE',
+            messageKey: 'compiler.invalidDefiningAttribute',
+            params: { name: candidate },
+          });
+          return;
+        }
+        definingAttribute = candidate;
+        specParts = lineWithoutCoords.replace(DEFINING_ATTRIBUTE_REGEX, ' ').trim().split(/\s+/);
+      }
+
+      const meta = specParts[1] && specParts[1] !== '->' ? specParts[1].trim() : command === 'union' ? 'u' : 'd';
       let id = meta || `spec_${index}`;
       if (existingIds.has(id)) {
         id = `${id}_${index}`;
@@ -170,12 +202,13 @@ export function compileEER(code: string): CompileResult {
         y,
         meta,
         lineIndex: index,
+        definingAttribute,
       });
 
       if (lineWithoutCoords.includes('->')) {
-        const arrowIndex = parts.indexOf('->');
+        const arrowIndex = specParts.indexOf('->');
         if (arrowIndex !== -1) {
-          const targetParent = parts[arrowIndex + 1]?.trim();
+          const targetParent = specParts[arrowIndex + 1]?.trim();
           if (!targetParent) {
             diagnostics.push({
               line: lineNum,
@@ -185,8 +218,10 @@ export function compileEER(code: string): CompileResult {
               params: { command, name: meta },
             });
           } else {
+            // En notación de Elmasri el atributo definidor se rotula sobre la arista
+            // superclase–círculo; reutilizamos la etiqueta del enlace para dibujarlo.
             candidateLinks.push({
-              link: { source: targetParent, target: id, label: '', style: 'double' },
+              link: { source: targetParent, target: id, label: definingAttribute ?? '', style: 'double' },
               lineIndex: index,
             });
           }
@@ -267,9 +302,11 @@ export function compileEER(code: string): CompileResult {
 
     // Solo emitir el enlace si ambos extremos existen en el grafo
     if (sourceExists && targetExists) {
-      resolvedLinks.push(link);
+      resolvedLinks.push({ ...link, lineIndex });
     }
   });
+
+  diagnostics.push(...lintKeyAttributesOnRelationships(newNodes, resolvedLinks));
 
   const isValid = !diagnostics.some(d => d.severity === 'error');
 
@@ -279,4 +316,43 @@ export function compileEER(code: string): CompileResult {
     links: resolvedLinks,
     diagnostics,
   };
+}
+
+/**
+ * Advierte de atributos clave colgados de relaciones binarias con algún lado de cardinalidad 1.
+ *
+ * Solo en una tabla de relación (M:N o n-aria) un atributo de la relación puede formar parte de
+ * la PK. En 1:1 y 1:N sus atributos migran a una tabla de entidad cuya PK ya está fijada, así que
+ * marcarlos como clave no tiene significado formal: el alumno probablemente quería otra cosa.
+ */
+function lintKeyAttributesOnRelationships(nodes: NodeData[], links: LinkData[]): Diagnostic[] {
+  const findNode = (ref: string) => nodes.find(n => n.id === ref || n.label === ref);
+  const isEntity = (node?: NodeData) => node?.type === 'entity' || node?.type === 'weak_entity';
+  const diagnostics: Diagnostic[] = [];
+
+  nodes
+    .filter(n => n.type === 'key_attribute' && n.parentEntity)
+    .forEach(attr => {
+      const rel = findNode(attr.parentEntity!);
+      if (rel?.type !== 'relationship' && rel?.type !== 'identifying_relationship') return;
+
+      const entityLinks = links.filter(l => {
+        const ends = [findNode(l.source), findNode(l.target)];
+        return ends.includes(rel) && ends.some(isEntity);
+      });
+      const isBinaryWithOneSide =
+        entityLinks.length === 2 && entityLinks.some(l => ONE_CARDINALITIES.includes((l.label ?? '').toUpperCase()));
+
+      if (isBinaryWithOneSide) {
+        diagnostics.push({
+          line: attr.lineIndex + 1,
+          severity: 'warning',
+          code: 'KEY_ATTRIBUTE_ON_NON_MN_RELATIONSHIP',
+          messageKey: 'compiler.keyAttributeOnNonMNRelationship',
+          params: { name: attr.label, rel: rel.label },
+        });
+      }
+    });
+
+  return diagnostics;
 }

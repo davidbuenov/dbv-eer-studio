@@ -4,10 +4,7 @@ import { useState } from 'react';
  * Estados de los modales de la aplicación
  */
 export interface ModalState {
-  // Modales informativos
-  showHelp: boolean;
-  showCredits: boolean;
-  showAIPrompt: boolean;
+  // Confirmación de borrado total
   showClearConfirm: boolean;
   
   // Modal de propiedades (inserción visual)
@@ -31,6 +28,12 @@ export interface ModalState {
   specType: string; // 'd' o 'o'
   specSuperclass: string;
   specSubclasses: string[];
+  specDefiningAttribute: string; // Vacío = especialización definida por el usuario
+
+  // Edición de un nodo existente (null = creación de uno nuevo)
+  editingNodeId: string | null;
+  // Relación n-aria en edición: solo se editan nombre y carácter identificativo
+  isNaryRelationship: boolean;
   
   // Propiedades de unión
   unionName: string;
@@ -43,9 +46,6 @@ export interface ModalState {
  */
 export function useModalState() {
   // Modales informativos
-  const [showHelp, setShowHelp] = useState(false);
-  const [showCredits, setShowCredits] = useState(false);
-  const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   // Modal de propiedades
@@ -69,6 +69,11 @@ export function useModalState() {
   const [specType, setSpecType] = useState('d');
   const [specSuperclass, setSpecSuperclass] = useState('');
   const [specSubclasses, setSpecSubclasses] = useState<string[]>([]);
+  const [specDefiningAttribute, setSpecDefiningAttribute] = useState('');
+
+  // Edición
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [isNaryRelationship, setIsNaryRelationship] = useState(false);
   
   // Unión
   const [unionName, setUnionName] = useState('');
@@ -90,6 +95,9 @@ export function useModalState() {
     setSpecType('d');
     setSpecSuperclass('');
     setSpecSubclasses([]);
+    setSpecDefiningAttribute('');
+    setEditingNodeId(null);
+    setIsNaryRelationship(false);
     setUnionName('');
     setUnionSuperclasses([]);
     setUnionCategory('');
@@ -97,12 +105,6 @@ export function useModalState() {
 
   return {
     // Modales informativos
-    showHelp,
-    setShowHelp,
-    showCredits,
-    setShowCredits,
-    showAIPrompt,
-    setShowAIPrompt,
     showClearConfirm,
     setShowClearConfirm,
     
@@ -143,6 +145,14 @@ export function useModalState() {
     setSpecSuperclass,
     specSubclasses,
     setSpecSubclasses,
+    specDefiningAttribute,
+    setSpecDefiningAttribute,
+
+    // Edición
+    editingNodeId,
+    setEditingNodeId,
+    isNaryRelationship,
+    setIsNaryRelationship,
     
     // Unión
     unionName,

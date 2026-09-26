@@ -147,13 +147,18 @@ Implementa el algoritmo de los **9 pasos formales** expuesto en *"Fundamentos de
 - **Editor bidireccional DSL ↔ Canvas:** escribe el código y el diagrama se dibuja al instante; arrastra un nodo en el canvas y las coordenadas se actualizan solas en el código.
 - **Barra de herramientas visual:** inserta entidades, relaciones y atributos con un clic en el canvas y configúralos mediante formularios, sin escribir una línea de DSL.
 - **Notación de Chen completa:** entidades fuertes y débiles, relaciones normales e identificativas, atributos simples/clave/derivados/multivaluados, cardinalidades (1, N, M), participación total, jerarquías de especialización (disjuntas y solapadas) y uniones/categorías.
-- **Shift + arrastrar** una entidad mueve también sus atributos, manteniendo la distancia relativa.
-- **Zoom y paneo** con controles +/−, reinicio y ajuste automático al contenido.
+- **Edición directa en el diagrama:** doble clic (o `F2`) sobre cualquier elemento abre su formulario para renombrarlo, cambiar cardinalidades y participación de una relación, convertir una entidad en débil, cambiar el propietario de un atributo, etc. Renombrar actualiza todas las referencias del DSL.
+- **Localiza cada elemento en el código:** al seleccionar un nodo, sus líneas del DSL se resaltan y el editor se desplaza hasta ellas.
+- **Selección múltiple:** arrastra en el fondo para dibujar un **rectángulo de selección** (selecciona lo que queda entero dentro) o usa `Ctrl` + clic para añadir o quitar nodos; arrastrar mueve todo el grupo y `Supr` lo elimina.
+- **Los atributos siguen a su entidad o relación** al arrastrarla (`Alt` + arrastrar mueve solo el nodo).
+- **Atributos en serie:** "Añadir y crear otro" deja el formulario abierto para el siguiente atributo y lo coloca 100 px a la derecha; los atributos nunca se crean encima de otro nodo.
+- **Atributos de relación** desde el formulario visual (también clave, que en relaciones M:N y n-arias entran en la PK).
+- **Navegación como en draw.io:** botón derecho (o central) + arrastrar desplaza el lienzo, la rueda también (`Shift` = horizontal) y `Ctrl` + rueda (o pellizco en el touchpad) hace zoom hacia el cursor. Además, controles +/−, reinicio y ajuste automático al contenido.
 
 ### Conversión al Modelo Relacional
 
 - **Motor de los 9 pasos formales** con trazabilidad completa: cada tabla, columna y clave ajena guarda qué paso la generó.
-- **Inspector pedagógico:** el botón "Guía 9 Pasos" abre el resumen teórico del algoritmo, y cada tarjeta de tabla enlaza con la explicación concreta de la regla que la creó.
+- **Inspector pedagógico:** la pestaña "Guía de 9 Pasos" de la Ayuda resume el algoritmo, y el icono 📖 de cada tabla abre la explicación concreta de la regla que la creó.
 - **Editor relacional propio:** el Modelo Relacional tiene su propio DSL de texto, también bidireccional y con coordenadas persistentes.
 - **Resaltado interactivo:** al pasar el ratón por una tabla se destacan sus conexiones de integridad referencial.
 
@@ -165,9 +170,8 @@ Implementa el algoritmo de los **9 pasos formales** expuesto en *"Fundamentos de
 
 ### Interfaz
 
-- **Español e inglés**, conmutables desde la cabecera; el idioma elegido se recuerda.
-- **Prompt integrado para IA:** copia un prompt optimizado para que ChatGPT, Claude o Gemini generen el DSL a partir de un enunciado en lenguaje natural.
-- **Guía de sintaxis integrada** con referencia completa de ambos DSL.
+- **Centro de Ayuda unificado** (botón **Ayuda** o `F1`), con pestañas: *Uso del editor* (gestos, atajos de teclado y flujo de trabajo), *Sintaxis* de ambos DSL, *Guía de 9 Pasos*, *Prompt IA* (para que ChatGPT, Claude o Gemini generen el DSL a partir de un enunciado) y *Acerca de*.
+- **Español e inglés** en toda la interfaz, la ayuda y el prompt de IA, conmutables desde la cabecera; el idioma elegido se recuerda.
 - **Fijar ventana encima** (solo escritorio) para mantener el diagrama visible junto a otra aplicación.
 
 ---
@@ -177,14 +181,16 @@ Implementa el algoritmo de los **9 pasos formales** expuesto en *"Fundamentos de
 | Paso | Regla | Resultado |
 | --- | --- | --- |
 | **1** | Entidades fuertes | Una tabla por entidad, con su clave primaria |
-| **2** | Entidades débiles | Tabla con PK compuesta: FK del propietario + clave parcial (`ON DELETE CASCADE`) |
-| **3** | Relaciones 1:1 | FK propagada al lado de participación total, con restricción `UNIQUE` |
-| **4** | Relaciones 1:N | FK propagada del lado 1 al lado N; los atributos de la relación migran al lado N |
-| **5** | Relaciones M:N | Tabla puente cuya PK combina las FKs de ambas entidades |
+| **2** | Entidades débiles | Tabla con PK compuesta: FK del propietario + clave parcial (`ON DELETE CASCADE`: la débil no existe sin su propietaria) |
+| **3** | Relaciones 1:1 | FK propagada al lado de participación total, con restricción `UNIQUE` (`NO ACTION` si es obligatoria, `SET NULL` si es opcional) |
+| **4** | Relaciones 1:N | FK propagada del lado 1 al lado N; los atributos de la relación migran al lado N. Participación total ⇒ `NOT NULL` + `ON DELETE NO ACTION`; parcial ⇒ `ON DELETE SET NULL` |
+| **5** | Relaciones M:N | Tabla puente cuya PK combina las FKs de ambas entidades y los atributos clave de la relación (`ON DELETE NO ACTION`) |
 | **6** | Atributos multivaluados | Tabla independiente, para no violar la 1FN |
 | **7** | Relaciones n-arias (n > 2) | Tabla de n vías; la PK combina las FKs de las entidades sin cardinalidad 1 |
-| **8** | Especialización / generalización | Opciones 8A–8D de mapeo de herencia |
+| **8** | Especialización / generalización | Opciones 8A–8D de mapeo de herencia; el atributo definidor es una columna de la superclase |
 | **9** | Categorías (tipos de unión) | Tabla de categoría con clave sustituta |
+
+`ON DELETE CASCADE` solo se usa cuando la fila hija no puede existir sin la padre (Pasos 2, 6 y 8A); en el resto de casos se usa `SET NULL` o `NO ACTION` para no borrar en cadena datos independientes. Puedes cambiar la acción de cualquier FK en el DSL relacional (`ON DELETE CASCADE | SET NULL | RESTRICT | NO ACTION`).
 
 La especificación formal completa está en [`dbv-specs-ops/docs/eer-to-relational-mapping.md`](./dbv-specs-ops/docs/eer-to-relational-mapping.md).
 
@@ -192,7 +198,7 @@ La especificación formal completa está en [`dbv-specs-ops/docs/eer-to-relation
 
 ## ⌨️ Sintaxis del DSL
 
-Referencia rápida — la guía completa está integrada en la app (botón **Sintaxis**).
+Referencia rápida — la guía completa está integrada en la app (**Ayuda → Sintaxis**).
 
 ```text
 // Entidades
@@ -204,6 +210,7 @@ key_att DNI -> EMPLEADO (350, 220)
 att Nombre -> EMPLEADO (450, 220)
 derived_att Edad -> EMPLEADO (400, 180)
 multivalued_att Telefono -> EMPLEADO (300, 180)
+key_att Vuelta -> CIRCULA (700, 120)   // atributo clave de una relación M:N
 
 // Relaciones y conexiones
 rel TRABAJA_PARA (550, 300)
@@ -216,7 +223,8 @@ link EMPLEADO TIENE_DEP "1"
 link DEPENDIENTE TIENE_DEP "N" [total]
 
 // Jerarquías
-spec d -> EMPLEADO      // 'd' disjunta, 'o' solapada
+spec d -> EMPLEADO                  // 'd' disjunta, 'o' solapada; definida por el usuario
+spec d -> EMPLEADO [TipoTrabajo]    // definida por atributo (atributo definidor)
 link d INGENIERO
 
 // Categorías
@@ -362,6 +370,10 @@ Copyright (c) 2025-2026 David Bueno Vallejo
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-davidbueno-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/davidbueno/)
 [![Website](https://img.shields.io/badge/Web-davidbuenov.com-6366f1?logo=googlechrome&logoColor=white)](https://davidbuenov.com)
 [![GitHub](https://img.shields.io/badge/GitHub-davidbuenov-181717?logo=github&logoColor=white)](https://github.com/davidbuenov)
+
+### 🤝 Colaboradores
+
+- **Enrique Soler Castillo** — gracias por probar la aplicación a fondo y por sus propuestas, que dieron forma a la versión 1.6.0: edición de elementos desde el diagrama, selección múltiple, localización de cada elemento en el DSL, creación ágil de atributos, atributos clave de relación en la PK, atributo definidor de las especializaciones y una política `ON DELETE` rigurosa en lugar del `CASCADE` universal.
 
 ### 📚 Referencia académica
 

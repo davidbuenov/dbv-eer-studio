@@ -27,6 +27,22 @@ export function interpolate(template: string, params?: Record<string, string | n
   );
 }
 
+export const LANGUAGE_STORAGE_KEY = 'eer-studio-language';
+
+/**
+ * Lee el idioma persistido. El acceso va en `try/catch` porque `localStorage` lanza
+ * excepción —no devuelve null— en modo privado o con los datos de sitio bloqueados.
+ * Vive aquí (no en el Provider) porque también lo usa `ErrorBoundary`, que envuelve al
+ * `LanguageProvider` y por tanto no puede leer su contexto.
+ */
+export function readStoredLanguage(): Language {
+  try {
+    return window.localStorage.getItem(LANGUAGE_STORAGE_KEY) === 'en' ? 'en' : 'es';
+  } catch {
+    return 'es';
+  }
+}
+
 /** Traduce una clave de UI al idioma indicado, interpolando los parámetros que reciba. */
 export function translate(
   lang: Language,

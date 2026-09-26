@@ -121,6 +121,31 @@ Pipeline de validación previa y contención de errores:
   - `EERDiagramer.tsx` retiene el último esquema relacional válido si el usuario introduce errores sintácticos al editar el DSL relacional, previniendo la desaparición súbita de tablas (*flickering*).
   - Conecta los diagnósticos del DSL relacional con la barra inferior de `CodePanel`.
 
+### 6. Usabilidad del Editor EER y Política Referencial (v1.6.0) `[NUEVO]`
+- **Modelo de datos EER (`src/types/index.ts`):**
+  - `NodeData.definingAttribute?: string` — atributo definidor de una especialización (`spec d -> SUPER [ATTR]`).
+  - `LinkData.lineIndex?: number` — línea del DSL que declara el enlace. Permite localizar y reescribir las líneas `link` que "pertenecen" a una relación, especialización o unión sin volver a parsear el texto.
+- **Compilador EER (`src/utils/compiler.ts`):**
+  - Parsea `[ATTR]` en `spec` (error `INVALID_DEFINING_ATTRIBUTE` si está vacío o no es identificador) y pone su nombre como `label` de la arista superclase–círculo.
+  - Anti-solapamiento en lectura: un atributo con coordenadas explícitas idénticas a las de un nodo anterior se desplaza +100 px en X (solo en el modelo visual; el texto no se reescribe).
+  - Linter: `KEY_ATTRIBUTE_ON_NON_MN_RELATIONSHIP` (warning) si un `key_att` cuelga de una relación binaria con algún lado de cardinalidad 1.
+- **Edición de DSL como transformaciones puras (`src/utils/dslEditing.ts`):** funciones `string → string` testeables, sin React:
+  - `getOwnedLineIndices(node, links)` — líneas de declaración + `link` propias de un nodo (resaltado y reescritura).
+  - `renameReferences(code, oldLabel, newLabel, skipLines)` — renombrado por token (fuera de comillas y coordenadas, nunca el comando).
+  - `replaceElementBlock(code, ownedLines, newBlock)` — sustituye el bloque de un elemento conservando su posición en el fichero.
+- **Layout (`src/utils/layout.ts`):** `findFreePosition(x, y, occupied)` — desplaza +100 px en X hasta no solapar (cota de iteraciones).
+- **Edición visual:** `useModalState` gana `editingNodeId` (null = creación). `EERDiagramer` rellena el estado del formulario desde el nodo (`buildEditState`) y, al confirmar, genera el bloque nuevo con los generadores de `codeGenerator.ts` (ahora con coordenadas opcionales en `spec`/`union` y `definingAttribute`).
+- **Selección múltiple y arrastre de grupo (`useCanvasInteraction`):** `selectedNodeIds: string[]` sustituye a `selectedNodeId`. El conjunto a mover = selección ∪ descendientes-atributo (por `parentEntity`, recursivo) salvo con `Alt`. Al soltar, cada nodo movido actualiza su propia línea con `updateNodePosition`.
+- **Resaltado en `CodePanel`:** capa de fondo absolutamente posicionada detrás de un `<textarea>` transparente con `wrap="off"`; la posición de cada banda = `padding + línea × lineHeight − scrollTop` (lineHeight medido con `getComputedStyle`). No se enfoca el textarea (enfocarlo deseleccionaría el nodo vía `onEditStart`).
+- **Política referencial:** `eerToRelational.ts` asigna `onDelete` y nulabilidad por paso (tabla en SPECIFICATIONS §3.7.A). `relationalCodeGenerator.ts` emite siempre `ON DELETE <acción>` y `NOT NULL` en FKs obligatorias; `relationalCompiler.ts` acepta las 4 acciones (omitida ⇒ `NO ACTION`); `relationalToSQL.ts` las emite por dialecto (Oracle: solo `CASCADE`/`SET NULL`).
+
+### 7. Centro de Ayuda (v1.6.0) `[NUEVO]`
+- **`src/components/help/`**: `HelpCenter.tsx` (marco del modal y navegación lateral por pestañas) + un componente por pestaña: `EditorUsageTab`, `SyntaxTab`, `StepGuideTab`, `AIPromptTab`, `AboutTab`. Sustituyen y eliminan `ModalHelp`, `StepInspectorModal`, `ModalAIPrompt` y `ModalCredits` (su contenido se traslada, no se duplica).
+- **Contenido como datos**: los ejemplos de sintaxis (`src/components/help/syntaxExamples.ts`) y las filas de "Uso del editor" son arrays de claves i18n, lo que permite testear que cada ejemplo EER compila con `compileEER` y que cada clave existe en ES y EN (el tipo `TranslationKey` lo garantiza en compilación).
+- **Prompt IA bilingüe**: `src/i18n/aiPrompt.ts` exporta `getAIPrompt(lang)`.
+- **Estado**: `src/hooks/useHelpCenter.ts` — `{ isOpen, tab, inspectedTable, openHelp(tab?, table?), setTab, close }`; persiste la última pestaña en `localStorage` con `try/catch`. `F1` la abre desde `EERDiagramer`. Los flags `showHelp`/`showCredits`/`showAIPrompt` salen de `useModalState`.
+- **Versión**: `vite.config.ts` inyecta `__APP_VERSION__` leyendo `package.json` (declarado en `src/globals.d.ts`), para que "Acerca de" no quede desfasado en cada release.
+
 ---
 
 ## 🖥️ Roadmap Nativo de Escritorio (`dbv-tauri-starter`)

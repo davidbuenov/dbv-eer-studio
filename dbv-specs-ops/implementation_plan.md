@@ -2,158 +2,92 @@
 dependencies:
   - "react: ^19.2.0"
   - "lucide-react: ^0.555.0"
+  - "vitest (dev) — sin dependencias nuevas"
 risks:
-  - "Falsos positivos de integridad referencial si el compilador relacional evalúa claves foráneas hacia tablas declaradas más abajo en el archivo (forward references)."
-  - "Desincronización entre el arrastre visual de tablas y el texto del DSL si el DSL se encuentra en estado sintáctico inválido."
-rollback_strategy: "Revertir el módulo relationalCompiler.ts y restaurar relationalParser.ts y EERDiagramer.tsx al commit v1.4.1."
+  - "Renombrado por texto que corrompa referencias ajenas (atributos homónimos en varias entidades, marcadores 'd'/'o'/'u' de spec/union)."
+  - "Reescritura de líneas con lineIndex obsoletos si el DSL EER está en estado inválido (Stale-while-error congela nodos antiguos)."
+  - "Pérdida silenciosa de la política ON DELETE / nulabilidad en la ida y vuelta EER → DSL relacional → SQL; ORA-00905 si se emite 'ON DELETE NO ACTION' literal en Oracle."
+  - "Resaltado de línea desalineado con soft-wrap, o que se apague al enfocar el textarea (onEditStart deselecciona)."
+  - "El click posterior a un arrastre de grupo colapsa la selección múltiple."
+rollback_strategy: "Todo el ciclo va en un único commit sobre v1.5.0 (d82ca4b). Rollback = git revert del commit v1.6.0. No hay migración de datos: los ficheros .eer existentes siguen siendo válidos (la sintaxis [ATTR] es opcional)."
 ---
 
-# Plan de Implementación: Compilador, Linter y Diagnósticos del Modelo Relacional
+# Plan de Implementación v1.6.0: Usabilidad del Editor EER y Rigor del Mapeo
 
-Implementación del compilador sintáctico y semántico para el DSL de texto del Modelo Relacional (`table NOMBRE { ... }`), con diagnósticos interactivos en `CodePanel`, estrategia de resiliencia *Stale-while-error* (evitando que las tablas desaparezcan del canvas al editar) y advertencias pedagógicas docentes de integridad referencial y claves primarias.
-
-## User Review Required
-
-> [!IMPORTANT]
-> - **Compilación multi-pasada para referencias hacia adelante (*forward references*)**:
->   Si una tabla `EMPLEADO` declara `FK -> DEPARTAMENTO(ID)` antes de que `table DEPARTAMENTO` aparezca escrita en el texto, el compilador registrará primero todas las tablas en un pase preliminar para **no emitir falsos positivos** de tabla inexistente.
-> - **Resiliencia visual en arrastre**:
->   Si el alumno arrastra una tarjeta relacional en el canvas mientras el DSL contiene un error sintáctico transitorio, la posición se actualiza en memoria sin sobreescribir destructivamente el texto incompleto del alumno.
-
----
+Implementa `SPECIFICATIONS.md §3.7` (propuestas del colaborador Enrique Soler Castillo) y el diseño de `ARCHITECTURE.md §6`.
 
 ## Adversarial Architect Review
 
 ```xml
 <architect_review>
-  <builder>
-    Proponemos crear <code>compileRelationalDSL(code)</code> con un pipeline de validación en dos niveles. Si el alumno borra el nombre de una tabla (ej. <code>table  {</code>) o se olvida de cerrar una llave <code>}</code>, la función marca <code>isValid: false</code> y emite diagnósticos con número de línea. En <code>EERDiagramer.tsx</code>, la vista relacional aplica <strong>Stale-while-error</strong> para mantener las tarjetas en pantalla sin parpadeos, y la barra inferior de <code>CodePanel</code> muestra el error con salto a la línea afectada.
-  </builder>
-  <adversary>
-    Riesgo específico al dominio Relacional:
-    1. ¿Qué ocurre con las <strong>referencias cruzadas y hacia adelante</strong> entre tablas? En modelos relacionales es habitual que la tabla <code>PEDIDO</code> esté escrita antes que <code>CLIENTE</code> o que existan relaciones 1:1 reflexivas/cruzadas. Si el linter valida la existencia de <code>TARGET_TABLE</code> línea a línea en una sola pasada, marcará falsos avisos de "tabla inexistente" en tablas perfectamente válidas.
-    2. ¿Qué ocurre con las <strong>coordenadas visuales</strong> <code>[x: N, y: N]</code> y el arrastre de tablas? Si el alumno tiene un error de sintaxis en la línea 12 y arrastra la tabla de la línea 1 en el canvas, ¿el evento de arrastre llamará a <code>generateRelationalDSL</code> y borrará el código con error del alumno?
-  </adversary>
-  <builder>
-    Resolución rigurosa:
-    1. <strong>Compilación en dos pasadas</strong>: El Pase 1 analiza las cabeceras de todas las tablas (<code>table NOMBRE [x, y] {</code>) y cataloga todos los nombres de tabla y sus columnas. El Pase 2 valida las columnas, tipos y resuelve las restricciones de clave ajena (<code>foreignKeys</code>), comprobando que la tabla y columna destino existan. Esto elimina el 100% de falsos positivos por orden de declaración.
-    2. <strong>Blindaje del generador de DSL en arrastre</strong>: Si <code>isRelationalValid === false</code>, el arrastre de tarjetas en el canvas actualiza la posición visual local en <code>relationalPositions</code>, pero <strong>no</strong> regenera el texto del DSL hasta que el alumno corrija los errores de sintaxis, protegiendo su texto en edición.
-  </builder>
+  <builder>Implementar §3.7 en 5 bloques: motor relacional (PK con key_att de relación, atributos del Paso 3, política ON DELETE/nulabilidad, DSL relacional y SQL multi-dialecto); [ATTR] en spec; utilidades puras de edición de DSL; UI (modo edición, "Añadir y crear otro", atributos de relación, resaltado en CodePanel, selección múltiple y arrastre de grupo); documentación.</builder>
+  <adversary>(1) Renombrar una ENTIDAD o un atributo por texto puede corromper líneas link ajenas o el comando; los atributos no son únicos. (2) Con el DSL EER inválido, Stale-while-error congela nodos con lineIndex obsoletos: editar/borrar reescribiría líneas equivocadas. (3) La ida y vuelta al DSL relacional perdía NOT NULL de FKs y el compilador ponía CASCADE por defecto; Oracle rechaza 'ON DELETE NO ACTION'. (4) Soft-wrap desalinea el resaltado; enfocar el textarea deselecciona. (5) El click tras arrastrar un grupo colapsa la selección.</adversary>
+  <builder>(1) renameReferences por tokens, nunca el token 0, fuera de comillas/coordenadas; atributos: solo si la etiqueta es única. (2) Edición y borrado bloqueados mientras isValid === false. (3) Generador emite NOT NULL + ON DELETE explícito; compilador acepta 4 acciones con NO ACTION por defecto; SQL Oracle omite la cláusula para NO ACTION/RESTRICT; tests de ida y vuelta. (4) wrap="off" + capa de fondo, sin focus. (5) didDragRef con umbral.</builder>
+  <adversary>Riesgo residual: al editar una relación/especialización/unión, sus líneas link se reagrupan bajo la declaración (se pierde el orden original).</adversary>
+  <builder>Aceptado conscientemente (el orden de link no tiene semántica) y registrado en memory.md. La nudge anti-solapamiento del DSL solo actúa ante coordenadas idénticas.</builder>
 </architect_review>
 ```
 
----
+## Cambios Propuestos
 
-## Proposed Changes
+### Bloque 1 — Motor relacional (rigor del mapeo)
+- `src/utils/relational/eerToRelational.ts`: helper `mapRelationshipAttributes(rel, table, step)` reutilizado por Pasos 3/4/5/7 (key_att ⇒ PK + NOT NULL solo en 5/7); Paso 3 coloca la FK en el lado total real y mapea atributos; política `onDelete` + nulabilidad por paso; Paso 8A añade la columna del atributo definidor.
+- `src/i18n/steps.ts`: claves `STEP3_ATTR`, `STEP5_ATTR_PK`, `STEP7_ATTR_PK`, `STEP8_DEFINING_ATTR`; textos de restricción FK que explican la acción referencial (`{{action}}`).
+- `src/utils/relational/relationalCodeGenerator.ts`: `NOT NULL` en FKs obligatorias y `ON DELETE <acción>` siempre.
+- `src/utils/relational/relationalCompiler.ts`: acepta `CASCADE | SET NULL | RESTRICT | NO ACTION`; por defecto `NO ACTION`.
+- `src/utils/relational/relationalToSQL.ts`: `ON DELETE` por dialecto (Oracle: solo CASCADE / SET NULL).
 
-### 1. Capa de Tipos
+### Bloque 2 — Atributo definidor
+- `src/types/index.ts`: `NodeData.definingAttribute`, `LinkData.lineIndex`.
+- `src/types/compiler.ts`: códigos `INVALID_DEFINING_ATTRIBUTE`, `KEY_ATTRIBUTE_ON_NON_MN_RELATIONSHIP`.
+- `src/utils/compiler.ts`: parseo de `[ATTR]`, etiqueta en la arista, `lineIndex` en enlaces, nudge de atributos con coordenadas duplicadas, linter de key_att en relación no M:N.
 
-#### [MODIFY] [compiler.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/types/compiler.ts)
-- Ampliar `DiagnosticCode` con los códigos del DSL relacional:
-  - `'MISSING_TABLE_NAME'`
-  - `'UNCLOSED_TABLE_BLOCK'`
-  - `'INVALID_COLUMN_DEFINITION'`
-  - `'INVALID_FOREIGN_KEY_SYNTAX'`
-  - `'UNDECLARED_TARGET_TABLE'`
-  - `'UNDECLARED_TARGET_COLUMN'`
-  - `'TABLE_WITHOUT_PK'`
-  - `'DUPLICATE_TABLE_NAME'`
-  - `'DUPLICATE_COLUMN_NAME'`
-- Crear interfaz `CompileRelationalResult`:
-  ```ts
-  export interface CompileRelationalResult {
-    isValid: boolean;
-    schema: RelationalSchema;
-    diagnostics: Diagnostic[];
-  }
-  ```
+### Bloque 3 — Utilidades puras
+- `src/utils/layout.ts` (nuevo): `findFreePosition`.
+- `src/utils/dslEditing.ts` (nuevo): `getOwnedLineIndices`, `renameReferences`, `replaceElementBlock`.
+- `src/utils/codeGenerator.ts`: coordenadas opcionales en spec/union y `definingAttribute`.
 
----
+### Bloque 4 — UI
+- `src/hooks/useModalState.ts`: `editingNodeId`.
+- `src/components/ModalProperties.tsx`: modo edición, checkboxes débil/identificativa, atributo definidor, propietario = entidades + relaciones, botón "Añadir y crear otro".
+- `src/hooks/useCanvasInteraction.ts`: selección múltiple, arrastre de grupo, atributos siguen al propietario (Alt = solo el nodo).
+- `src/components/Canvas.tsx`, `NodeRenderer.tsx`: `selectedNodeIds`, doble clic, clic en fondo.
+- `src/components/CodePanel.tsx`: resaltado de líneas.
+- `src/components/ModalDeleteConfirm.tsx`: borrado múltiple.
+- `src/EERDiagramer.tsx`: orquestación (edición, crear otro, resaltado, teclado F2/Enter/Supr).
+- `src/components/Toolbar.tsx` + i18n: pista de gestos actualizada.
 
-### 2. Motor de Compilación del DSL Relacional
+### Bloque 5 — Documentación
+- `ModalHelp.tsx` (corrige sintaxis de atributos, añade `[ATTR]` y ON DELETE), `ModalAIPrompt.tsx`, `README.md`/`README.en.md` (gestos, sintaxis, tabla de 9 pasos, agradecimiento a Enrique Soler Castillo), `CHANGELOG.md [Sin publicar]`, `memory.md`.
 
-#### [NEW] [relationalCompiler.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/utils/relational/relationalCompiler.ts)
-- Función `compileRelationalDSL(code: string): CompileRelationalResult`:
-  - **Pase 1 (Indexación de Tablas)**:
-    - Detecta `table NOMBRE [x: N, y: N] {`.
-    - Error si falta el nombre de tabla o si no abre llave.
-    - Warning si el nombre de tabla está duplicado.
-  - **Pase 2 (Análisis de Contenido de Tablas)**:
-    - Valida cada columna: `NOMBRE TIPO [PK] [NOT NULL] [FK -> TABLA(COL)] [ON DELETE ...]`.
-    - Detecta error si la sintaxis de `FK` está rota (ej: falta tabla destino, faltan paréntesis de columna o formato inválido).
-    - Valida cierre de bloques: si el archivo termina sin `}`, emite error bloqueante `UNCLOSED_TABLE_BLOCK` en la línea de inicio de la tabla.
-  - **Pase 3 (Linter Semántico e Integridad Referencial)**:
-    - Valida que la tabla destino referenciada en cada FK exista en el esquema.
-    - Valida que la columna destino exista dentro de la tabla destino.
-    - Emite warning si una tabla no tiene ninguna columna `PK`.
-    - Emite warning si hay columnas con nombres duplicados dentro de la misma tabla.
-  - Retorna `{ isValid, schema, diagnostics }`.
-
-#### [MODIFY] [relationalParser.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/utils/relational/relationalParser.ts)
-- Hacer que `parseRelationalDSL(code)` delegue en `compileRelationalDSL(code).schema`.
+## Plan de Verificación
+- Tests nuevos: `dslEditing.test.ts`, `layout.test.ts`, ampliación de `compiler.test.ts`, `eerToRelational.test.ts` (CIRCULA con VUELTA, política ON DELETE por paso, Paso 3 con atributos, atributo definidor), `relationalCompiler.test.ts` y `relationalToSQL.test.ts` (4 acciones, Oracle sin NO ACTION, ida y vuelta).
+- `npm run lint`, `npm test`, `npm run build`.
+- Validación manual por el usuario en navegador antes de `/ship`.
 
 ---
 
-### 3. Internacionalización (ES / EN)
+# Anexo v1.6.0 — Centro de Ayuda Unificado (`SPECIFICATIONS.md §3.8`, `ARCHITECTURE.md §7`)
 
-#### [MODIFY] [es.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/i18n/es.ts) & [en.ts](file:///d:/Programacion/github-davidbuenov/eer-studio/src/i18n/en.ts)
-- Nuevas claves para diagnósticos relacionales:
-  - `compiler.relationalValid`: "Sintaxis relacional correcta" / "Relational syntax valid"
-  - `compiler.tablesAndFKs`: "{{tables}} tablas, {{fks}} claves foráneas" / "{{tables}} tables, {{fks}} foreign keys"
-  - `compiler.missingTableName`: "Se esperaba el nombre de la tabla tras 'table' (ej: table CLIENTE {)" / "Expected table name after 'table' (e.g. table CUSTOMER {)"
-  - `compiler.unclosedTableBlock`: "La tabla '{{name}}' no tiene llave de cierre '}'" / "Table '{{name}}' is missing closing bracket '}'"
-  - `compiler.invalidFKSyntax`: "Sintaxis de clave foránea inválida (formato esperado: FK -> TABLA(COLUMNA))" / "Invalid foreign key syntax (expected format: FK -> TABLE(COLUMN))"
-  - `compiler.undeclaredTargetTable`: "La tabla '{{table}}' referenciada en la clave foránea no existe" / "Target table '{{table}}' referenced in foreign key does not exist"
-  - `compiler.undeclaredTargetColumn`: "La columna '{{col}}' no existe en la tabla destino '{{table}}'" / "Target column '{{col}}' does not exist in table '{{table}}'"
-  - `compiler.tableWithoutPK`: "La tabla '{{name}}' no tiene ninguna clave primaria (PK)" / "Table '{{name}}' has no primary key (PK)"
-  - `compiler.duplicateTableName`: "El nombre de tabla '{{name}}' ya está declarado" / "Table name '{{name}}' has already been declared"
-  - `compiler.duplicateColumnName`: "La columna '{{col}}' ya existe en la tabla '{{table}}'" / "Column '{{col}}' already exists in table '{{table}}'"
+## Adversarial Architect Review
 
----
+```xml
+<architect_review>
+  <builder>Fusionar ModalHelp, StepInspectorModal, ModalAIPrompt y ModalCredits en HelpCenter con 5 pestañas, botón Ayuda + F1, acceso contextual desde cada tabla, última pestaña recordada, ES/EN completo.</builder>
+  <adversary>(1) is_packaged_app del updater consultado a destiempo. (2) F1 abre la ayuda nativa del navegador/WebView2. (3) La guía de Sintaxis ya tenía ejemplos que el compilador no reconoce. (4) Tabla inspeccionada obsoleta al reabrir la ayuda. (5) localStorage bloqueado. (6) Traducir el prompt IA podría traducir palabras clave del DSL.</adversary>
+  <builder>(1) AboutTab solo montada si está activa. (2) preventDefault en F1. (3) Ejemplos como datos + test de compilación de cada ejemplo. (4) openHelp() sin tabla la limpia. (5) try/catch con valor por defecto. (6) Prompt EN con los mismos comandos DSL, verificado por test; ADR i18n actualizado.</builder>
+</architect_review>
+```
 
-### 4. Integración en UI y Tolerancia a Fallos (EERDiagramer.tsx)
+## Cambios
+- Nuevo `src/components/help/` (HelpCenter + 5 pestañas + `syntaxExamples.ts`), `src/hooks/useHelpCenter.ts`, `src/i18n/aiPrompt.ts`, `src/globals.d.ts`.
+- `vite.config.ts`: `define.__APP_VERSION__` desde `package.json`.
+- `EERDiagramer.tsx`: botón Ayuda + F1; acceso contextual desde `RelationalViewer`; se retiran los 4 botones y modales antiguos.
+- `useModalState.ts`: fuera `showHelp`/`showCredits`/`showAIPrompt`.
+- `Toolbar.tsx`: se elimina la pista de gestos.
+- i18n ES/EN: claves `help.*`; limpieza de claves huérfanas.
+- Eliminados: `ModalHelp.tsx`, `ModalAIPrompt.tsx`, `ModalCredits.tsx`, `relational/StepInspectorModal.tsx`.
 
-#### [MODIFY] [EERDiagramer.tsx](file:///d:/Programacion/github-davidbuenov/eer-studio/src/EERDiagramer.tsx)
-- Estado de diagnósticos relacionales:
-  - `relationalDiagnostics: Diagnostic[]`
-  - `isRelationalValid: boolean`
-  - `lastValidRelationalSchemaRef`
-- En `handleRelationalCodeChange`:
-  - Ejecutar `compileRelationalDSL(newDSL)`.
-  - Si `result.isValid`: actualizar `relationalSchema` y guardar en `lastValidRelationalSchemaRef`.
-  - Si `!result.isValid`: retener el último esquema válido en pantalla para evitar que desaparezcan las tablas.
-- En la pestaña `activeTab === 'relational'`:
-  - Pasar a `<CodePanel />`:
-    - `diagnostics={relationalDiagnostics}`
-    - `isValid={isRelationalValid}`
-    - `elementCount={{ entities: relationalSchema.tables.length, relations: totalForeignKeys }}`
-
----
-
-## Verification Plan
-
-### Automated Tests
-- Ejecutar tests existentes y nuevos:
-  ```bash
-  npm test
-  ```
-- Crear fichero `src/utils/relational/relationalCompiler.test.ts`:
-  - Test 1: Tabla sin nombre (`table {`) detecta error bloqueante.
-  - Test 2: Bloque sin llave de cierre `}` detecta `UNCLOSED_TABLE_BLOCK`.
-  - Test 3: Sintaxis de FK rota (`FK -> TABLA`) sin paréntesis detecta `INVALID_FOREIGN_KEY_SYNTAX`.
-  - Test 4: Referencia hacia adelante (*forward reference*) entre dos tablas válidas no emite falsos positivos.
-  - Test 5: FK hacia tabla no existente emite advertencia `UNDECLARED_TARGET_TABLE`.
-  - Test 6: Tabla sin PK emite advertencia `TABLE_WITHOUT_PK`.
-  - Test 7: Código válido devuelve `isValid: true` y genera el esquema relacional con tablas, columnas y FKs correctas.
-
-### Manual Verification
-1. Arrancar `npm run dev` y abrir `http://localhost:5173/`.
-2. Ir a la pestaña **Modelo Relacional**.
-3. Verificar que la barra inferior muestra: `✓ Sintaxis relacional correcta (N tablas, M claves foráneas)`.
-4. En el editor de texto relacional, borrar el nombre de una tabla (ej: cambiar `table EMPLEADO {` por `table  {`):
-   - Verificar que la tarjeta de la tabla **no desaparece** del canvas (Stale-while-error).
-   - Verificar que la barra inferior muestra en rojo: `⚠️ Línea X: Se esperaba el nombre de la tabla tras 'table'`.
-   - Clic en la barra para comprobar que selecciona la línea del error.
-5. Restaurar el nombre y escribir una FK inválida (`FK -> INVENTADA(ID)`):
-   - Verificar que la barra muestra el aviso en ámbar/amarillo sobre la tabla inexistente.
-6. Cambiar el idioma a English y verificar que todos los diagnósticos se leen correctamente en inglés.
+## Verificación
+- Tests: cada ejemplo de sintaxis compila; prompts ES/EN contienen los mismos comandos DSL; persistencia de pestaña tolerante a fallos.
+- Lint, tests, build, smoke Playwright (F1, pestañas, acceso contextual, cambio de idioma) y `.exe` recompilado.

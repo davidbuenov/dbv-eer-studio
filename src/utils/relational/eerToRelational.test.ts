@@ -8,6 +8,9 @@
 import { describe, it, expect } from 'vitest';
 import { eerToRelational } from './eerToRelational';
 import type { NodeData, LinkData } from '../../types';
+import { compileEER } from '../compiler';
+import { generateRelationalDSL } from './relationalCodeGenerator';
+import { compileRelationalDSL } from './relationalCompiler';
 
 function node(partial: Partial<NodeData> & Pick<NodeData, 'id' | 'type' | 'label'>): NodeData {
   return { x: 0, y: 0, lineIndex: 0, ...partial };
@@ -467,5 +470,190 @@ describe('eerToRelational — Paso 9: Tipos de Unión (Categoría)', () => {
 
     expect(fkPersona?.onDelete).toBe('SET NULL');
     expect(fkEmpresa?.onDelete).toBe('SET NULL');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// v1.6.0 — Propuestas de Enrique Soler Castillo (SPECIFICATIONS.md §3.7.A/B).
+// Se parte del DSL real (compileEER) para cubrir también la ida y vuelta con el compilador.
+// ---------------------------------------------------------------------------
+
+function schemaFromDSL(code: string) {
+  const compiled = compileEER(code);
+  expect(compiled.isValid).toBe(true);
+  return eerToRelational(compiled.nodes, compiled.links);
+}
+
+const CIRCULA = `
+ent PILOTO
+key_att Id_Piloto -> PILOTO
+ent TRAMO
+key_att Id_Tramo -> TRAMO
+rel CIRCULA
+link PILOTO CIRCULA "N"
+link TRAMO CIRCULA "M"
+key_att Vuelta -> CIRCULA
+att Tiempo -> CIRCULA
+`;
+
+describe('eerToRelational — atributos clave de relación (Pasos 5 y 7)', () => {
+  it('Paso 5: el atributo clave de la relación M:N entra en la PK de la tabla puente', () => {
+    const circula = findTable(schemaFromDSL(CIRCULA), 'CIRCULA');
+    const pk = circula.columns.filter(c => c.isPrimaryKey).map(c => c.name);
+    expect(pk).toEqual(['PILOTO_ID_PILOTO', 'TRAMO_ID_TRAMO', 'VUELTA']);
+    expect(circula.columns.find(c => c.name === 'VUELTA')?.isNullable).toBe(false);
+    expect(circula.columns.find(c => c.name === 'VUELTA')?.stepTrace?.stepKey).toBe('STEP5_ATTR_PK');
+    expect(circula.columns.find(c => c.name === 'TIEMPO')?.isPrimaryKey).toBe(false);
+  });
+
+  it('Paso 7: el atributo clave de una relación n-aria entra en la PK', () => {
+    const schema = schemaFromDSL(`
+ent A
+ent B
+ent C
+rel R
+link A R "N"
+link B R "N"
+link C R "N"
+key_att Turno -> R
+`);
+    const r = findTable(schema, 'R');
+    expect(r.columns.find(c => c.name === 'TURNO')?.isPrimaryKey).toBe(true);
+    expect(r.foreignKeys.every(fk => fk.onDelete === 'NO ACTION')).toBe(true);
+  });
+
+  it('Paso 4: un atributo clave en una 1:N no altera la PK de la tabla del lado N', () => {
+    const schema = schemaFromDSL(CIRCULA.replace('"M"', '"1"'));
+    const piloto = findTable(schema, 'PILOTO');
+    expect(piloto.columns.filter(c => c.isPrimaryKey).map(c => c.name)).toEqual(['ID_PILOTO']);
+    expect(piloto.columns.some(c => c.name === 'CIRCULA_VUELTA')).toBe(true);
+  });
+});
+
+describe('eerToRelational — política ON DELETE por paso', () => {
+  const DEPTO = (profesorTotal: boolean) => `
+ent DEPARTAMENTO
+key_att Id_Depto -> DEPARTAMENTO
+ent PROFESOR
+key_att Id_Prof -> PROFESOR
+rel PERTENECE
+link DEPARTAMENTO PERTENECE "1"
+link PROFESOR PERTENECE "N"${profesorTotal ? ' [total]' : ''}
+`;
+
+  it('Paso 4 con participación total del lado N: FK NOT NULL y NO ACTION (no se borra un departamento con profesores)', () => {
+    const profesor = findTable(schemaFromDSL(DEPTO(true)), 'PROFESOR');
+    expect(profesor.foreignKeys[0]!.onDelete).toBe('NO ACTION');
+    expect(profesor.columns.find(c => c.isForeignKey)?.isNullable).toBe(false);
+    expect(profesor.foreignKeys[0]!.stepTrace?.stepKey).toBe('STEP4_FK_CONSTRAINT');
+  });
+
+  it('Paso 4 con participación parcial: FK nullable y SET NULL', () => {
+    const profesor = findTable(schemaFromDSL(DEPTO(false)), 'PROFESOR');
+    expect(profesor.foreignKeys[0]!.onDelete).toBe('SET NULL');
+    expect(profesor.columns.find(c => c.isForeignKey)?.isNullable).toBe(true);
+    expect(profesor.foreignKeys[0]!.stepTrace?.stepKey).toBe('STEP4_FK_CONSTRAINT_SET_NULL');
+  });
+
+  it('Paso 5: las FKs de la tabla puente usan NO ACTION', () => {
+    const circula = findTable(schemaFromDSL(CIRCULA), 'CIRCULA');
+    expect(circula.foreignKeys.map(fk => fk.onDelete)).toEqual(['NO ACTION', 'NO ACTION']);
+  });
+
+  it('Pasos 2 y 6 mantienen CASCADE (dependencia existencial)', () => {
+    const schema = schemaFromDSL(`
+ent PEDIDO
+key_att Id_Pedido -> PEDIDO
+multivalued_att Telefono -> PEDIDO
+weak_ent LINEA
+key_att Num -> LINEA
+ident_rel CONTIENE
+link PEDIDO CONTIENE "1"
+link LINEA CONTIENE "N" [total]
+`);
+    expect(findTable(schema, 'LINEA').foreignKeys[0]!.onDelete).toBe('CASCADE');
+    expect(findTable(schema, 'PEDIDO_TELEFONO').foreignKeys[0]!.onDelete).toBe('CASCADE');
+  });
+
+  it('Paso 3: la FK va al lado total aunque sea el segundo enlace, es NOT NULL y migra los atributos de la relación', () => {
+    const schema = schemaFromDSL(`
+ent PERSONA
+key_att Dni -> PERSONA
+ent PASAPORTE
+key_att Numero -> PASAPORTE
+rel POSEE
+link PERSONA POSEE "1"
+link PASAPORTE POSEE "1" [total]
+att Fecha_Emision -> POSEE
+`);
+    const pasaporte = findTable(schema, 'PASAPORTE');
+    expect(pasaporte.foreignKeys[0]!.targetTableName).toBe('PERSONA');
+    expect(pasaporte.foreignKeys[0]!.onDelete).toBe('NO ACTION');
+    expect(pasaporte.columns.find(c => c.isForeignKey)?.isNullable).toBe(false);
+    expect(pasaporte.columns.some(c => c.name === 'POSEE_FECHA_EMISION')).toBe(true);
+  });
+
+  it('Paso 3 sin participación total: FK nullable con SET NULL', () => {
+    const schema = schemaFromDSL('ent A\nent B\nrel R\nlink A R "1"\nlink B R "1"');
+    const b = findTable(schema, 'B');
+    expect(b.foreignKeys[0]!.onDelete).toBe('SET NULL');
+    expect(b.columns.find(c => c.isForeignKey)?.isNullable).toBe(true);
+  });
+});
+
+describe('eerToRelational — atributo definidor de la especialización (Paso 8)', () => {
+  const SPEC = (defining: string, extra = '') => `
+ent EMPLEADO
+key_att Dni -> EMPLEADO
+${extra}
+spec d -> EMPLEADO${defining}
+ent INGENIERO
+link d INGENIERO
+`;
+
+  it('añade el atributo definidor como columna de la superclase', () => {
+    const empleado = findTable(schemaFromDSL(SPEC(' [TipoTrabajo]')), 'EMPLEADO');
+    const col = empleado.columns.find(c => c.name === 'TIPOTRABAJO');
+    expect(col?.stepTrace?.stepKey).toBe('STEP8_DEFINING_ATTR');
+    expect(col?.isPrimaryKey).toBe(false);
+  });
+
+  it('no duplica la columna si el alumno ya declaró el atributo en la superclase', () => {
+    const empleado = findTable(schemaFromDSL(SPEC(' [TipoTrabajo]', 'att TipoTrabajo -> EMPLEADO')), 'EMPLEADO');
+    expect(empleado.columns.filter(c => c.name === 'TIPOTRABAJO')).toHaveLength(1);
+  });
+
+  it('sin atributo definidor (definida por el usuario) no se genera discriminante', () => {
+    const empleado = findTable(schemaFromDSL(SPEC('')), 'EMPLEADO');
+    expect(empleado.columns.map(c => c.name)).toEqual(['DNI']);
+  });
+});
+
+describe('Ida y vuelta EER → DSL relacional → compilador', () => {
+  it('conserva la acción ON DELETE y la nulabilidad de cada FK', () => {
+    const schema = schemaFromDSL(`
+ent DEPARTAMENTO
+key_att Id_Depto -> DEPARTAMENTO
+ent PROFESOR
+key_att Id_Prof -> PROFESOR
+ent COCHE
+key_att Matricula -> COCHE
+rel PERTENECE
+link DEPARTAMENTO PERTENECE "1"
+link PROFESOR PERTENECE "N" [total]
+rel USA
+link PROFESOR USA "1"
+link COCHE USA "N"
+`);
+    const recompiled = compileRelationalDSL(generateRelationalDSL(schema));
+    expect(recompiled.isValid).toBe(true);
+
+    const describeFKs = (tables: typeof schema.tables) =>
+      tables.flatMap(t => t.foreignKeys.map(fk => {
+        const col = t.columns.find(c => c.name === fk.sourceColumnNames[0]);
+        return `${t.name}.${fk.sourceColumnNames[0]}:${fk.onDelete}:${col?.isNullable}`;
+      })).sort();
+
+    expect(describeFKs(recompiled.schema.tables)).toEqual(describeFKs(schema.tables));
   });
 });

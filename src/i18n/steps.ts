@@ -26,12 +26,16 @@ export type StepKey =
   | 'STEP2_ATTRIBUTE'
   | 'STEP3_FK_ONE_TO_ONE'
   | 'STEP3_FK_CONSTRAINT'
+  | 'STEP3_FK_CONSTRAINT_SET_NULL'
+  | 'STEP3_ATTR'
   | 'STEP4_FK_ONE_TO_MANY'
   | 'STEP4_ATTR'
   | 'STEP4_FK_CONSTRAINT'
+  | 'STEP4_FK_CONSTRAINT_SET_NULL'
   | 'STEP5_PK_FK'
   | 'STEP5_FK_CONSTRAINT'
   | 'STEP5_ATTR'
+  | 'STEP5_ATTR_PK'
   | 'STEP5_BRIDGE_TABLE'
   | 'STEP6_FK_OWNER'
   | 'STEP6_VALUE'
@@ -41,9 +45,11 @@ export type StepKey =
   | 'STEP7_PK_COMPONENT'
   | 'STEP7_FK_CONSTRAINT'
   | 'STEP7_ATTR'
+  | 'STEP7_ATTR_PK'
   | 'STEP7_BRIDGE_TABLE'
   | 'STEP8A_PK_FK_INHERITED'
   | 'STEP8A_FK_LINK'
+  | 'STEP8_DEFINING_ATTR'
   | 'STEP9_CATEGORY_TABLE'
   | 'STEP9_FK_CATEGORY'
   | 'STEP9_FK_CONSTRAINT'
@@ -81,7 +87,7 @@ const stepsEs: Record<StepKey, StepEntry> = {
   },
   STEP2_FK_CASCADE: {
     title: 'Paso 2: Restricción FK con CASCADE',
-    description: 'Integridad referencial ON DELETE CASCADE obligatoria al depender la entidad débil de la propietaria.',
+    description: 'ON DELETE CASCADE justificado: la entidad débil no tiene existencia propia sin su propietaria, así que al borrar la propietaria se borran sus débiles.',
   },
   STEP2_PARTIAL_KEY: {
     title: 'Paso 2: Clave Parcial / Atributo',
@@ -96,8 +102,16 @@ const stepsEs: Record<StepKey, StepEntry> = {
     description: "Clave ajena propagada para modelar la relación 1:1 '{{relLabel}}'. Contiene restricción UNIQUE.",
   },
   STEP3_FK_CONSTRAINT: {
-    title: 'Paso 3: Restricción FK 1:1',
-    description: "Restricción referencial 1:1 entre '{{targetTableName}}' y '{{sourceTableName}}'.",
+    title: 'Paso 3: Restricción FK 1:1 (NO ACTION)',
+    description: "FK obligatoria (participación total) de '{{targetTableName}}' hacia '{{sourceTableName}}' con ON DELETE NO ACTION: no se puede borrar la fila de '{{sourceTableName}}' mientras tenga su pareja obligatoria.",
+  },
+  STEP3_FK_CONSTRAINT_SET_NULL: {
+    title: 'Paso 3: Restricción FK 1:1 (SET NULL)',
+    description: "FK opcional (participación parcial) de '{{targetTableName}}' hacia '{{sourceTableName}}' con ON DELETE SET NULL: al borrar la fila referenciada, la pareja pierde el vínculo pero sigue existiendo.",
+  },
+  STEP3_ATTR: {
+    title: 'Paso 3: Atributo de Relación 1:1',
+    description: "Atributo de la relación 1:1 '{{relLabel}}' migrado a la tabla que recibe la FK '{{tableName}}'.",
   },
   STEP4_FK_ONE_TO_MANY: {
     title: 'Paso 4: FK en Relación Binaria 1:N',
@@ -105,23 +119,31 @@ const stepsEs: Record<StepKey, StepEntry> = {
   },
   STEP4_ATTR: {
     title: 'Paso 4: Atributo de Relación 1:N',
-    description: "Atributo de la relación 1:N migrado a la tabla del lado N '{{tableManyName}}'.",
+    description: "Atributo de la relación 1:N migrado a la tabla del lado N '{{tableName}}'.",
   },
   STEP4_FK_CONSTRAINT: {
-    title: 'Paso 4: Restricción FK 1:N',
-    description: "Restricción de clave ajena referenciando al lado 1 '{{tableOneName}}'.",
+    title: 'Paso 4: Restricción FK 1:N (NO ACTION)',
+    description: "FK obligatoria (participación total del lado N) hacia '{{tableOneName}}' con ON DELETE NO ACTION: no se puede borrar una fila de '{{tableOneName}}' mientras tenga filas asociadas en '{{tableManyName}}' (hay que reasignarlas antes).",
+  },
+  STEP4_FK_CONSTRAINT_SET_NULL: {
+    title: 'Paso 4: Restricción FK 1:N (SET NULL)',
+    description: "FK opcional (participación parcial del lado N) hacia '{{tableOneName}}' con ON DELETE SET NULL: al borrar la fila de '{{tableOneName}}', las filas de '{{tableManyName}}' siguen existiendo sin vínculo.",
   },
   STEP5_PK_FK: {
     title: 'Paso 5: Componente PK/FK M:N (Entidad {{side}})',
     description: "Clave ajena participante de '{{tableName}}' formando la PK compuesta de la tabla puente M:N.",
   },
   STEP5_FK_CONSTRAINT: {
-    title: 'Paso 5: Restricción FK M:N',
-    description: "Integridad referencial a '{{tableName}}' con CASCADE.",
+    title: 'Paso 5: Restricción FK M:N (NO ACTION)',
+    description: "Integridad referencial a '{{tableName}}' con ON DELETE NO ACTION: no se puede borrar una fila de '{{tableName}}' mientras participe en la relación; borrar esos vínculos debe ser una decisión explícita.",
   },
   STEP5_ATTR: {
     title: 'Paso 5: Atributo Propio M:N',
     description: 'Atributo de la relación muchos-a-muchos incorporado como columna en la tabla puente.',
+  },
+  STEP5_ATTR_PK: {
+    title: 'Paso 5: Atributo Clave de la Relación M:N',
+    description: "El atributo clave '{{attrLabel}}' de la relación '{{relLabel}}' forma parte de la PK de la tabla puente: la misma pareja de entidades puede relacionarse varias veces, distinguidas por '{{attrLabel}}'.",
   },
   STEP5_BRIDGE_TABLE: {
     title: 'Paso 5: Mapeado de Relaciones M:N Binarias',
@@ -152,12 +174,16 @@ const stepsEs: Record<StepKey, StepEntry> = {
     description: "Clave ajena de '{{tableName}}' participante de la PK compuesta de la relación n-aria '{{relLabel}}'.",
   },
   STEP7_FK_CONSTRAINT: {
-    title: 'Paso 7: Restricción FK N-aria',
-    description: "Integridad referencial a '{{tableName}}' con CASCADE.",
+    title: 'Paso 7: Restricción FK N-aria (NO ACTION)',
+    description: "Integridad referencial a '{{tableName}}' con ON DELETE NO ACTION: no se puede borrar una fila de '{{tableName}}' mientras participe en la relación.",
   },
   STEP7_ATTR: {
     title: 'Paso 7: Atributo Propio de la Relación N-aria',
     description: 'Atributo de la relación n-aria incorporado como columna en la tabla de relación.',
+  },
+  STEP7_ATTR_PK: {
+    title: 'Paso 7: Atributo Clave de la Relación N-aria',
+    description: "El atributo clave '{{attrLabel}}' de la relación '{{relLabel}}' forma parte de la PK de la tabla de relación.",
   },
   STEP7_BRIDGE_TABLE: {
     title: 'Paso 7: Mapeado de Relaciones N-arias (n > 2)',
@@ -169,7 +195,11 @@ const stepsEs: Record<StepKey, StepEntry> = {
   },
   STEP8A_FK_LINK: {
     title: 'Paso 8 (Opción 8A): Enlace de Herencia FK',
-    description: "Restricción de herencia asociando la subclase '{{subTableName}}' a su superclase '{{superTableName}}'.",
+    description: "Restricción de herencia asociando la subclase '{{subTableName}}' a su superclase '{{superTableName}}' con ON DELETE CASCADE: la fila de la subclase es parte de la misma entidad que la de la superclase.",
+  },
+  STEP8_DEFINING_ATTR: {
+    title: 'Paso 8: Atributo Definidor de la Especialización',
+    description: "Columna del atributo definidor '{{attrLabel}}' en la superclase '{{superTableName}}': su valor determina a qué subclase pertenece cada fila (especialización definida por atributo).",
   },
   STEP9_CATEGORY_TABLE: {
     title: 'Paso 9: Mapeado de Categoría (Tipo de Unión)',
@@ -216,7 +246,7 @@ const stepsEn: Record<StepKey, StepEntry> = {
   },
   STEP2_FK_CASCADE: {
     title: 'Step 2: FK Constraint with CASCADE',
-    description: 'ON DELETE CASCADE referential integrity is mandatory because the weak entity depends on its owner.',
+    description: 'ON DELETE CASCADE is justified: the weak entity has no existence of its own without its owner, so deleting the owner deletes its weak entities.',
   },
   STEP2_PARTIAL_KEY: {
     title: 'Step 2: Partial Key / Attribute',
@@ -231,8 +261,16 @@ const stepsEn: Record<StepKey, StepEntry> = {
     description: "Foreign key propagated to model the 1:1 relationship '{{relLabel}}'. It carries a UNIQUE constraint.",
   },
   STEP3_FK_CONSTRAINT: {
-    title: 'Step 3: 1:1 FK Constraint',
-    description: "1:1 referential constraint between '{{targetTableName}}' and '{{sourceTableName}}'.",
+    title: 'Step 3: 1:1 FK Constraint (NO ACTION)',
+    description: "Mandatory FK (total participation) from '{{targetTableName}}' to '{{sourceTableName}}' with ON DELETE NO ACTION: the '{{sourceTableName}}' row cannot be deleted while its mandatory partner exists.",
+  },
+  STEP3_FK_CONSTRAINT_SET_NULL: {
+    title: 'Step 3: 1:1 FK Constraint (SET NULL)',
+    description: "Optional FK (partial participation) from '{{targetTableName}}' to '{{sourceTableName}}' with ON DELETE SET NULL: deleting the referenced row unlinks its partner, which keeps existing.",
+  },
+  STEP3_ATTR: {
+    title: 'Step 3: 1:1 Relationship Attribute',
+    description: "Attribute of the 1:1 relationship '{{relLabel}}' migrated to the table holding the FK '{{tableName}}'.",
   },
   STEP4_FK_ONE_TO_MANY: {
     title: 'Step 4: FK in 1:N Binary Relationship',
@@ -240,23 +278,31 @@ const stepsEn: Record<StepKey, StepEntry> = {
   },
   STEP4_ATTR: {
     title: 'Step 4: 1:N Relationship Attribute',
-    description: "Attribute of the 1:N relationship migrated to the table on the N side '{{tableManyName}}'.",
+    description: "Attribute of the 1:N relationship migrated to the table on the N side '{{tableName}}'.",
   },
   STEP4_FK_CONSTRAINT: {
-    title: 'Step 4: 1:N FK Constraint',
-    description: "Foreign key constraint referencing the 1 side '{{tableOneName}}'.",
+    title: 'Step 4: 1:N FK Constraint (NO ACTION)',
+    description: "Mandatory FK (total participation of the N side) to '{{tableOneName}}' with ON DELETE NO ACTION: a '{{tableOneName}}' row cannot be deleted while it has related rows in '{{tableManyName}}' (they must be reassigned first).",
+  },
+  STEP4_FK_CONSTRAINT_SET_NULL: {
+    title: 'Step 4: 1:N FK Constraint (SET NULL)',
+    description: "Optional FK (partial participation of the N side) to '{{tableOneName}}' with ON DELETE SET NULL: when the '{{tableOneName}}' row is deleted, the '{{tableManyName}}' rows keep existing without a link.",
   },
   STEP5_PK_FK: {
     title: 'Step 5: M:N PK/FK Component (Entity {{side}})',
     description: "Participating foreign key of '{{tableName}}' forming the composite PK of the M:N bridge table.",
   },
   STEP5_FK_CONSTRAINT: {
-    title: 'Step 5: M:N FK Constraint',
-    description: "Referential integrity to '{{tableName}}' with CASCADE.",
+    title: 'Step 5: M:N FK Constraint (NO ACTION)',
+    description: "Referential integrity to '{{tableName}}' with ON DELETE NO ACTION: a '{{tableName}}' row cannot be deleted while it takes part in the relationship; removing those links must be an explicit decision.",
   },
   STEP5_ATTR: {
     title: 'Step 5: M:N Own Attribute',
     description: 'Attribute of the many-to-many relationship added as a column in the bridge table.',
+  },
+  STEP5_ATTR_PK: {
+    title: 'Step 5: M:N Relationship Key Attribute',
+    description: "Key attribute '{{attrLabel}}' of the relationship '{{relLabel}}' is part of the bridge table's PK: the same pair of entities can be related several times, told apart by '{{attrLabel}}'.",
   },
   STEP5_BRIDGE_TABLE: {
     title: 'Step 5: Binary M:N Relationship Mapping',
@@ -287,12 +333,16 @@ const stepsEn: Record<StepKey, StepEntry> = {
     description: "Foreign key of '{{tableName}}' participating in the composite PK of the n-ary relationship '{{relLabel}}'.",
   },
   STEP7_FK_CONSTRAINT: {
-    title: 'Step 7: N-ary FK Constraint',
-    description: "Referential integrity to '{{tableName}}' with CASCADE.",
+    title: 'Step 7: N-ary FK Constraint (NO ACTION)',
+    description: "Referential integrity to '{{tableName}}' with ON DELETE NO ACTION: a '{{tableName}}' row cannot be deleted while it takes part in the relationship.",
   },
   STEP7_ATTR: {
     title: 'Step 7: N-ary Relationship Own Attribute',
     description: 'Attribute of the n-ary relationship added as a column in the relationship table.',
+  },
+  STEP7_ATTR_PK: {
+    title: 'Step 7: N-ary Relationship Key Attribute',
+    description: "Key attribute '{{attrLabel}}' of the relationship '{{relLabel}}' is part of the relationship table's PK.",
   },
   STEP7_BRIDGE_TABLE: {
     title: 'Step 7: N-ary Relationship Mapping (n > 2)',
@@ -304,7 +354,11 @@ const stepsEn: Record<StepKey, StepEntry> = {
   },
   STEP8A_FK_LINK: {
     title: 'Step 8 (Option 8A): Inheritance FK Link',
-    description: "Inheritance constraint linking the subclass '{{subTableName}}' to its superclass '{{superTableName}}'.",
+    description: "Inheritance constraint linking the subclass '{{subTableName}}' to its superclass '{{superTableName}}' with ON DELETE CASCADE: the subclass row is part of the same entity as the superclass row.",
+  },
+  STEP8_DEFINING_ATTR: {
+    title: 'Step 8: Specialization Defining Attribute',
+    description: "Column for the defining attribute '{{attrLabel}}' in the superclass '{{superTableName}}': its value determines which subclass each row belongs to (attribute-defined specialization).",
   },
   STEP9_CATEGORY_TABLE: {
     title: 'Step 9: Category Mapping (Union Type)',
@@ -342,19 +396,19 @@ const formalStepsEs: Record<FormalStepNumber, StepEntry> = {
   },
   2: {
     title: 'Paso 2: Entidades Débiles',
-    description: 'Se crea una tabla para la entidad débil W. Se propaga la PK de la entidad propietaria como FK y se combina con la clave parcial de W para formar su PK compuesta (con ON DELETE CASCADE).',
+    description: 'Se crea una tabla para la entidad débil W. Se propaga la PK de la entidad propietaria como FK y se combina con la clave parcial de W para formar su PK compuesta. La FK usa ON DELETE CASCADE porque W no puede existir sin su propietaria.',
   },
   3: {
     title: 'Paso 3: Relaciones Binarias 1:1',
-    description: 'Se elige la relación con participación total e incluye como FK la clave primaria de la otra tabla, marcándola con restricción UNIQUE.',
+    description: 'Se elige la relación con participación total e incluye como FK la clave primaria de la otra tabla, marcándola con restricción UNIQUE. FK obligatoria ⇒ ON DELETE NO ACTION; FK opcional ⇒ ON DELETE SET NULL.',
   },
   4: {
     title: 'Paso 4: Relaciones Binarias 1:N',
-    description: 'Se propaga la clave primaria de la tabla del lado 1 como clave ajena (FK) en la tabla del lado N. Los atributos de la relación migran al lado N.',
+    description: 'Se propaga la clave primaria de la tabla del lado 1 como clave ajena (FK) en la tabla del lado N. Los atributos de la relación migran al lado N. Participación total del lado N ⇒ FK NOT NULL con ON DELETE NO ACTION (no se borra un departamento con profesores); parcial ⇒ ON DELETE SET NULL. CASCADE no procede: borraría entidades independientes.',
   },
   5: {
     title: 'Paso 5: Relaciones Binarias M:N',
-    description: 'Se crea una tabla puente de correspondencia. Su PK es la combinación de las FKs que referencian a las dos entidades participantes.',
+    description: 'Se crea una tabla puente de correspondencia. Su PK es la combinación de las FKs que referencian a las dos entidades participantes más los atributos clave de la relación. Las FKs usan ON DELETE NO ACTION.',
   },
   6: {
     title: 'Paso 6: Atributos Multivalorados',
@@ -362,11 +416,11 @@ const formalStepsEs: Record<FormalStepNumber, StepEntry> = {
   },
   7: {
     title: 'Paso 7: Relaciones n-arias (n > 2)',
-    description: 'Se crea una tabla de relación n-vías que incluye las PKs de todas las entidades participantes como claves ajenas.',
+    description: 'Se crea una tabla de relación n-vías que incluye las PKs de todas las entidades participantes como claves ajenas (con ON DELETE NO ACTION). Los atributos clave de la relación se suman a la PK.',
   },
   8: {
     title: 'Paso 8: Especialización y Generalización',
-    description: 'Se aplican las opciones de herencia: 8A (varias tablas con FK a la superclase), 8B (tablas solo por subclase), 8C (tabla única con discriminador) u 8D (banderas booleanas).',
+    description: 'Se aplican las opciones de herencia: 8A (varias tablas con FK a la superclase), 8B (tablas solo por subclase), 8C (tabla única con discriminador) u 8D (banderas booleanas). Si la especialización es definida por atributo (spec d -> SUPER [ATRIBUTO]), el atributo definidor es una columna de la superclase.',
   },
   9: {
     title: 'Paso 9: Categorías (Tipos de Unión)',
@@ -381,19 +435,19 @@ const formalStepsEn: Record<FormalStepNumber, StepEntry> = {
   },
   2: {
     title: 'Step 2: Weak Entities',
-    description: "A table is created for the weak entity W. The owner entity's PK is propagated as an FK and combined with W's partial key to form its composite PK (with ON DELETE CASCADE).",
+    description: "A table is created for the weak entity W. The owner entity's PK is propagated as an FK and combined with W's partial key to form its composite PK. The FK uses ON DELETE CASCADE because W cannot exist without its owner.",
   },
   3: {
     title: 'Step 3: 1:1 Binary Relationships',
-    description: 'The relationship with total participation is chosen and the primary key of the other table is included as an FK, marked with a UNIQUE constraint.',
+    description: 'The relationship with total participation is chosen and the primary key of the other table is included as an FK, marked with a UNIQUE constraint. Mandatory FK ⇒ ON DELETE NO ACTION; optional FK ⇒ ON DELETE SET NULL.',
   },
   4: {
     title: 'Step 4: 1:N Binary Relationships',
-    description: 'The primary key of the table on the 1 side is propagated as a foreign key (FK) on the table on the N side. Attributes of the relationship migrate to the N side.',
+    description: 'The primary key of the table on the 1 side is propagated as a foreign key (FK) on the table on the N side. Attributes of the relationship migrate to the N side. Total participation of the N side ⇒ NOT NULL FK with ON DELETE NO ACTION (a department with lecturers cannot be deleted); partial ⇒ ON DELETE SET NULL. CASCADE does not apply: it would delete independent entities.',
   },
   5: {
     title: 'Step 5: M:N Binary Relationships',
-    description: 'A bridge (correspondence) table is created. Its PK is the combination of the FKs referencing the two participating entities.',
+    description: 'A bridge (correspondence) table is created. Its PK is the combination of the FKs referencing the two participating entities plus the key attributes of the relationship. The FKs use ON DELETE NO ACTION.',
   },
   6: {
     title: 'Step 6: Multivalued Attributes',
@@ -401,11 +455,11 @@ const formalStepsEn: Record<FormalStepNumber, StepEntry> = {
   },
   7: {
     title: 'Step 7: N-ary Relationships (n > 2)',
-    description: 'An n-way relationship table is created including the PKs of all participating entities as foreign keys.',
+    description: 'An n-way relationship table is created including the PKs of all participating entities as foreign keys (with ON DELETE NO ACTION). Key attributes of the relationship are added to the PK.',
   },
   8: {
     title: 'Step 8: Specialization and Generalization',
-    description: 'Inheritance options are applied: 8A (multiple tables with FK to the superclass), 8B (tables only per subclass), 8C (single table with discriminator), or 8D (boolean flags).',
+    description: 'Inheritance options are applied: 8A (multiple tables with FK to the superclass), 8B (tables only per subclass), 8C (single table with discriminator), or 8D (boolean flags). If the specialization is attribute-defined (spec d -> SUPER [ATTRIBUTE]), the defining attribute is a column of the superclass.',
   },
   9: {
     title: 'Step 9: Categories (Union Types)',

@@ -5,7 +5,7 @@
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Code, Trash2, AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '../i18n/language';
 import type { TranslationKey } from '../i18n/es';
@@ -20,7 +20,15 @@ interface CodePanelProps {
   isValid?: boolean;
   elementCount?: { entities: number; relations: number };
   countSummary?: string;
+  /** Líneas (base 0) a resaltar: las del elemento seleccionado en el diagrama. */
+  highlightedLines?: readonly number[];
+  /** Línea (base 0) que debe quedar visible; el editor se desplaza hasta ella. */
+  focusLine?: number | null;
 }
+
+// Debe coincidir con el padding `p-4` del textarea para que las bandas caigan sobre sus líneas.
+const EDITOR_PADDING_PX = 16;
+const NO_HIGHLIGHTS: readonly number[] = [];
 
 export function CodePanel({
   code,
@@ -31,9 +39,37 @@ export function CodePanel({
   isValid = true,
   elementCount,
   countSummary,
+  highlightedLines = NO_HIGHLIGHTS,
+  focusLine = null,
 }: CodePanelProps) {
   const { t } = useLanguage();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [lineHeight, setLineHeight] = useState(20);
+
+  // El interlineado cambia con el breakpoint (text-xs / md:text-sm): se mide del estilo real.
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const observer = new ResizeObserver(() => {
+      const measured = parseFloat(getComputedStyle(textarea).lineHeight);
+      if (!Number.isNaN(measured)) setLineHeight(measured);
+    });
+    observer.observe(textarea);
+    return () => observer.disconnect();
+  }, []);
+
+  // Desplaza el editor hasta el elemento seleccionado sin enfocarlo: enfocar el textarea
+  // dispararía `onEditStart`, que deselecciona el nodo y apagaría el propio resaltado.
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || focusLine === null) return;
+    const lineTop = EDITOR_PADDING_PX + focusLine * lineHeight;
+    const isVisible = lineTop >= textarea.scrollTop && lineTop + lineHeight <= textarea.scrollTop + textarea.clientHeight;
+    if (!isVisible) {
+      textarea.scrollTop = Math.max(0, lineTop - textarea.clientHeight / 2);
+    }
+  }, [focusLine, lineHeight]);
 
   const handleCodeChange = (newCode: string) => {
     onCodeChange(newCode);
@@ -85,14 +121,28 @@ export function CodePanel({
         </div>
       </div>
 
-      <textarea
-        ref={textareaRef}
-        value={code}
-        onChange={(e) => handleCodeChange(e.target.value)}
-        onFocus={handleTextareaFocus}
-        className="flex-1 resize-none bg-slate-50 p-4 font-mono text-xs md:text-sm leading-relaxed text-slate-700 focus:outline-none selection:bg-indigo-100"
-        spellCheck={false}
-      />
+      <div className="relative flex-1 overflow-hidden bg-slate-50">
+        {/* Capa de resaltado detrás del texto: sin ajuste de línea, línea N = banda N */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          {highlightedLines.map(line => (
+            <div
+              key={line}
+              className="absolute left-0 right-0 border-l-4 border-indigo-500 bg-indigo-100/80"
+              style={{ top: EDITOR_PADDING_PX + line * lineHeight - scrollTop, height: lineHeight }}
+            />
+          ))}
+        </div>
+        <textarea
+          ref={textareaRef}
+          value={code}
+          wrap="off"
+          onChange={(e) => handleCodeChange(e.target.value)}
+          onFocus={handleTextareaFocus}
+          onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+          className="relative h-full w-full resize-none bg-transparent p-4 font-mono text-xs md:text-sm leading-relaxed text-slate-700 focus:outline-none selection:bg-indigo-200 whitespace-pre overflow-auto"
+          spellCheck={false}
+        />
+      </div>
 
       {/* Barra inferior de Diagnósticos y Compilación (Linter EER) */}
       {diagnostics !== undefined && (
@@ -110,7 +160,7 @@ export function CodePanel({
           }}
           title={
             firstError || firstWarning
-              ? 'Clic para ir a la línea en el editor'
+              ? t('codePanel.goToLine')
               : undefined
           }
         >

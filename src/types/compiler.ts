@@ -25,6 +25,8 @@ export type DiagnosticCode =
   | 'DUPLICATE_NODE_IDENTIFIER'
   | 'UNKNOWN_COMMAND'
   | 'INVALID_COORDINATES'
+  | 'INVALID_DEFINING_ATTRIBUTE'
+  | 'KEY_ATTRIBUTE_ON_NON_MN_RELATIONSHIP'
   // Códigos Relacionales
   | 'MISSING_TABLE_NAME'
   | 'UNCLOSED_TABLE_BLOCK'
@@ -34,7 +36,8 @@ export type DiagnosticCode =
   | 'UNDECLARED_TARGET_COLUMN'
   | 'TABLE_WITHOUT_PK'
   | 'DUPLICATE_TABLE_NAME'
-  | 'DUPLICATE_COLUMN_NAME';
+  | 'DUPLICATE_COLUMN_NAME'
+  | 'INVALID_REFERENTIAL_ACTION';
 
 /**
  * Diagnóstico individual en una línea del código fuente

@@ -5,7 +5,7 @@
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 
-import type { RelationalSchema } from '../../types/relational';
+import type { RelationalSchema, CascadeOption } from '../../types/relational';
 import type { Language } from '../../i18n/language';
 import { translate } from '../../i18n/translate';
 import { translateStep } from '../../i18n/steps';
@@ -47,6 +47,18 @@ function mapDataTypeToDialect(dataType: string, dialect: SQLDialect): string {
   }
 
   return dt;
+}
+
+/**
+ * Cláusula `ON DELETE` de una FK en el dialecto destino.
+ *
+ * Oracle solo acepta `ON DELETE CASCADE` y `ON DELETE SET NULL`: `NO ACTION` es su comportamiento
+ * implícito y `ON DELETE NO ACTION`/`RESTRICT` literales darían ORA-00905, así que se omiten.
+ * El resto de dialectos admite las cuatro acciones y se escriben siempre de forma explícita.
+ */
+function onDeleteClause(action: CascadeOption, dialect: SQLDialect): string {
+  const isOracleImplicit = dialect === 'oracle' && (action === 'NO ACTION' || action === 'RESTRICT');
+  return isOracleImplicit ? '' : ` ON DELETE ${action}`;
 }
 
 /**
@@ -105,9 +117,8 @@ export function relationalToSQL(schema: RelationalSchema, dialect: SQLDialect = 
     table.foreignKeys.forEach(fk => {
       const sourceColsStr = fk.sourceColumnNames.join(', ');
       const targetColsStr = fk.targetColumnNames.join(', ');
-      const cascadeStr = fk.onDelete === 'CASCADE' ? ' ON DELETE CASCADE' : '';
       colLines.push(
-        `  CONSTRAINT ${fk.constraintName} FOREIGN KEY (${sourceColsStr}) REFERENCES ${fk.targetTableName} (${targetColsStr})${cascadeStr}`
+        `  CONSTRAINT ${fk.constraintName} FOREIGN KEY (${sourceColsStr}) REFERENCES ${fk.targetTableName} (${targetColsStr})${onDeleteClause(fk.onDelete, dialect)}`
       );
     });
 

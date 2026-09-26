@@ -1,3 +1,5 @@
+import type { NodeData } from '../types';
+
 /**
  * Elimina un nodo del código DSL y todas sus referencias
  * 
@@ -71,6 +73,36 @@ export function deleteNodeFromCode(code: string, nodeLabel: string): string {
   }
 
   return filteredLines.join('\n');
+}
+
+const ATTRIBUTE_TYPES = ['attribute', 'key_attribute', 'derived_attribute', 'multivalued_attribute'];
+
+/**
+ * Elimina varios nodos del DSL (selección múltiple).
+ *
+ * `deleteNodeFromCode` borra por etiqueta, lo que es correcto para entidades y relaciones
+ * (nombres únicos) pero no para atributos: dos entidades pueden tener su propio `Nombre`, y
+ * borrar uno se llevaría el otro. Los atributos con etiqueta repetida se borran por su línea
+ * de declaración; se hace primero, en orden descendente, porque los borrados por etiqueta
+ * posteriores no dependen de índices de línea.
+ */
+export function deleteNodesFromCode(code: string, targets: readonly NodeData[], allNodes: readonly NodeData[]): string {
+  const isSharedAttribute = (n: NodeData) =>
+    ATTRIBUTE_TYPES.includes(n.type) && allNodes.filter(o => o.label === n.label).length > 1;
+
+  const lineRemovals = new Set(targets.filter(isSharedAttribute).map(n => n.lineIndex));
+  let result = code
+    .split('\n')
+    .filter((_line, index) => !lineRemovals.has(index))
+    .join('\n');
+
+  targets
+    .filter(n => !isSharedAttribute(n))
+    .forEach(n => {
+      result = deleteNodeFromCode(result, n.label);
+    });
+
+  return result;
 }
 
 /**

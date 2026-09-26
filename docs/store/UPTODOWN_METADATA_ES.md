@@ -43,8 +43,12 @@ Combina un editor gráfico de diagramas **Entidad-Relación Extendido (EER)** co
 
 ---
 
-## 🆕 Novedades de la Versión v1.5.0
-- Compilador y Linter interactivo para el Modelo Relacional con verificación de integridad referencial.
-- Barra inferior de diagnósticos en vivo con navegación directa a la línea con error o advertencia.
-- Tolerancia a fallos Stale-while-error: eliminación de parpadeos y desaparición de tablas al editar.
-- Red de seguridad Zero-Crash con ErrorBoundary y blindaje ante edición de entidades incompletas.
+## 🆕 Novedades de la Versión v1.6.0
+- Edición de elementos con doble clic o F2 y renombrado que actualiza todas las referencias.
+- Rectángulo de selección, Ctrl + clic y movimiento en grupo; los atributos siguen a su entidad.
+- Navegación estilo draw.io: botón derecho para desplazar y Ctrl + rueda para zoom.
+- Resaltado en el código del elemento seleccionado.
+- "Añadir y crear otro" y atributos de relación desde el formulario.
+- Atributos clave de relación M:N en la PK y política ON DELETE rigurosa por paso.
+- Atributo definidor de especializaciones: `spec d -> EMPLEADO [TipoTrabajo]`.
+- Centro de Ayuda unificado (F1) en español e inglés.

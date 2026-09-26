@@ -36,6 +36,9 @@ function LinkRendererComponent({ link, nodes }: LinkRendererProps) {
   // Calcular ángulo para rotar el símbolo correctamente
   const angle = Math.atan2(targetNode.y - sourceNode.y, targetNode.x - sourceNode.x) * 180 / Math.PI;
 
+  // Ancho aproximado a 7 px por carácter (fuente de 12 px en negrita); mínimo el de una cardinalidad.
+  const labelWidth = Math.max(20, (link.label?.length ?? 0) * 7 + 8);
+
   return (
     <g key={`${link.source}-${link.target}`}>
       {/* Línea principal */}
@@ -73,10 +76,10 @@ function LinkRendererComponent({ link, nodes }: LinkRendererProps) {
         />
       )}
 
-      {/* Etiqueta de cardinalidad */}
+      {/* Etiqueta de cardinalidad, o atributo definidor en la arista superclase–especialización */}
       {link.label && (
         <g transform={`translate(${midX}, ${midY})`}>
-          <rect x="-10" y="-10" width="20" height="20" fill="white" opacity="0.9" rx="4" />
+          <rect x={-labelWidth / 2} y="-10" width={labelWidth} height="20" fill="white" opacity="0.9" rx="4" />
           <text 
             x="0" 
             y="5" 

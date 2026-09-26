@@ -34,12 +34,23 @@ interface SpecializationCodeProps {
   type: 'd' | 'o';
   superclass: string;
   subclasses: string[];
+  /** Atributo definidor (especialización definida por atributo). Vacío = definida por el usuario. */
+  definingAttribute?: string;
+  x?: number;
+  y?: number;
 }
 
 interface UnionCodeProps {
   name: string;
   superclasses: string[];
   category: string;
+  x?: number;
+  y?: number;
+}
+
+/** Sufijo de coordenadas; se omite si no se conocen (el compilador coloca el nodo en espiral). */
+function coordSuffix(x?: number, y?: number): string {
+  return x === undefined || y === undefined ? '' : ` (${Math.round(x)}, ${Math.round(y)})`;
 }
 
 /**
@@ -92,8 +103,9 @@ export function generateRelationshipCode({
 /**
  * Genera código para una especialización/generalización
  */
-export function generateSpecializationCode({ type, superclass, subclasses }: SpecializationCodeProps): string {
-  let code = `spec ${type} -> ${superclass}\n`;
+export function generateSpecializationCode({ type, superclass, subclasses, definingAttribute, x, y }: SpecializationCodeProps): string {
+  const defining = definingAttribute?.trim() ? ` [${definingAttribute.trim()}]` : '';
+  let code = `spec ${type} -> ${superclass}${defining}${coordSuffix(x, y)}\n`;
   
   subclasses.forEach((subclass, index) => {
     code += `link ${type} ${subclass}`;
@@ -108,8 +120,8 @@ export function generateSpecializationCode({ type, superclass, subclasses }: Spe
 /**
  * Genera código para una unión/categoría
  */
-export function generateUnionCode({ name, superclasses, category }: UnionCodeProps): string {
-  let code = `union ${name}\n`;
+export function generateUnionCode({ name, superclasses, category, x, y }: UnionCodeProps): string {
+  let code = `union ${name}${coordSuffix(x, y)}\n`;
   
   superclasses.forEach(superclass => {
     code += `link ${superclass} ${name}\n`;

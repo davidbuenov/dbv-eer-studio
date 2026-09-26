@@ -26,19 +26,18 @@ export function generateRelationalDSL(schema: RelationalSchema): string {
 
       if (col.isPrimaryKey) {
         colLine += ' PK';
+      } else if (!col.isNullable) {
+        // También en FKs: sin esto una FK obligatoria volvería como nullable al recompilar el DSL.
+        colLine += ' NOT NULL';
       }
 
-      // Buscar si esta columna es parte de una clave foránea
+      // La acción referencial se escribe siempre, para que el alumno vea la política de cada FK
+      // y la ida y vuelta DSL → esquema → DSL no la pierda.
       const fk = table.foreignKeys.find(f => f.sourceColumnNames.includes(col.name));
       if (fk) {
         const sourceIdx = fk.sourceColumnNames.indexOf(col.name);
         const targetCol = fk.targetColumnNames[sourceIdx] ?? 'ID';
-        colLine += ` FK -> ${fk.targetTableName}(${targetCol})`;
-        if (fk.onDelete === 'CASCADE') {
-          colLine += ' ON DELETE CASCADE';
-        }
-      } else if (!col.isNullable && !col.isPrimaryKey) {
-        colLine += ' NOT NULL';
+        colLine += ` FK -> ${fk.targetTableName}(${targetCol}) ON DELETE ${fk.onDelete}`;
       }
 
       lines.push(colLine);

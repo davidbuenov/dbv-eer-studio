@@ -35,7 +35,7 @@ link EMPLEADO TIENE_DEP "1"
 link DEPENDIENTE TIENE_DEP "N" [total]
 
 // Jerarquía (EER Cap 4)
-spec d -> EMPLEADO (400, 420)
+spec d -> EMPLEADO [TipoTrabajo] (400, 420)
 ent SECRETARIA (280, 550)
 ent INGENIERO (400, 550)
 ent TECNICO (520, 550)

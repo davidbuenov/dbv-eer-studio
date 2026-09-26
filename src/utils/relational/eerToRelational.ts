@@ -13,7 +13,9 @@ import type {
   ForeignKeyConstraint,
   MappingConfig,
   StepTrace,
+  CascadeOption,
 } from '../../types/relational';
+import type { StepKey } from '../../i18n/steps';
 
 /**
  * Normaliza nombres de tabla y columna para formato SQL
@@ -126,6 +128,74 @@ function expandSimpleAttributes(attrNode: NodeData, nodes: NodeData[], links: Li
     }
   });
   return result;
+}
+
+/**
+ * Acción `ON DELETE` de una FK que NO expresa dependencia existencial (Pasos 3, 4 y 9).
+ *
+ * Una FK opcional se anula al borrar la fila referenciada (el hijo sobrevive sin vínculo);
+ * una FK obligatoria bloquea el borrado para no dejar huérfanos. `CASCADE` queda reservado a
+ * los pasos donde la fila hija no existe sin la padre (2, 6 y 8A): borrar en cascada entidades
+ * independientes —los profesores de un departamento— sería un efecto colateral peligroso.
+ */
+function nonDependentOnDelete(isNullable: boolean): CascadeOption {
+  return isNullable ? 'SET NULL' : 'NO ACTION';
+}
+
+interface RelationshipAttributeOptions {
+  step: 3 | 4 | 5 | 7;
+  tableName: string;
+  /** Prefija el nombre con el de la relación: evita choques al migrar a una tabla de entidad (Pasos 3/4). */
+  prefixWithRelationship: boolean;
+}
+
+/**
+ * Columnas de los atributos propios de una relación.
+ *
+ * En una tabla de relación (Pasos 5 y 7) un atributo clave forma parte de la PK compuesta:
+ * p. ej. `VUELTA` en `CIRCULA(PILOTO, TRAMO, VUELTA)`, porque un piloto recorre el mismo tramo
+ * varias veces. En los Pasos 3/4 los atributos migran a una tabla de entidad, cuya PK ya está
+ * fijada, así que un atributo clave allí no tiene significado formal (el linter EER lo advierte).
+ */
+function buildRelationshipAttributeColumns(
+  rel: NodeData,
+  nodes: NodeData[],
+  links: LinkData[],
+  { step, tableName, prefixWithRelationship }: RelationshipAttributeOptions
+): RelationalColumn[] {
+  const keysJoinPK = step === 5 || step === 7;
+  const columns: RelationalColumn[] = [];
+
+  getMappableAttributes(rel.id, nodes, links).forEach(attr => {
+    expandSimpleAttributes(attr, nodes, links).forEach(simpleAttr => {
+      const isKey = keysJoinPK && (simpleAttr.type === 'key_attribute' || attr.type === 'key_attribute');
+      const colName = sanitizeName(prefixWithRelationship ? `${rel.label}_${simpleAttr.label}` : simpleAttr.label);
+      const stepKey: StepKey =
+        step === 3 ? 'STEP3_ATTR'
+        : step === 4 ? 'STEP4_ATTR'
+        : step === 5 ? (isKey ? 'STEP5_ATTR_PK' : 'STEP5_ATTR')
+        : (isKey ? 'STEP7_ATTR_PK' : 'STEP7_ATTR');
+
+      columns.push({
+        id: `${tableName}_${colName}`,
+        name: colName,
+        dataType: inferSQLType(simpleAttr.label, isKey),
+        isPrimaryKey: isKey,
+        isForeignKey: false,
+        isNullable: !isKey,
+        isUnique: false,
+        stepTrace: {
+          stepNumber: step,
+          stepKey,
+          params: { tableName, attrLabel: simpleAttr.label, relLabel: rel.label },
+          sourceEERNodeId: simpleAttr.id,
+          sourceEERNodeLabel: simpleAttr.label,
+        },
+      });
+    });
+  });
+
+  return columns;
 }
 
 /**
@@ -454,6 +524,29 @@ export function eerToRelational(
       const superNode = nodes.find(n => n.id === superNodeId);
       const superTable = superNode ? tables.find(t => t.id === superNode.id || t.name === sanitizeName(superNode.label)) : undefined;
 
+      // Especialización definida por atributo: el atributo definidor pertenece a la superclase.
+      // Si el alumno no lo declaró también como `att`, se materializa aquí; si lo declaró,
+      // `addColumn` lo deja como está. Sin atributo definidor (definida por el usuario) no hay
+      // columna discriminante.
+      if (superTable && spec.definingAttribute) {
+        const colName = sanitizeName(spec.definingAttribute);
+        addColumn(superTable, {
+          id: `${superTable.name}_${colName}`,
+          name: colName,
+          dataType: inferSQLType(spec.definingAttribute),
+          isPrimaryKey: false,
+          isForeignKey: false,
+          isNullable: true,
+          isUnique: false,
+          stepTrace: {
+            stepNumber: 8,
+            stepKey: 'STEP8_DEFINING_ATTR',
+            params: { superTableName: superTable.name, attrLabel: spec.definingAttribute },
+            sourceEERNodeId: spec.id,
+          },
+        });
+      }
+
       if (superTable && subNodeIds.length > 0) {
         const selectedOption = config.inheritanceOptions[spec.id] ?? '8A';
 
@@ -559,9 +652,14 @@ export function eerToRelational(
 
         // PASO 3: Relaciones 1:1
         if (isAOne && isBOne) {
+          // La FK va al lado de participación total (sea el primero o el segundo enlace), y
+          // solo entonces es obligatoria. Sin participación total, va al segundo y es opcional.
           const isATotal = linkA.style === 'double';
+          const isBTotal = linkB.style === 'double';
           const targetTable = isATotal ? tableA : tableB;
           const sourceTable = isATotal ? tableB : tableA;
+          const isFKNullable = !(isATotal || isBTotal);
+          const onDelete = nonDependentOnDelete(isFKNullable);
 
           const sourcePKs = sourceTable.columns.filter((c: RelationalColumn) => c.isPrimaryKey);
           const fkColNames: string[] = [];
@@ -576,7 +674,7 @@ export function eerToRelational(
               dataType: pkCol.dataType,
               isPrimaryKey: false,
               isForeignKey: true,
-              isNullable: !isATotal,
+              isNullable: isFKNullable,
               isUnique: true,
               stepTrace: {
                 stepNumber: 3,
@@ -586,17 +684,25 @@ export function eerToRelational(
             });
           });
 
+          targetTable.columns.push(
+            ...buildRelationshipAttributeColumns(rel, nodes, links, {
+              step: 3,
+              tableName: targetTable.name,
+              prefixWithRelationship: true,
+            })
+          );
+
           targetTable.foreignKeys.push({
             id: `FK_${targetTable.name}_${rel.label}_${sourceTable.name}`,
             constraintName: `FK_${targetTable.name}_${sourceTable.name}`,
             sourceColumnNames: fkColNames.map(sanitizeName),
             targetTableName: sourceTable.name,
             targetColumnNames: sourcePKs.map((c: RelationalColumn) => c.name),
-            onDelete: 'CASCADE',
+            onDelete,
             onUpdate: 'CASCADE',
             stepTrace: {
               stepNumber: 3,
-              stepKey: 'STEP3_FK_CONSTRAINT',
+              stepKey: onDelete === 'SET NULL' ? 'STEP3_FK_CONSTRAINT_SET_NULL' : 'STEP3_FK_CONSTRAINT',
               params: { targetTableName: targetTable.name, sourceTableName: sourceTable.name },
             },
           });
@@ -605,6 +711,10 @@ export function eerToRelational(
         else if (isAOne || isBOne) {
           const tableOne = isAOne ? tableA : tableB;
           const tableMany = isAOne ? tableB : tableA;
+          // La FK solo es obligatoria si toda entidad del lado N participa en la relación.
+          const linkMany = isAOne ? linkB : linkA;
+          const isFKNullable = linkMany.style !== 'double';
+          const onDelete = nonDependentOnDelete(isFKNullable);
 
           const onePKs = tableOne.columns.filter((c: RelationalColumn) => c.isPrimaryKey);
           const fkColNames: string[] = [];
@@ -619,7 +729,7 @@ export function eerToRelational(
               dataType: pkCol.dataType,
               isPrimaryKey: false,
               isForeignKey: true,
-              isNullable: false,
+              isNullable: isFKNullable,
               isUnique: false,
               stepTrace: {
                 stepNumber: 4,
@@ -629,26 +739,13 @@ export function eerToRelational(
             });
           });
 
-          const relAttrs = getMappableAttributes(rel.id, nodes, links);
-          relAttrs.forEach(attr => {
-            const expanded = expandSimpleAttributes(attr, nodes, links);
-            expanded.forEach(simpleAttr => {
-              tableMany.columns.push({
-                id: `${tableMany.name}_${rel.label}_${simpleAttr.label}`,
-                name: sanitizeName(`${rel.label}_${simpleAttr.label}`),
-                dataType: inferSQLType(simpleAttr.label),
-                isPrimaryKey: false,
-                isForeignKey: false,
-                isNullable: true,
-                isUnique: false,
-                stepTrace: {
-                  stepNumber: 4,
-                  stepKey: 'STEP4_ATTR',
-                  params: { tableManyName: tableMany.name },
-                },
-              });
-            });
-          });
+          tableMany.columns.push(
+            ...buildRelationshipAttributeColumns(rel, nodes, links, {
+              step: 4,
+              tableName: tableMany.name,
+              prefixWithRelationship: true,
+            })
+          );
 
           tableMany.foreignKeys.push({
             id: `FK_${tableMany.name}_${tableOne.name}`,
@@ -656,12 +753,12 @@ export function eerToRelational(
             sourceColumnNames: fkColNames.map(sanitizeName),
             targetTableName: tableOne.name,
             targetColumnNames: onePKs.map((c: RelationalColumn) => c.name),
-            onDelete: 'CASCADE',
+            onDelete,
             onUpdate: 'CASCADE',
             stepTrace: {
               stepNumber: 4,
-              stepKey: 'STEP4_FK_CONSTRAINT',
-              params: { tableOneName: tableOne.name },
+              stepKey: onDelete === 'SET NULL' ? 'STEP4_FK_CONSTRAINT_SET_NULL' : 'STEP4_FK_CONSTRAINT',
+              params: { tableOneName: tableOne.name, tableManyName: tableMany.name },
             },
           });
         }
@@ -698,7 +795,7 @@ export function eerToRelational(
             sourceColumnNames: fkColsA,
             targetTableName: tableA.name,
             targetColumnNames: pksA.map((c: RelationalColumn) => c.name),
-            onDelete: 'CASCADE',
+            onDelete: 'NO ACTION',
             onUpdate: 'CASCADE',
             stepTrace: {
               stepNumber: 5,
@@ -734,7 +831,7 @@ export function eerToRelational(
             sourceColumnNames: fkColsB,
             targetTableName: tableB.name,
             targetColumnNames: pksB.map((c: RelationalColumn) => c.name),
-            onDelete: 'CASCADE',
+            onDelete: 'NO ACTION',
             onUpdate: 'CASCADE',
             stepTrace: {
               stepNumber: 5,
@@ -743,25 +840,13 @@ export function eerToRelational(
             },
           });
 
-          const relAttrs = getMappableAttributes(rel.id, nodes, links);
-          relAttrs.forEach(attr => {
-            const expanded = expandSimpleAttributes(attr, nodes, links);
-            expanded.forEach(simpleAttr => {
-              bridgeColumns.push({
-                id: `${bridgeTableName}_${simpleAttr.label}`,
-                name: sanitizeName(simpleAttr.label),
-                dataType: inferSQLType(simpleAttr.label),
-                isPrimaryKey: false,
-                isForeignKey: false,
-                isNullable: true,
-                isUnique: false,
-                stepTrace: {
-                  stepNumber: 5,
-                  stepKey: 'STEP5_ATTR',
-                },
-              });
-            });
-          });
+          bridgeColumns.push(
+            ...buildRelationshipAttributeColumns(rel, nodes, links, {
+              step: 5,
+              tableName: bridgeTableName,
+              prefixWithRelationship: false,
+            })
+          );
 
           tables.push({
             id: rel.id,
@@ -835,7 +920,7 @@ export function eerToRelational(
             sourceColumnNames: fkColNames,
             targetTableName: table.name,
             targetColumnNames: pks.map((c: RelationalColumn) => c.name),
-            onDelete: 'CASCADE',
+            onDelete: 'NO ACTION',
             onUpdate: 'CASCADE',
             stepTrace: {
               stepNumber: 7,
@@ -845,25 +930,13 @@ export function eerToRelational(
           });
         });
 
-        const relAttrs = getMappableAttributes(rel.id, nodes, links);
-        relAttrs.forEach(attr => {
-          const expanded = expandSimpleAttributes(attr, nodes, links);
-          expanded.forEach(simpleAttr => {
-            bridgeColumns.push({
-              id: `${bridgeTableName}_${simpleAttr.label}`,
-              name: sanitizeName(simpleAttr.label),
-              dataType: inferSQLType(simpleAttr.label),
-              isPrimaryKey: false,
-              isForeignKey: false,
-              isNullable: true,
-              isUnique: false,
-              stepTrace: {
-                stepNumber: 7,
-                stepKey: 'STEP7_ATTR',
-              },
-            });
-          });
-        });
+        bridgeColumns.push(
+          ...buildRelationshipAttributeColumns(rel, nodes, links, {
+            step: 7,
+            tableName: bridgeTableName,
+            prefixWithRelationship: false,
+          })
+        );
 
         tables.push({
           id: rel.id,
