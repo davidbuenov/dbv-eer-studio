@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Linter EER**: aviso `KEY_ATTRIBUTE_ON_NON_MN_RELATIONSHIP` y error `INVALID_DEFINING_ATTRIBUTE`. **Linter relacional**: error `INVALID_REFERENTIAL_ACTION`.
 
 ### Changed
+- **Windows se distribuye solo por Microsoft Store** (igual que en `dbv-md-reader`): se elimina `release-windows.yml` y las Releases de GitHub dejan de incluir `.exe`/`.msi` desde esta versión. Linux y macOS siguen en GitHub Releases.
 - **Política `ON DELETE` según la semántica de cada paso** (antes `CASCADE` universal): `CASCADE` solo en dependencia existencial (Pasos 2, 6 y 8A); `NO ACTION` en FKs obligatorias de 1:1/1:N y en tablas M:N y n-arias; `SET NULL` en FKs opcionales y categorías. Textos de la Guía de 9 Pasos, del Inspector y de `eer-to-relational-mapping.md` explican el porqué de cada acción.
 - **DSL relacional**: siempre escribe `ON DELETE <acción>` y `NOT NULL` en FKs obligatorias; acepta `CASCADE | SET NULL | RESTRICT | NO ACTION` y, si se omite, asume `NO ACTION` (antes `CASCADE`).
 - **Interfaz más limpia**: la toolbar pierde la pista de gestos (su contenido está en *Ayuda → Uso del editor*) y la cabecera la etiqueta "Suite Docente de Bases de Datos".

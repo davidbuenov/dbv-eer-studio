@@ -11,7 +11,7 @@ Documento operativo (no una especificación de producto): checklist accionable p
 
 Misma decisión ya validada en `dbv-md-reader` (publicado y en vivo en la Store): la Store firma el paquete automáticamente con su propio certificado tras la certificación — no hace falta comprar un certificado Authenticode propio (vía "EXE o MSI" descartada por el mismo motivo).
 
-Los dos canales de distribución coexisten sin conflicto: el instalador NSIS/MSI sigue publicándose en GitHub Releases con su propio mecanismo de actualización (`tauri-plugin-updater`); el MSIX es una identidad de paquete distinta, exclusiva de la Store, cuyas actualizaciones gestiona la propia Store — el botón "Buscar actualizaciones" de Créditos se oculta automáticamente ahí (`is_packaged_app()` en `src-tauri/src/lib.rs`).
+**Desde v1.6.0 (decisión del autor, 2026-09-26), Microsoft Store es el único canal para Windows**, igual que en `dbv-md-reader`: se eliminó `release-windows.yml` y las Releases de GitHub ya no incluyen `.exe`/`.msi` (las versiones anteriores los conservan como histórico). El MSIX es una identidad de paquete propia de la Store, que gestiona sus actualizaciones; el botón "Buscar actualizaciones" de *Ayuda → Acerca de* se oculta ahí (`is_packaged_app()` en `src-tauri/src/lib.rs`).
 
 ## 2. Empaquetado MSIX con `@choochmeque/tauri-windows-bundle`
 
@@ -87,8 +87,8 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 
 La entrega de una versión **no termina en el commit + tag**. Cada `/ship` incluye además:
 
-1. **Publicar en GitHub:** `git push origin main --tags` (dispara GitHub Pages y los workflows de release de Windows/Linux/macOS).
-   - Los workflows crean la release como **borrador**: cuando terminen, revisar `gh release list` y publicarla (`gh release edit vX.Y.Z --draft=false --latest`) con confirmación del autor.
+1. **Publicar en GitHub:** `git push origin main --tags` (dispara GitHub Pages y los workflows de release de Linux y macOS; Windows no tiene release en GitHub).
+   - Los workflows crean la release como **borrador**: cuando terminen, escribir sus notas (formato de la v1.3.0: *Novedades*, *Correcciones*, *Instalación* y enlace al CHANGELOG), revisar `gh release list` y publicarla (`gh release edit vX.Y.Z --draft=false --latest`).
 2. **Generar el MSIX:**
    - Cerrar cualquier instancia de `dbv-eer-studio.exe` (Windows bloquea el binario y el build falla con "Acceso denegado").
    - Comprobar que `src-tauri/gen/windows/Assets/*.png` no son placeholders (§3).

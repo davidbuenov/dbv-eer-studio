@@ -113,6 +113,8 @@
 
 ## 📌 Tareas Pendientes / Roadmap Futuro
 
+- [ ] **Deuda técnica — auto-updater roto (detectada 2026-09-26)**: `tauri.conf.json` apunta a `releases/latest/download/latest.json`, pero los workflows usan `includeUpdaterJson: false` y ninguna release lo contiene, así que "Buscar actualizaciones" (Linux/macOS; en la Store está oculto) siempre falla. Opciones: generar `latest.json` firmado en `release-linux.yml`/`release-macos.yml` (requiere `TAURI_SIGNING_PRIVATE_KEY` en CI) o retirar el botón y el plugin. Decisión del autor.
+
 - [ ] **v1.7.0 — Soporte táctil (tablets)** (decidido con el usuario el 2026-09-26, ver `SPECIFICATIONS.md §3.7` fuera de alcance): migrar `Canvas`/`useCanvasInteraction` a Pointer Events con `touch-action: none`; un dedo en nodo = arrastrar, un dedo en fondo = desplazar, dos dedos = pellizco zoom/desplazamiento, mantener pulsado + arrastrar = rectángulo de selección, doble toque = editar. Requiere prueba en dispositivo táctil real.
 
 - [ ] **Deuda técnica (detectada en v1.6.0, pre-existente)**: el compilador del DSL relacional parte las FK compuestas en una FK por columna; el motor solo implementa la opción 8A (8B/8C/8D en la especificación); dos `spec d` en el mismo diagrama comparten la etiqueta `d` y `link d X` se asocia siempre a la primera; `LinkRenderer` resuelve extremos solo por id, así que `link ENTIDAD atributo` (sin `->`) no se dibuja.

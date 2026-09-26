@@ -2,6 +2,7 @@
 
 **[🇪🇸 Español](./README.md) · 🇬🇧 English**
 
+[![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-available-0078D4?logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9NFHVXW7ZRJC)
 [![Release](https://img.shields.io/github/v/release/davidbuenov/dbv-eer-studio?display_name=tag&sort=semver)](https://github.com/davidbuenov/dbv-eer-studio/releases)
 [![Live demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-4285F4?logo=github&logoColor=white)](https://davidbuenov.github.io/dbv-eer-studio/)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
@@ -48,35 +49,15 @@
 
 ## 🚀 Download and install
 
-**You don't need Node.js, Rust, or any development tooling.** The **DBV EER Studio** installer ships everything required, including the system rendering engine.
+**You don't need Node.js, Rust, or any development tooling.** Every **DBV EER Studio** package ships everything required, including the system rendering engine.
 
 > Just want to try it? The [web version](https://davidbuenov.github.io/dbv-eer-studio/) is the same application and needs no installation.
 
 ### 🪟 Windows
 
-#### 1️⃣ Download
+**[🛒 Get it from the Microsoft Store](https://apps.microsoft.com/detail/9NFHVXW7ZRJC)**
 
-**[⬇️ See all versions (Releases)](https://github.com/davidbuenov/dbv-eer-studio/releases)**
-
-Download one of the two installers from the latest version:
-
-| File | When to use it |
-| --- | --- |
-| `dbv-eer-studio_x.y.z_x64-setup.exe` | **Recommended.** NSIS installer, no administrator rights needed (installs for your user only). |
-| `dbv-eer-studio_x.y.z_x64_en-US.msi` | MSI package, useful for classroom or corporate deployment via group policy. |
-
-Your browser may warn that the file "isn't commonly downloaded" or "isn't trusted" (Microsoft Edge/Chrome SmartScreen). This is normal for new installers without a commercial signing certificate: in Edge, open the downloads panel and click **Show more → Keep**.
-
-#### 2️⃣ Install
-
-Double-click the downloaded installer. Windows may also show an "Unknown publisher" warning when you run it — click **More info → Run anyway**.
-
-#### 3️⃣ Update
-
-From here on you no longer need to come back to this page for every new version. Open the **Credits** panel (top bar) and click **Check for updates**. The check is always on demand — it never runs by itself at startup.
-
-- If you already have the latest version: **"You already have the latest version."**
-- If a new one exists: the button becomes **Install update** — one click downloads, installs, and restarts the app for you, without going through the browser or the Releases page.
+Since `v1.6.0`, the Microsoft Store is the **only** installation channel for Windows: the Store signs the package itself, it installs with one click, updates automatically and shows no SmartScreen or "unknown publisher" warnings. The `.exe`/`.msi` installers on GitHub Releases are discontinued (releases before 1.6.0 keep them as history). If you had the GitHub version installed, install the Store one and uninstall the old one from "Installed apps": they are two different app identities and will coexist as two entries until then.
 
 ### 🐧 Linux
 
@@ -301,12 +282,11 @@ npx tsc -b      # Type check (strict TypeScript)
 
 ### Publishing a new version
 
-1. Bump the version **in all four places at once** — `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and `src/components/ModalCredits.tsx` — and move the `[Sin publicar]` section of [`dbv-specs-ops/CHANGELOG.md`](./dbv-specs-ops/CHANGELOG.md) to `[x.y.z] — date`.
+1. Bump the version in `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `src-tauri/Cargo.lock` (the app reads it from `package.json`), and move the `[Sin publicar]` section of [`dbv-specs-ops/CHANGELOG.md`](./dbv-specs-ops/CHANGELOG.md) to `[x.y.z] — date`.
 2. `git commit`, `git tag vx.y.z`, `git push origin main --tags`.
-3. The three workflows in `.github/workflows/` (`release-windows.yml`, `release-linux.yml`, `release-macos.yml`) build each platform and upload the artifacts to the Release.
-4. `deploy-pages.yml` publishes the web version to GitHub Pages.
-
-The updater's private signing key is **not in this repository** — it is generated and kept by the project maintainer (`npx tauri signer generate`).
+3. `release-linux.yml` and `release-macos.yml` build Linux and macOS and upload the artifacts to a **draft** Release: review it, add the release notes and publish it.
+4. `deploy-pages.yml` publishes the web version on GitHub Pages.
+5. **Windows (Microsoft Store only):** `npm run tauri:windows:build` produces `src-tauri/target/msix/dbv-eer-studio_x.y.z.0.msixbundle`, which is uploaded to Partner Center — full procedure in [`dbv-specs-ops/docs/MICROSOFT_STORE.md`](./dbv-specs-ops/docs/MICROSOFT_STORE.md) §7.
 
 ### Methodology
 
