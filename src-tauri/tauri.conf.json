@@ -34,15 +34,5 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
-  },
-  "plugins": {
-    "updater": {
-      "active": true,
-      "dialog": false,
-      "endpoints": [
-        "https://github.com/davidbuenov/dbv-eer-studio/releases/latest/download/latest.json"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEEwNzY2NTk0QkJBOEM2QzUKUldURnhxaTdsR1Yyb0NzdzJhWW9aaFIrR2ZMR0FlbzdiQ2hsRFlMQjN2ZlFKWTJoa1Rld3Zsbk8K"
-    }
   }
 }

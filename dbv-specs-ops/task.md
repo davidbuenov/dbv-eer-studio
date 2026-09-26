@@ -3,7 +3,7 @@
 ## Contexto del Proyecto (Context Snapshot)
 * **Objetivo**: Editor EER ↔ Modelo Relacional ↔ Oracle SQL DDL con compiladores interactivos, linter de 2 niveles y tolerancia a fallos Stale-while-error.
 * **Estado actual**: **v1.6.0 entregada y publicada en GitHub** (2026-09-26): commits `51eab62` (feat) y `8229a4e` (docs store), tag `v1.6.0`, GitHub Pages desplegado y workflows de release Windows/Linux/macOS en verde. MSIX `dbv-eer-studio_1.6.0.0.msixbundle` generado y verificado (`src-tauri/target/msix/`, no versionado). Documentación de Microsoft Store lista en `docs/store/`. 138 tests en verde.
-* **Próximo paso**: (1) enviar la actualización v1.6.0 en Partner Center con `docs/store/SUBMISSION_GUIDE_v1.6.0.md`; (2) decidir sobre el auto-updater roto (deuda técnica); (3) iniciar `/spec` de la v1.7.0 — soporte táctil.
+* **Próximo paso**: (1) enviar la actualización v1.6.0 en Partner Center con `docs/store/SUBMISSION_GUIDE_v1.6.0.md`; (2) la próxima versión (v1.7.0 — soporte táctil) ya incluye en `[Sin publicar]` la retirada del auto-actualizador (§3.9); empezar por `/spec` del soporte táctil.
 
 ## Checklist de Tareas
 
@@ -113,7 +113,7 @@
 
 ## 📌 Tareas Pendientes / Roadmap Futuro
 
-- [ ] **Deuda técnica — auto-updater roto (detectada 2026-09-26)**: `tauri.conf.json` apunta a `releases/latest/download/latest.json`, pero los workflows usan `includeUpdaterJson: false` y ninguna release lo contiene, así que "Buscar actualizaciones" (Linux/macOS; en la Store está oculto) siempre falla. Opciones: generar `latest.json` firmado en `release-linux.yml`/`release-macos.yml` (requiere `TAURI_SIGNING_PRIVATE_KEY` en CI) o retirar el botón y el plugin. Decisión del autor.
+- [x] **Deuda técnica — auto-updater roto (detectada 2026-09-26)**: RESUELTA por decisión del autor — se retira el auto-actualizador en la próxima versión (`SPECIFICATIONS.md §3.9`, CHANGELOG `[Sin publicar]`). Ya implementado en `main`, pendiente de publicar.
 
 - [ ] **v1.7.0 — Soporte táctil (tablets)** (decidido con el usuario el 2026-09-26, ver `SPECIFICATIONS.md §3.7` fuera de alcance): migrar `Canvas`/`useCanvasInteraction` a Pointer Events con `touch-action: none`; un dedo en nodo = arrastrar, un dedo en fondo = desplazar, dos dedos = pellizco zoom/desplazamiento, mantener pulsado + arrastrar = rectángulo de selección, doble toque = editar. Requiere prueba en dispositivo táctil real.
 

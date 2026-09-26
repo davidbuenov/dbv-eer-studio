@@ -139,6 +139,13 @@
 - [ ] **Multiidioma ES/EN completo** en todas las pestañas.
 - [ ] **Toolbar más limpia**: se elimina la pista de gestos de la barra (su contenido pasa a "Uso del editor").
 
+### 3.9. Retirada del Auto-actualizador (próxima versión) `[NUEVO]`
+> Decisión del autor (2026-09-26), consecuencia de distribuir Windows solo por Microsoft Store.
+
+- [x] **Sin botón "Buscar actualizaciones"** en ninguna plataforma: en Windows actualiza la Store, en la web no aplica y en Linux/macOS nunca funcionó (ninguna release incluía `latest.json`). Las nuevas versiones de Linux/macOS se descargan desde GitHub Releases.
+- [x] **Se retiran `tauri-plugin-updater` y `tauri-plugin-process`** (Rust, npm, permisos `updater:default`/`process:allow-restart` y bloque `plugins.updater` de `tauri.conf.json`, incluida la clave pública).
+- [x] Se mantiene en *Ayuda → Acerca de* el aviso "Instalada desde Microsoft Store — las actualizaciones son automáticas" (`is_packaged_app()`).
+
 ## 🏗️ 4. Propuesta de Solución Técnica
 - **Modelos de Dominio:** `EERDiagram` (Conceptual) ↔ `RelationalSchema` (Lógico con DSL + Coordenadas) ↔ `SQLScript` (Físico Oracle / Multi-SGBD).
 - **Motores:** `eerToRelational` (con trazabilidad pedagógica de 9 pasos), `relationalParser` / `relationalCodeGenerator` (DSL de texto relacional) y `relationalToSQL` (Oracle prioritario).

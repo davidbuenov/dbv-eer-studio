@@ -11,7 +11,7 @@ Documento operativo (no una especificación de producto): checklist accionable p
 
 Misma decisión ya validada en `dbv-md-reader` (publicado y en vivo en la Store): la Store firma el paquete automáticamente con su propio certificado tras la certificación — no hace falta comprar un certificado Authenticode propio (vía "EXE o MSI" descartada por el mismo motivo).
 
-**Desde v1.6.0 (decisión del autor, 2026-09-26), Microsoft Store es el único canal para Windows**, igual que en `dbv-md-reader`: se eliminó `release-windows.yml` y las Releases de GitHub ya no incluyen `.exe`/`.msi` (las versiones anteriores los conservan como histórico). El MSIX es una identidad de paquete propia de la Store, que gestiona sus actualizaciones; el botón "Buscar actualizaciones" de *Ayuda → Acerca de* se oculta ahí (`is_packaged_app()` en `src-tauri/src/lib.rs`).
+**Desde v1.6.0 (decisión del autor, 2026-09-26), Microsoft Store es el único canal para Windows**, igual que en `dbv-md-reader`: se eliminó `release-windows.yml` y las Releases de GitHub ya no incluyen `.exe`/`.msi` (las versiones anteriores los conservan como histórico). El MSIX es una identidad de paquete propia de la Store, que gestiona sus actualizaciones. Tras la v1.6.0 se retiró el auto-actualizador propio (`SPECIFICATIONS.md §3.9`); `is_packaged_app()` (`src-tauri/src/lib.rs`) sigue usándose para mostrar en *Ayuda → Acerca de* que las actualizaciones las gestiona la Store.
 
 ## 2. Empaquetado MSIX con `@choochmeque/tauri-windows-bundle`
 

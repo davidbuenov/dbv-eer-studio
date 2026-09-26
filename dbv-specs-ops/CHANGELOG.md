@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Sin publicar]
+
+### Removed
+- **Botón "Buscar actualizaciones" y auto-actualizador** (`SPECIFICATIONS.md §3.9`): Windows se distribuye solo por Microsoft Store, que actualiza la app, y en Linux/macOS el botón nunca llegó a funcionar porque ninguna release publicaba el `latest.json` que consultaba. Se retiran `tauri-plugin-updater`, `tauri-plugin-process`, sus permisos y la configuración `plugins.updater`. Las nuevas versiones de Linux/macOS se descargan desde GitHub Releases.
+
 ## [1.6.0] — 2026-09-26
 
 > Propuestas del colaborador **Enrique Soler Castillo** (`SPECIFICATIONS.md §3.7`).
