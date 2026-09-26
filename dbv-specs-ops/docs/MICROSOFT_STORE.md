@@ -1,7 +1,7 @@
 # 🏬 Publicación en Microsoft Store: dbv-eer-studio
 
-> **Estado:** 🟡 Subido a Partner Center (v1.5.0.0) — En proceso de certificación/revisión por Microsoft.
-> **Última revisión:** 2026-09-23
+> **Estado:** 🟢 v1.5.0 publicada en Microsoft Store · 🟡 v1.6.0.0 generada y documentada, pendiente de enviar como actualización (`docs/store/SUBMISSION_GUIDE_v1.6.0.md`).
+> **Última revisión:** 2026-09-26
 
 Documento operativo (no una especificación de producto): checklist accionable para publicar `dbv-eer-studio` en la Microsoft Store, y registro de las decisiones técnicas que llevan hasta aquí. Complementa al instalador NSIS/MSI ya existente (GitHub Releases) sin sustituirlo — ambos canales de distribución coexisten.
 
@@ -62,7 +62,10 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 - [x] Reservar el nombre → `davidbuenov.dbv-eer-studio` (Id de Store: `9NFHVXW7ZRJC`).
 - [x] Copiar Publisher CN (`CN=13EE2A5D-F49E-48C9-8873-941069B15D63`) a `bundle.config.json` (§2).
 - [x] Generar el paquete MSIX bundle `dbv-eer-studio_1.5.0.0.msixbundle`.
-- [ ] Generar y subir `dbv-eer-studio_1.6.0.0.msixbundle` (v1.6.0, notas de versión ya actualizadas en `docs/store/`).
+- [x] v1.5.0 publicada en la Store (confirmado por el autor, 2026-09-26).
+- [x] Generar `dbv-eer-studio_1.6.0.0.msixbundle` (2026-09-26) — identidad, versión y assets verificados.
+- [x] Documentación de la actualización v1.6.0: fichas ES/EN, 6 capturas nuevas y `docs/store/SUBMISSION_GUIDE_v1.6.0.md`.
+- [ ] Enviar la actualización v1.6.0 en Partner Center (acción del autor).
 - [x] Política de privacidad creada en [`docs/store/PRIVACY_POLICY.md`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/PRIVACY_POLICY.md).
 - [x] Capturas de pantalla para la ficha en [`docs/store/screenshots/`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/screenshots/).
 - [x] Metadatos de Store creados en [`docs/store/MICROSOFT_STORE_METADATA_ES.md`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/MICROSOFT_STORE_METADATA_ES.md) y `_EN.md`.
@@ -79,6 +82,23 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 8. (Recomendado) Pasar el Windows App Certification Kit (WACK) local antes de enviar (Completado ✅).
 9. **Verificar que ningún asset de `Assets/*.png` sea un placeholder** (§3) (Completado ✅).
 10. Enviar a certificación (Completado ✅ — 2026-09-23).
+
+## 7. Procedimiento obligatorio en cada `/ship` (decidido por el autor, 2026-09-26)
+
+La entrega de una versión **no termina en el commit + tag**. Cada `/ship` incluye además:
+
+1. **Publicar en GitHub:** `git push origin main --tags` (dispara GitHub Pages y los workflows de release de Windows/Linux/macOS).
+2. **Generar el MSIX:**
+   - Cerrar cualquier instancia de `dbv-eer-studio.exe` (Windows bloquea el binario y el build falla con "Acceso denegado").
+   - Comprobar que `src-tauri/gen/windows/Assets/*.png` no son placeholders (§3).
+   - `npm run tauri:windows:build` → `src-tauri/target/msix/dbv-eer-studio_X.Y.Z.0.msixbundle`.
+   - Verificar en el `AppxManifest.xml` del `.msix`: Identity, Publisher y `Version="X.Y.Z.0"`.
+3. **Documentación completa para Microsoft Store** en `docs/store/`:
+   - Fichas `MICROSOFT_STORE_METADATA_ES.md` / `_EN.md` (descripción, características, novedades, pies de captura) dentro de los límites de Partner Center.
+   - Capturas regeneradas con `node scripts/capture-store-screenshots.mjs`.
+   - Novedades de Uptodown (`UPTODOWN_METADATA_*.md`).
+   - `SUBMISSION_GUIDE_vX.Y.Z.md` con los pasos exactos de la actualización en Partner Center.
+4. Actualizar este documento (§4) con el estado del envío.
 
 ## 6. Fuera de alcance de esta fase
 

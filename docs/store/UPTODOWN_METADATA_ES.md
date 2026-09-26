@@ -31,6 +31,9 @@ Combina un editor gráfico de diagramas **Entidad-Relación Extendido (EER)** co
 ### 💡 Puntos Destacados
 
 - **Modelado EER Completo**: Soporta entidades fuertes, débiles, atributos clave, derivados, multivaluados, relaciones binarias (1:1, 1:N, M:N), relaciones identificativas, relaciones N-arias, jerarquías de herencia disjunta/solapada y tipos de unión.
+- **Edición Visual como en otras Aplicaciones**: doble clic para editar cualquier elemento, selección por rectángulo, botón derecho para desplazar y Ctrl + rueda para hacer zoom.
+- **Integridad Referencial Rigurosa**: ON DELETE CASCADE, SET NULL o NO ACTION según corresponda en cada paso del algoritmo.
+- **Centro de Ayuda Integrado (F1)**: guía de uso, sintaxis del DSL, los 9 pasos y un prompt para generar diagramas con IA.
 - **Inspector Pedagógico de 9 Pasos**: Muestra la explicación didáctica del algoritmo formal de Ramez Elmasri & Shamkant B. Navathe sobre cada tabla y columna.
 - **Exportación SQL Multi-Dialecto**: Genera DDL limpio para Oracle SQL (con `CONSTRAINT` y tipos universitarios por defecto), PostgreSQL, MySQL y SQLite.
 - **Exportación Vectorial SVG**: Descarga cualquier diagrama o modelo relacional en formato SVG de alta calidad.

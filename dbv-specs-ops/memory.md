@@ -11,6 +11,7 @@
 - **Foco inmediato:** publicar la v1.6.0 (push, MSIX, tiendas) y preparar la v1.7.0 (soporte táctil con Pointer Events, probar en dispositivo real).
 
 ## 🏗️ Log de Decisiones Técnicas (ADR Ligero)
+- **2026-09-26 — `/ship` incluye publicación y Microsoft Store:** a petición del autor, toda entrega incluye además `git push origin main --tags`, la generación y verificación del MSIX y la documentación completa de la ficha (textos ES/EN, capturas regeneradas con `scripts/capture-store-screenshots.mjs` y guía de envío). Procedimiento en `docs/MICROSOFT_STORE.md` §7. La v1.5.0 ya está publicada en la Store (Id `9NFHVXW7ZRJC`).
 - **2026-09-26 — v1.6.0: propuestas de Enrique Soler Castillo (usabilidad + rigor del mapeo):**
   - *Política `ON DELETE` por paso (sustituye al CASCADE universal):* `CASCADE` solo con dependencia existencial (Pasos 2, 6, 8A); FK obligatoria en 1:1/1:N ⇒ `NO ACTION`; FK opcional y Paso 9 ⇒ `SET NULL`. **Tablas puente M:N y n-arias ⇒ `NO ACTION`** (decisión del usuario sobre la propuesta: borrar vínculos de negocio debe ser explícito; el alumno puede cambiarlo a CASCADE en el DSL relacional). En Oracle `NO ACTION`/`RESTRICT` se emiten omitiendo la cláusula (ORA-00905 si se escriben).
   - *DSL relacional:* `ON DELETE` omitido ⇒ `NO ACTION` (antes CASCADE en silencio) y el generador escribe `NOT NULL` en FKs obligatorias para que la nulabilidad sobreviva a la ida y vuelta.

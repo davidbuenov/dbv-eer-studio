@@ -2,8 +2,8 @@
 
 ## Contexto del Proyecto (Context Snapshot)
 * **Objetivo**: Editor EER ↔ Modelo Relacional ↔ Oracle SQL DDL con compiladores interactivos, linter de 2 niveles y tolerancia a fallos Stale-while-error.
-* **Estado actual**: Versión **v1.6.0** entregada (2026-09-26): propuestas de Enrique Soler Castillo (`SPECIFICATIONS.md §3.7`), selección por rectángulo y navegación estilo draw.io, y Centro de Ayuda unificado (§3.8). 138 tests en verde, lint y build limpios, smoke tests Playwright superados y `.exe` validado por el autor. Commit y tag `v1.6.0` creados en local (sin push).
-* **Próximo paso**: `git push origin main --tags`; generar el MSIX v1.6.0.0 y publicarlo (Microsoft Store / Uptodown, notas ya en `docs/store/`); después, v1.7.0 — soporte táctil.
+* **Estado actual**: Versión **v1.6.0** entregada (2026-09-26): propuestas de Enrique Soler Castillo (`SPECIFICATIONS.md §3.7`), selección por rectángulo y navegación estilo draw.io, y Centro de Ayuda unificado (§3.8). 138 tests en verde, lint y build limpios, smoke tests Playwright superados y `.exe` validado por el autor. Commit y tag `v1.6.0` publicados en GitHub; MSIX `1.6.0.0` generado y documentación de la tienda preparada.
+* **Próximo paso**: el autor envía la actualización v1.6.0 en Partner Center siguiendo `docs/store/SUBMISSION_GUIDE_v1.6.0.md` (MSIX ya generado en `src-tauri/target/msix/`); después, v1.7.0 — soporte táctil.
 
 ## Checklist de Tareas
 

@@ -30,6 +30,9 @@ It pairs an **Extended Entity-Relationship (EER)** visual diagram editor with a 
 
 ### 💡 Highlights
 
+- **Visual Editing Like Other Apps**: double-click to edit any element, rectangle selection, right button to pan and Ctrl + wheel to zoom.
+- **Rigorous Referential Integrity**: ON DELETE CASCADE, SET NULL or NO ACTION as each step of the algorithm requires.
+- **Built-in Help Center (F1)**: usage guide, DSL syntax, the 9 steps and a prompt to generate diagrams with AI.
 - **Comprehensive EER Modeling**: Supports strong and weak entities, key, derived, and multivalued attributes, binary (1:1, 1:N, M:N) and identifying relationships, N-ary relationships, specialization/generalization hierarchies, and union categories.
 - **9-Step Educational Inspector**: Provides step-by-step academic explanations based on the formal algorithm by Ramez Elmasri & Shamkant B. Navathe for every generated table and foreign key.
 - **Multi-Dialect SQL Exporter**: Generates clean DDL for Oracle SQL (with `CONSTRAINT` syntax and standard university data types), PostgreSQL, MySQL, and SQLite.
