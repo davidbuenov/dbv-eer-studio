@@ -87,6 +87,7 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 
 La entrega de una versión **no termina en el commit + tag**. Cada `/ship` incluye además:
 
+0. **Edición Moodle** (desde v1.7.0), antes del commit: subir `version-app` en `docs/moodle/styles.typ` y ejecutar `npm run build:moodle:release`. Regenera los paquetes oficiales de `dist-moodle/` (versionados, con nombres fijos porque la guía los enlaza) y `docs/moodle/GUIA_PROFESOR.pdf`.
 1. **Publicar en GitHub:** `git push origin main --tags` (dispara GitHub Pages y los workflows de release de Linux y macOS; Windows no tiene release en GitHub).
    - Los workflows crean la release como **borrador**: cuando terminen, escribir sus notas (formato de la v1.3.0: *Novedades*, *Correcciones*, *Instalación* y enlace al CHANGELOG), revisar `gh release list` y publicarla (`gh release edit vX.Y.Z --draft=false --latest`).
 2. **Generar el MSIX:**

@@ -139,12 +139,48 @@
 - [ ] **Multiidioma ES/EN completo** en todas las pestañas.
 - [ ] **Toolbar más limpia**: se elimina la pista de gestos de la barra (su contenido pasa a "Uso del editor").
 
-### 3.9. Retirada del Auto-actualizador (próxima versión) `[NUEVO]`
+### 3.9. Retirada del Auto-actualizador (v1.7.0)
 > Decisión del autor (2026-09-26), consecuencia de distribuir Windows solo por Microsoft Store.
 
 - [x] **Sin botón "Buscar actualizaciones"** en ninguna plataforma: en Windows actualiza la Store, en la web no aplica y en Linux/macOS nunca funcionó (ninguna release incluía `latest.json`). Las nuevas versiones de Linux/macOS se descargan desde GitHub Releases.
 - [x] **Se retiran `tauri-plugin-updater` y `tauri-plugin-process`** (Rust, npm, permisos `updater:default`/`process:allow-restart` y bloque `plugins.updater` de `tauri.conf.json`, incluida la clave pública).
 - [x] Se mantiene en *Ayuda → Acerca de* el aviso "Instalada desde Microsoft Store — las actualizaciones son automáticas" (`is_packaged_app()`).
+
+### 3.10. Edición Moodle para Exámenes EER (variante independiente, v1.7.0) `[NUEVO]`
+> Decisión del autor (2026-11-13). Examen de modelado EER en el Moodle 5 de la universidad, en aula **sin internet** (solo llega Moodle) y, si es posible, con **Safe Exam Browser (SEB)**.
+
+**A. Principio de no regresión**
+- [x] La edición actual (web, Windows/Store, Linux, macOS) **no cambia**: la variante Moodle es otro punto de entrada y otro comando de compilación (`npm run build:moodle`), con su salida en una carpeta propia. Los builds y tests actuales siguen igual.
+
+**B. Alcance funcional (solo EER)**
+- [x] Editor EER completo: DSL bidireccional, canvas, linter y diagnósticos, propiedades, selección múltiple.
+- [x] **Sin** Modelo Relacional, SQL DDL, ingeniería inversa, prompt de IA, abrir/guardar ficheros locales ni enlaces externos.
+- [x] **Ayuda se mantiene** (*Uso del editor* y *Sintaxis* con ejemplos). Se retiran las pestañas ajenas al examen: guía de 9 pasos (relacional), prompt de IA y *Acerca de* (sus enlaces externos no funcionan sin internet y en SEB sacarían al alumno del examen); la versión se muestra en la barra del examen.
+- [x] **Plantilla de partida opcional:** el profesor indica un fichero `.eer` al compilar (`npm run build:moodle -- --template examen.eer`) y el paquete arranca con ese contenido; sin plantilla, el editor arranca vacío. Un paquete por examen.
+- [x] ES/EN conservado.
+
+**C. Empaquetado offline**
+- [x] Un **único fichero HTML autocontenido** (JS, CSS e iconos incrustados; ninguna petición de red), envuelto en un **paquete SCORM 1.2** (`imsmanifest.xml` + HTML), el mismo formato que el autor ya usa con éxito en el Moodle de la UMA. Se genera también el HTML suelto (prueba local con doble clic).
+- [x] El SCORM es solo contenedor: si encuentra la API (`LMSInitialize`), marca `cmi.core.lesson_status = incomplete` al abrir y `completed` al pulsar "Copiar para entregar"; sin API (HTML suelto) funciona igual. **La entrega válida es siempre la de la Tarea.**
+
+**D. Persistencia durante el examen**
+- [x] **Autoguardado** del DSL en `localStorage` en cada cambio, para no perder el trabajo al ir y volver entre el SCORM y la Tarea o al recargar. Si `localStorage` está bloqueado, se avisa y se sigue funcionando.
+- [x] Botón **"Nuevo examen"** con confirmación, que borra el autoguardado.
+
+**E. Entrega en la Tarea de Moodle**
+- [x] Botón **"Copiar para entregar"**: copia al portapapeles el DSL entre marcadores (`=== EER-STUDIO BEGIN v1 ===` … `=== EER-STUDIO END ===`) con versión, fecha y una suma de control. El alumno lo pega en el **texto en línea** de la Tarea. Es la vía principal, porque no necesita diálogos de fichero y funciona dentro de SEB.
+- [x] Botón **"Descargar .eer"** como vía alternativa (entrega por fichero), si la Tarea lo admite y SEB permite descargas.
+- [x] La app **acepta pegar un bloque de entrega** (con o sin el HTML que añade el editor de Moodle) para reconstruir el diagrama. Sirve al profesor como visor y al alumno para recuperar su trabajo.
+
+**F. Cierre tras la entrega** (configuración de Moodle, no de la app)
+- [x] Guía para el profesor (`docs/moodle/GUIA_PROFESOR.md`): Tarea con *Requerir que los alumnos pulsen Enviar = Sí*, *Fecha límite* y *Fecha de corte*, *Reabrir intentos = Nunca*, restricciones de acceso y configuración de SEB (dominio de Moodle permitido, portapapeles dentro de SEB). Una vez enviada la Tarea o pasada la fecha de corte, Moodle no deja modificarla.
+
+**F2. Distribución**
+- [x] Los paquetes oficiales se versionan con nombres fijos en `dist-moodle/` del repositorio (SCORM vacío, SCORM de ejemplo Hoteles Royal UMA y HTML vacío como visor; `npm run build:moodle:release`), y la guía en Markdown y PDF en `docs/moodle/`. Por decisión del autor, la guía enlaza a esas carpetas de GitHub.
+- [x] Crédito de autoría (David Bueno Vallejo, Universidad de Málaga) en la primera línea de cada entrega, en los `.eer` descargados y en la guía.
+
+**G. Corrección (fase posterior)**
+- [ ] El bloque de entrega es analizable por máquina: tanto la descarga masiva de entregas en texto en línea (HTML) como los ficheros `.eer` se pueden procesar con un script offline. La corrección automática se especificará aparte.
 
 ## 🏗️ 4. Propuesta de Solución Técnica
 - **Modelos de Dominio:** `EERDiagram` (Conceptual) ↔ `RelationalSchema` (Lógico con DSL + Coordenadas) ↔ `SQLScript` (Físico Oracle / Multi-SGBD).

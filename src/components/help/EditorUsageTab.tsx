@@ -84,8 +84,13 @@ const SHORTCUTS: [keys: (string | TranslationKey)[], action: TranslationKey][] =
   [['Enter'], 'help.usage.shortcuts.enter'],
 ];
 
-/** Pestaña "Uso del editor": gestos de ratón/teclado agrupados por tarea y tabla de atajos. */
-export function EditorUsageTab() {
+const RELATIONAL_SECTION: TranslationKey = 'help.usage.relational.title';
+
+/**
+ * Pestaña "Uso del editor": gestos de ratón/teclado agrupados por tarea y tabla de atajos.
+ * Con `eerOnly` (edición de examen) se omite la sección de modelo relacional, SQL y archivos.
+ */
+export function EditorUsageTab({ eerOnly = false }: { eerOnly?: boolean }) {
   const { t } = useLanguage();
   const keyLabel = (key: string) => (key.startsWith('help.') ? t(key as TranslationKey) : key);
 
@@ -93,7 +98,7 @@ export function EditorUsageTab() {
     <div className="space-y-6 text-sm text-slate-600">
       <p className="text-slate-600">{t('help.usage.intro')}</p>
 
-      {USAGE_SECTIONS.map(section => (
+      {USAGE_SECTIONS.filter(section => !eerOnly || section.titleKey !== RELATIONAL_SECTION).map(section => (
         <section key={section.titleKey}>
           <h3 className="mb-2 font-bold text-indigo-600">{t(section.titleKey)}</h3>
           <table className="w-full border-collapse overflow-hidden rounded-lg border border-slate-200 text-xs">

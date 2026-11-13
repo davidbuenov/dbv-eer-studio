@@ -39,6 +39,7 @@
 - [Los 9 pasos formales](#-los-9-pasos-formales)
 - [Sintaxis del DSL](#-sintaxis-del-dsl)
 - [Ejemplos incluidos](#-ejemplos-incluidos)
+- [Edición Moodle para exámenes](#-edición-moodle-para-exámenes)
 - [Para desarrolladores](#-para-desarrolladores)
 - [Estructura del proyecto](#-estructura-del-proyecto)
 - [Changelog](#-changelog)
@@ -229,6 +230,20 @@ La carpeta [`ejemplos/`](ejemplos/) contiene ficheros listos para abrir desde la
 
 ---
 
+## 🎓 Edición Moodle para exámenes
+
+Variante de examen que se integra en **Moodle** como paquete **SCORM 1.2**: un único HTML que funciona **sin internet** y dentro de **Safe Exam Browser**. Incluye solo el editor EER (con su ayuda), una plantilla de partida opcional y autoguardado. El alumno entrega pegando su diagrama en el texto en línea de una **Tarea**, que es la que impide modificarlo después de enviarlo o de cerrarse.
+
+```bash
+npm run build:moodle -- --template examen.eer --title "Examen BD · Junio"
+# → dist-moodle/examen-bd-junio_scorm12.zip  (subir a Moodle)
+```
+
+- **Paquetes listos para subir a Moodle** (editor vacío y ejemplo «Hoteles Royal UMA»): [`dist-moodle/`](./dist-moodle/).
+- **Guía del profesor** (ajustes de Moodle y SEB, revisión de entregas): [`docs/moodle/`](./docs/moodle/), en [Markdown](./docs/moodle/GUIA_PROFESOR.md) y en [PDF](./docs/moodle/GUIA_PROFESOR.pdf).
+
+---
+
 ## 🧑‍💻 Para desarrolladores
 
 Todo lo anterior es lo único que necesita un usuario normal. Lo siguiente solo aplica si quieres **modificar el código fuente o compilarlo tú mismo**.
@@ -269,6 +284,7 @@ Para detenerlo: `stop.cmd` (Windows) o `./stop.sh` (macOS/Linux).
 
 ```bash
 npm run build            # Web → carpeta dist/ (cualquier servidor estático)
+npm run build:moodle     # Edición Moodle → dist-moodle/ (HTML único + SCORM 1.2)
 npm run desktop:build    # Escritorio → src-tauri/target/release/bundle/
 ```
 
@@ -282,7 +298,7 @@ npx tsc -b      # Comprobación de tipos (TypeScript estricto)
 
 ### Publicar una nueva versión
 
-1. Sube la versión en `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` y `src-tauri/Cargo.lock` (la app la lee de `package.json`), y mueve la sección `[Sin publicar]` de [`dbv-specs-ops/CHANGELOG.md`](./dbv-specs-ops/CHANGELOG.md) a `[x.y.z] — fecha`.
+1. Sube la versión en `docs/moodle/styles.typ` (`version-app`, y ejecuta `npm run build:moodle:release`), `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` y `src-tauri/Cargo.lock` (la app la lee de `package.json`), y mueve la sección `[Sin publicar]` de [`dbv-specs-ops/CHANGELOG.md`](./dbv-specs-ops/CHANGELOG.md) a `[x.y.z] — fecha`.
 2. `git commit`, `git tag vx.y.z`, `git push origin main --tags`.
 3. `release-linux.yml` y `release-macos.yml` compilan Linux y macOS y suben los artefactos a una Release **en borrador**: revísala, añade las notas de la versión y publícala.
 4. `deploy-pages.yml` publica la versión web en GitHub Pages.
@@ -305,6 +321,7 @@ dbv-eer-studio/
 │   │   └── sql/                  # Vista previa y exportación de SQL DDL
 │   ├── hooks/                    # Parser, archivos, canvas, toolbar, modales
 │   ├── i18n/                     # Diccionarios ES/EN y contexto de idioma
+│   ├── moodle/                   # Edición Moodle para exámenes (entrada: moodle.html)
 │   ├── utils/
 │   │   ├── parser.ts             # DSL EER → nodos/enlaces
 │   │   ├── codeGenerator.ts      # Nodos/enlaces → DSL EER (par crítico del anterior)
@@ -312,6 +329,7 @@ dbv-eer-studio/
 │   └── types/                    # Modelos de dominio EER y relacional
 ├── src-tauri/                    # Código Rust y configuración de Tauri v2
 ├── .github/workflows/            # CI: release por plataforma + despliegue de Pages
+├── docs/moodle/                  # Guía del profesor para la edición Moodle
 ├── ejemplos/                     # Diagramas .eer de muestra y prompt para IA
 ├── dbv-specs-ops/                # Especificaciones SDD y marco de ingeniería
 │   ├── docs/                     # SPECIFICATIONS, ARCHITECTURE, DESIGN, 9 pasos

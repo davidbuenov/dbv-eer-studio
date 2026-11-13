@@ -1,0 +1,19 @@
+<!doctype html>
+<!--
+  dbv-eer-studio — Edición Moodle para exámenes EER
+  Copyright (c) 2025-2026 David Bueno Vallejo · MIT License
+  Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
+-->
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Examen EER — EER Studio</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- scripts/build-moodle.mjs sustituye esta configuración por la del examen (plantilla incluida). -->
+    <script id="eer-exam-config" type="application/json">{"examId":"dev","title":"","template":""}</script>
+    <script type="module" src="/src/moodle/main.tsx"></script>
+  </body>
+</html>

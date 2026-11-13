@@ -146,6 +146,19 @@ Pipeline de validación previa y contención de errores:
 - **Estado**: `src/hooks/useHelpCenter.ts` — `{ isOpen, tab, inspectedTable, openHelp(tab?, table?), setTab, close }`; persiste la última pestaña en `localStorage` con `try/catch`. `F1` la abre desde `EERDiagramer`. Los flags `showHelp`/`showCredits`/`showAIPrompt` salen de `useModalState`.
 - **Versión**: `vite.config.ts` inyecta `__APP_VERSION__` leyendo `package.json` (declarado en `src/globals.d.ts`), para que "Acerca de" no quede desfasado en cada release.
 
+### 8. Edición Moodle para exámenes EER `[NUEVO]`
+> `SPECIFICATIONS.md §3.10`. Guía de uso: `docs/moodle/GUIA_PROFESOR.md`.
+
+- **Punto de entrada propio**: `moodle.html` → `src/moodle/main.tsx` → `MoodleExamApp.tsx`. Reutiliza `Toolbar`, `CodePanel`, `Canvas`, los modales de propiedades, borrado y limpieza, y los hooks del editor EER. **No importa `EERDiagramer`**, así que el modelo relacional, el SQL y Tauri quedan fuera del bundle y la edición completa no cambia. Cambios compartidos, ambos aditivos: `HelpCenter` acepta `variant="exam"` (pestañas *Uso del editor* y *Sintaxis*; `EditorUsageTab`/`SyntaxTab` con `eerOnly`) y hay claves `moodle.*` en `es.ts`/`en.ts`.
+- **Utilidades puras con tests** (`src/moodle/`):
+  - `submission.ts`: bloque `=== EER-STUDIO BEGIN v1 ===` … `END` con línea de crédito de autoría (`SUBMISSION_ATTRIBUTION`, opcional al decodificar para leer bloques v1 anteriores), línea de metadatos (comentario DSL) y suma de control FNV-1a sobre una forma canónica (espacios colapsados, sin líneas vacías). `decodeSubmission` acepta texto o el HTML de TinyMCE (`<p>`/`<br>`, entidades, `&nbsp;`).
+  - `autosave.ts`: `localStorage` por examen con caducidad de 12 h.
+  - `scorm12.ts`: API SCORM 1.2 en marcos padre u `opener`; `incomplete` al abrir, `completed` al copiar.
+  - `clipboard.ts`: Clipboard API → `execCommand('copy')` → modal con el texto seleccionado.
+  - `examConfig.ts`: configuración incrustada en `<script id="eer-exam-config" type="application/json">`.
+- **Estado**: `useExamSession.ts` (código inicial del autoguardado o la plantilla, autoguardado con 400 ms de retardo más volcado en `pagehide`, y sesión SCORM).
+- **Build**: `npm run build:moodle` → `scripts/build-moodle.mjs` compila con `vite.config.moodle.ts` (un solo JS y un solo CSS, `inlineDynamicImports`), los inlina en un único HTML, incrusta la configuración (con `<` escapado como `<`), comprueba que no queda ningún `src`/`href` externo y genera el zip SCORM 1.2 con `node:zlib`. Salida en `dist-moodle/` (no versionada). Sin dependencias npm nuevas.
+
 ---
 
 ## 🖥️ Roadmap Nativo de Escritorio (`dbv-tauri-starter`)

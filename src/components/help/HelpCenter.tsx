@@ -24,7 +24,14 @@ interface HelpCenterProps {
   onClose: () => void;
   /** Tabla abierta desde el icono 📖 del Modelo Relacional (acceso contextual a la Guía de 9 Pasos). */
   inspectedTable: RelationalTable | null;
+  /**
+   * `exam` (edición Moodle): solo "Uso del editor" y "Sintaxis", sin contenido relacional.
+   * Sin guía de 9 pasos, prompt IA ni "Acerca de" (enlaces externos que en SEB sacarían del examen).
+   */
+  variant?: 'full' | 'exam';
 }
+
+const EXAM_TABS: readonly HelpTab[] = ['usage', 'syntax'];
 
 const TABS: { id: HelpTab; labelKey: TranslationKey; icon: LucideIcon }[] = [
   { id: 'usage', labelKey: 'help.tab.usage', icon: MousePointer2 },
@@ -39,8 +46,12 @@ const TABS: { id: HelpTab; labelKey: TranslationKey; icon: LucideIcon }[] = [
  * Solo se monta la pestaña activa (p. ej. "Acerca de" consulta el canal de instalación de Tauri
  * únicamente cuando se muestra).
  */
-export function HelpCenter({ isOpen, tab, onTabChange, onClose, inspectedTable }: HelpCenterProps) {
+export function HelpCenter({ isOpen, tab: requestedTab, onTabChange, onClose, inspectedTable, variant = 'full' }: HelpCenterProps) {
   const { t } = useLanguage();
+  const isExam = variant === 'exam';
+  const tabs = isExam ? TABS.filter(({ id }) => EXAM_TABS.includes(id)) : TABS;
+  // La pestaña recordada puede no existir en esta variante (p. ej. "steps" en el examen).
+  const tab = tabs.some(({ id }) => id === requestedTab) ? requestedTab : tabs[0].id;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -78,7 +89,7 @@ export function HelpCenter({ isOpen, tab, onTabChange, onClose, inspectedTable }
 
         <div className="flex min-h-0 flex-1">
           <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-slate-200 bg-slate-50 p-3" role="tablist">
-            {TABS.map(({ id, labelKey, icon: Icon }) => (
+            {tabs.map(({ id, labelKey, icon: Icon }) => (
               <button
                 key={id}
                 role="tab"
@@ -95,8 +106,8 @@ export function HelpCenter({ isOpen, tab, onTabChange, onClose, inspectedTable }
           </nav>
 
           <div className="min-w-0 flex-1 overflow-y-auto p-6" role="tabpanel">
-            {tab === 'usage' && <EditorUsageTab />}
-            {tab === 'syntax' && <SyntaxTab />}
+            {tab === 'usage' && <EditorUsageTab eerOnly={isExam} />}
+            {tab === 'syntax' && <SyntaxTab eerOnly={isExam} />}
             {tab === 'steps' && <StepGuideTab inspectedTable={inspectedTable} />}
             {tab === 'aiPrompt' && <AIPromptTab />}
             {tab === 'about' && <AboutTab />}

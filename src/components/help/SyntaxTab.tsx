@@ -10,11 +10,14 @@ import { Layers, Database } from 'lucide-react';
 import { useLanguage } from '../../i18n/language';
 import { EER_SYNTAX, RELATIONAL_SYNTAX, type SyntaxSection } from './syntaxExamples';
 
-/** Pestaña "Sintaxis": referencia del DSL EER y del DSL relacional. */
-export function SyntaxTab() {
+/**
+ * Pestaña "Sintaxis": referencia del DSL EER y del DSL relacional.
+ * Con `eerOnly` (edición de examen) solo se muestra el DSL EER, sin selector.
+ */
+export function SyntaxTab({ eerOnly = false }: { eerOnly?: boolean }) {
   const { t } = useLanguage();
   const [dsl, setDsl] = useState<'eer' | 'relational'>('eer');
-  const sections: SyntaxSection[] = dsl === 'eer' ? EER_SYNTAX : RELATIONAL_SYNTAX;
+  const sections: SyntaxSection[] = eerOnly || dsl === 'eer' ? EER_SYNTAX : RELATIONAL_SYNTAX;
 
   const subTabClass = (active: boolean) =>
     `flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold transition ${
@@ -25,7 +28,7 @@ export function SyntaxTab() {
     <div className="space-y-4">
       <p className="text-sm text-slate-600">{t('modalHelp.subtitle')}</p>
 
-      <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 p-1">
+      {!eerOnly && <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 p-1">
         <button onClick={() => setDsl('eer')} className={subTabClass(dsl === 'eer')}>
           <Layers className="h-4 w-4" />
           <span>{t('modalHelp.tabEER')}</span>
@@ -34,7 +37,7 @@ export function SyntaxTab() {
           <Database className="h-4 w-4" />
           <span>{t('modalHelp.tabRelational')}</span>
         </button>
-      </div>
+      </div>}
 
       <div className="grid grid-cols-1 gap-6 text-sm text-slate-600 md:grid-cols-2">
         {sections.map(section => (

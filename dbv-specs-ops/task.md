@@ -3,9 +3,22 @@
 ## Contexto del Proyecto (Context Snapshot)
 * **Objetivo**: Editor EER ↔ Modelo Relacional ↔ Oracle SQL DDL con compiladores interactivos, linter de 2 niveles y tolerancia a fallos Stale-while-error.
 * **Estado actual**: **v1.6.0 entregada y publicada en GitHub** (2026-09-26): commits `51eab62` (feat) y `8229a4e` (docs store), tag `v1.6.0`, GitHub Pages desplegado y workflows de release Windows/Linux/macOS en verde. MSIX `dbv-eer-studio_1.6.0.0.msixbundle` generado y verificado (`src-tauri/target/msix/`, no versionado). Documentación de Microsoft Store lista en `docs/store/`. 138 tests en verde.
-* **Próximo paso**: (1) enviar la actualización v1.6.0 en Partner Center con `docs/store/SUBMISSION_GUIDE_v1.6.0.md`; (2) la próxima versión (v1.7.0 — soporte táctil) ya incluye en `[Sin publicar]` la retirada del auto-actualizador (§3.9); empezar por `/spec` del soporte táctil.
+* **Próximo paso**: (0) **v1.7.0 entregada** (edición Moodle): el autor la prueba con SEB en la UMA y envía la actualización a Partner Center con `docs/store/SUBMISSION_GUIDE_v1.7.0.md`; después, especificar la corrección automática (§3.10 G); (1) enviar la actualización v1.6.0 en Partner Center con `docs/store/SUBMISSION_GUIDE_v1.6.0.md`; (2) la próxima versión (v1.7.0 — soporte táctil) ya incluye en `[Sin publicar]` la retirada del auto-actualizador (§3.9); empezar por `/spec` del soporte táctil.
 
 ## Checklist de Tareas
+
+- [x] **Fase `/spec` — Edición Moodle para exámenes EER** (`SPECIFICATIONS.md §3.10`): HTML único sin red dentro de un SCORM 1.2, solo EER con ayuda y plantilla opcional, autoguardado, entrega por texto en línea de la Tarea con bloque y suma de control, cierre configurado en Moodle.
+- [x] **Fase `/plan` — Edición Moodle**: Adversarial Review + `implementation_plan.md` (aprobado por el usuario el 2026-11-13).
+- [x] **Fase `/build` — Edición Moodle**
+  - [x] Bloque 1: utilidades puras `src/moodle/` (submission, autosave, scorm12, clipboard, examConfig) con tests.
+  - [x] Bloque 2: interfaz del examen (`moodle.html`, `MoodleExamApp`, `useExamSession`, barra de acciones, modales; `variant="exam"` en HelpCenter; i18n `moodle.*`).
+  - [x] Bloque 3: `vite.config.moodle.ts` + `scripts/build-moodle.mjs` (inlinado, plantilla, verificación sin refs externas, manifiesto, zip) + `npm run build:moodle`.
+  - [x] Bloque 4: `docs/moodle/GUIA_PROFESOR.md`, ARCHITECTURE §8, README ES/EN y CHANGELOG.
+- [x] **Fase `/test` — Edición Moodle**: 24 tests unitarios nuevos (162 en total), lint, `tsc -b`, `dist/` con la misma estructura y smoke Playwright `scripts/smoke-moodle.mjs` (26/26: red bloqueada, autoguardado, copiar/cargar, manipulación, ayuda reducida, respaldo del portapapeles, SCORM simulado).
+- [x] **Fase `/code-simplify` — Edición Moodle**: tipo `ScormWindow` exportado en lugar de casts; secuencias de escape restauradas; security review sin hallazgos (sin dependencias nuevas ni secretos; plantilla con `<` escapado, manifiesto escapado en XML, nombres de fichero saneados, texto pegado renderizado solo por React).
+- [x] **Validación del autor en el Campus Virtual de la UMA** (navegador normal: SCORM, copiar y pegar en la Tarea). Pendiente: prueba con SEB.
+- [x] **Mejoras tras la validación**: guía ampliada (dos actividades, ocultar la navegación SCORM, instrucciones para el alumnado, lista de comprobación SEB, problemas frecuentes); PDF con Typst (diseño del autor: `main.typ` + `styles.typ` + `guia-profesor.typ`); crédito de autoría con la Universidad de Málaga; adjuntos de release con nombres fijos (`build:moodle:release`).
+- [x] **`/ship` v1.7.0** (2026-11-13): versión 1.7.0 en package.json/lock, Cargo y tauri.conf; CHANGELOG `[1.7.0]`; walkthrough; commit + tag; adjuntos Moodle en la release; MSIX y documentación de Microsoft Store.
 
 - [x] **Fase `/spec` v1.6.0: Usabilidad del editor EER y rigor del mapeo**
   - [x] `SPECIFICATIONS.md` §3.7 (PK con key_att de relación, política ON DELETE, `[ATTR]`, edición, selección múltiple, resaltado DSL, crear otro).
@@ -115,7 +128,7 @@
 
 - [x] **Deuda técnica — auto-updater roto (detectada 2026-09-26)**: RESUELTA por decisión del autor — se retira el auto-actualizador en la próxima versión (`SPECIFICATIONS.md §3.9`, CHANGELOG `[Sin publicar]`). Ya implementado en `main`, pendiente de publicar.
 
-- [ ] **v1.7.0 — Soporte táctil (tablets)** (decidido con el usuario el 2026-09-26, ver `SPECIFICATIONS.md §3.7` fuera de alcance): migrar `Canvas`/`useCanvasInteraction` a Pointer Events con `touch-action: none`; un dedo en nodo = arrastrar, un dedo en fondo = desplazar, dos dedos = pellizco zoom/desplazamiento, mantener pulsado + arrastrar = rectángulo de selección, doble toque = editar. Requiere prueba en dispositivo táctil real.
+- [ ] **v1.8.0 — Soporte táctil (tablets)** (decidido con el usuario el 2026-09-26, ver `SPECIFICATIONS.md §3.7` fuera de alcance): migrar `Canvas`/`useCanvasInteraction` a Pointer Events con `touch-action: none`; un dedo en nodo = arrastrar, un dedo en fondo = desplazar, dos dedos = pellizco zoom/desplazamiento, mantener pulsado + arrastrar = rectángulo de selección, doble toque = editar. Requiere prueba en dispositivo táctil real.
 
 - [ ] **Deuda técnica (detectada en v1.6.0, pre-existente)**: el compilador del DSL relacional parte las FK compuestas en una FK por columna; el motor solo implementa la opción 8A (8B/8C/8D en la especificación); dos `spec d` en el mismo diagrama comparten la etiqueta `d` y `link d X` se asocia siempre a la primera; `LinkRenderer` resuelve extremos solo por id, así que `link ENTIDAD atributo` (sin `->`) no se dibuja.
 - [x] **Rename del Repositorio a `dbv-eer-studio`**: hecho en GitHub (`gh repo rename`), remote local, workflow de Pages y README.
@@ -195,7 +208,7 @@
 > **Para retomar, en este orden:**
 > 1. ~~Releases en borrador~~ — **resuelto 2026-09-26**: v1.4.1, v1.5.0 y v1.6.0 publicadas en orden (v1.6.0 = *Latest*) con notas detalladas; v1.4.0 completada. Windows pasa a ser solo Microsoft Store (sin `.exe`/`.msi` en v1.6.0; `release-windows.yml` eliminado).
 > 2. **Microsoft Store:** el autor envía la actualización v1.6.0 siguiendo `docs/store/SUBMISSION_GUIDE_v1.6.0.md`; al publicarse, actualizar `docs/MICROSOFT_STORE.md` §4.
-> 3. **v1.7.0 — soporte táctil:** empezar por `/spec` (ver roadmap más abajo y `SPECIFICATIONS.md §3.7` fuera de alcance).
+> 3. **v1.8.0 — soporte táctil:** empezar por `/spec` (ver roadmap más abajo y `SPECIFICATIONS.md §3.7` fuera de alcance).
 > 4. **Regla de `/ship`** (autor, 2026-09-26): toda entrega incluye push, MSIX y documentación completa de la Store — `docs/MICROSOFT_STORE.md` §7.
 
 > *Histórico del snapshot anterior (v1.5.0) a continuación.*

@@ -1,0 +1,3 @@
+# Manifiesto de DBV Typst Editor. Otras aplicaciones lo ignoran.
+# Guarda el documento principal del proyecto: súbelo a git para que viaje con él.
+entrypoint = "main.typ"

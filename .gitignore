@@ -10,6 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# Edición Moodle: se versionan solo los paquetes oficiales (npm run build:moodle:release)
+dist-moodle/*
+!dist-moodle/README.md
+!dist-moodle/eer-studio-moodle-vacio_scorm12.zip
+!dist-moodle/eer-studio-moodle-vacio.html
+!dist-moodle/eer-studio-moodle-ejemplo-hotel_scorm12.zip
 *.local
 
 # Editor directories and files

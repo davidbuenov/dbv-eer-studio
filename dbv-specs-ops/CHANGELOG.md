@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Sin publicar]
 
+## [1.7.0] — 2026-11-13
+
+> Edición Moodle para exámenes EER (`SPECIFICATIONS.md §3.10`) y retirada del auto-actualizador (§3.9).
+
+### Added
+- **Edición Moodle para exámenes EER** (`SPECIFICATIONS.md §3.10`, guía en `docs/moodle/GUIA_PROFESOR.md`): `npm run build:moodle` genera un único HTML sin peticiones de red y su paquete SCORM 1.2 para Moodle. Solo editor EER, con la ayuda (*Uso del editor* y *Sintaxis*), plantilla de partida opcional (`--template`) y título (`--title`). Autoguardado en el navegador (por examen, caduca a las 12 h). **«Copiar para entregar»** genera un bloque con suma de control para el texto en línea de una Tarea, con respaldo si el portapapeles está bloqueado. **«Cargar entrega»** reconstruye el diagrama desde ese bloque o desde el HTML de Moodle, y avisa si se manipuló. **«Descargar .eer»** queda como alternativa. Cada entrega y cada `.eer` descargado empiezan por una línea de crédito de autoría (comentario del DSL, fuera de la suma de control; al cargar una entrega se descarta para que no se duplique). La guía del profesor se publica también en PDF (`docs/moodle/GUIA_PROFESOR.pdf`, fuentes Typst `main.typ` + `styles.typ` + `guia-profesor.typ`). `npm run build:moodle:release` genera los paquetes oficiales con nombres fijos (`eer-studio-moodle-vacio_scorm12.zip`, `eer-studio-moodle-vacio.html` y `eer-studio-moodle-ejemplo-hotel_scorm12.zip`), que se versionan en `dist-moodle/`; la guía está en `docs/moodle/`. La edición completa no cambia: el único cambio compartido es la opción `variant="exam"` del Centro de Ayuda.
+
 ### Removed
 - **Botón "Buscar actualizaciones" y auto-actualizador** (`SPECIFICATIONS.md §3.9`): Windows se distribuye solo por Microsoft Store, que actualiza la app, y en Linux/macOS el botón nunca llegó a funcionar porque ninguna release publicaba el `latest.json` que consultaba. Se retiran `tauri-plugin-updater`, `tauri-plugin-process`, sus permisos y la configuración `plugins.updater`. Las nuevas versiones de Linux/macOS se descargan desde GitHub Releases.
 

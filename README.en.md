@@ -39,6 +39,7 @@
 - [The 9 formal steps](#-the-9-formal-steps)
 - [DSL syntax](#-dsl-syntax)
 - [Bundled examples](#-bundled-examples)
+- [Moodle edition for exams](#-moodle-edition-for-exams)
 - [For developers](#-for-developers)
 - [Project structure](#-project-structure)
 - [Changelog](#-changelog)
@@ -229,6 +230,20 @@ The [`ejemplos/`](ejemplos/) folder contains files ready to open from the app (*
 
 ---
 
+## 🎓 Moodle edition for exams
+
+An exam variant that plugs into **Moodle** as a **SCORM 1.2** package: a single HTML file that works **offline** and inside **Safe Exam Browser**. It includes only the EER editor (with its help), an optional starting template and autosave. Students submit by pasting their diagram into the online text of an **Assignment**, which is what prevents changes once it has been submitted or closed.
+
+```bash
+npm run build:moodle -- --template exam.eer --title "DB exam · June"
+# → dist-moodle/db-exam-june_scorm12.zip  (upload to Moodle)
+```
+
+- **Packages ready to upload to Moodle** (empty editor and the "Hoteles Royal UMA" example): [`dist-moodle/`](./dist-moodle/).
+- **Teacher guide** (in Spanish; Moodle and SEB settings, reviewing submissions): [`docs/moodle/`](./docs/moodle/), as [Markdown](./docs/moodle/GUIA_PROFESOR.md) and [PDF](./docs/moodle/GUIA_PROFESOR.pdf).
+
+---
+
 ## 🧑‍💻 For developers
 
 Everything above is all a regular user needs. The following only applies if you want to **modify the source code or build it yourself**.
@@ -269,6 +284,7 @@ To stop it: `stop.cmd` (Windows) or `./stop.sh` (macOS/Linux).
 
 ```bash
 npm run build            # Web → dist/ folder (any static server)
+npm run build:moodle     # Moodle edition → dist-moodle/ (single HTML + SCORM 1.2)
 npm run desktop:build    # Desktop → src-tauri/target/release/bundle/
 ```
 
@@ -282,9 +298,9 @@ npx tsc -b      # Type check (strict TypeScript)
 
 ### Publishing a new version
 
-1. Bump the version in `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `src-tauri/Cargo.lock` (the app reads it from `package.json`), and move the `[Sin publicar]` section of [`dbv-specs-ops/CHANGELOG.md`](./dbv-specs-ops/CHANGELOG.md) to `[x.y.z] — date`.
+1. Bump the version in `docs/moodle/styles.typ` (`version-app`, then run `npm run build:moodle:release`), `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `src-tauri/Cargo.lock` (the app reads it from `package.json`), and move the `[Sin publicar]` section of [`dbv-specs-ops/CHANGELOG.md`](./dbv-specs-ops/CHANGELOG.md) to `[x.y.z] — date`.
 2. `git commit`, `git tag vx.y.z`, `git push origin main --tags`.
-3. `release-linux.yml` and `release-macos.yml` build Linux and macOS and upload the artifacts to a **draft** Release: review it, add the release notes and publish it.
+3. `release-linux.yml` and `release-macos.yml` build Linux and macOS and upload the artifacts to a **draft** Release: review it, add the release notes and and publish it.
 4. `deploy-pages.yml` publishes the web version on GitHub Pages.
 5. **Windows (Microsoft Store only):** `npm run tauri:windows:build` produces `src-tauri/target/msix/dbv-eer-studio_x.y.z.0.msixbundle`, which is uploaded to Partner Center — full procedure in [`dbv-specs-ops/docs/MICROSOFT_STORE.md`](./dbv-specs-ops/docs/MICROSOFT_STORE.md) §7.
 
@@ -305,6 +321,7 @@ dbv-eer-studio/
 │   │   └── sql/                  # SQL DDL preview and export
 │   ├── hooks/                    # Parser, files, canvas, toolbar, modals
 │   ├── i18n/                     # ES/EN dictionaries and language context
+│   ├── moodle/                   # Moodle exam edition (entry point: moodle.html)
 │   ├── utils/
 │   │   ├── parser.ts             # EER DSL → nodes/links
 │   │   ├── codeGenerator.ts      # Nodes/links → EER DSL (critical counterpart)
@@ -312,6 +329,7 @@ dbv-eer-studio/
 │   └── types/                    # EER and relational domain models
 ├── src-tauri/                    # Rust code and Tauri v2 configuration
 ├── .github/workflows/            # CI: per-platform release + Pages deployment
+├── docs/moodle/                  # Teacher guide for the Moodle edition
 ├── ejemplos/                     # Sample .eer diagrams and AI prompt
 ├── dbv-specs-ops/                # SDD specifications and engineering framework
 │   ├── docs/                     # SPECIFICATIONS, ARCHITECTURE, DESIGN, 9 steps

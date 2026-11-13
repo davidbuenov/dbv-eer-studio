@@ -1,12 +1,14 @@
 {
   "name": "dbv-eer-studio",
   "private": true,
-  "version": "1.6.0",
+  "version": "1.7.0",
   "type": "module",
   "homepage": "https://davidbuenov.github.io/dbv-eer-studio/",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:moodle": "tsc -b && node scripts/build-moodle.mjs",
+    "build:moodle:release": "tsc -b && node scripts/build-moodle-release.mjs",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
