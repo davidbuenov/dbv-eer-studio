@@ -3,7 +3,7 @@
 ## Contexto del Proyecto (Context Snapshot)
 * **Objetivo**: Editor EER ↔ Modelo Relacional ↔ Oracle SQL DDL con compiladores interactivos, linter de 2 niveles y tolerancia a fallos Stale-while-error.
 * **Estado actual**: **v1.6.0 entregada y publicada en GitHub** (2026-09-26): commits `51eab62` (feat) y `8229a4e` (docs store), tag `v1.6.0`, GitHub Pages desplegado y workflows de release Windows/Linux/macOS en verde. MSIX `dbv-eer-studio_1.6.0.0.msixbundle` generado y verificado (`src-tauri/target/msix/`, no versionado). Documentación de Microsoft Store lista en `docs/store/`. 138 tests en verde.
-* **Próximo paso**: (0) **v1.7.0 entregada** (edición Moodle): el autor la prueba con SEB en la UMA y envía la actualización a Partner Center con `docs/store/SUBMISSION_GUIDE_v1.7.0.md`; después, especificar la corrección automática (§3.10 G); (1) enviar la actualización v1.6.0 en Partner Center con `docs/store/SUBMISSION_GUIDE_v1.6.0.md`; (2) la próxima versión (v1.7.0 — soporte táctil) ya incluye en `[Sin publicar]` la retirada del auto-actualizador (§3.9); empezar por `/spec` del soporte táctil.
+* **Próximo paso**: (0) **v1.7.0 entregada** (edición Moodle): el autor la prueba con SEB en la UMA (la v1.7.0 no va a la Store); después, especificar la corrección automática (§3.10 G); (1) enviar la actualización v1.6.0 en Partner Center con `docs/store/SUBMISSION_GUIDE_v1.6.0.md`; (2) la próxima versión (v1.7.0 — soporte táctil) ya incluye en `[Sin publicar]` la retirada del auto-actualizador (§3.9); empezar por `/spec` del soporte táctil.
 
 ## Checklist de Tareas
 
@@ -18,7 +18,7 @@
 - [x] **Fase `/code-simplify` — Edición Moodle**: tipo `ScormWindow` exportado en lugar de casts; secuencias de escape restauradas; security review sin hallazgos (sin dependencias nuevas ni secretos; plantilla con `<` escapado, manifiesto escapado en XML, nombres de fichero saneados, texto pegado renderizado solo por React).
 - [x] **Validación del autor en el Campus Virtual de la UMA** (navegador normal: SCORM, copiar y pegar en la Tarea). Pendiente: prueba con SEB.
 - [x] **Mejoras tras la validación**: guía ampliada (dos actividades, ocultar la navegación SCORM, instrucciones para el alumnado, lista de comprobación SEB, problemas frecuentes); PDF con Typst (diseño del autor: `main.typ` + `styles.typ` + `guia-profesor.typ`); crédito de autoría con la Universidad de Málaga; adjuntos de release con nombres fijos (`build:moodle:release`).
-- [x] **`/ship` v1.7.0** (2026-11-13): versión 1.7.0 en package.json/lock, Cargo y tauri.conf; CHANGELOG `[1.7.0]`; walkthrough; commit + tag; adjuntos Moodle en la release; MSIX y documentación de Microsoft Store.
+- [x] **`/ship` v1.7.0** (2026-11-13): versión 1.7.0 en package.json/lock, Cargo y tauri.conf; CHANGELOG `[1.7.0]`; walkthrough; commit + tag + push; paquetes oficiales en `dist-moodle/`. **Sin MSIX ni envío a la Store** por decisión del autor (el escritorio no cambia de forma relevante).
 
 - [x] **Fase `/spec` v1.6.0: Usabilidad del editor EER y rigor del mapeo**
   - [x] `SPECIFICATIONS.md` §3.7 (PK con key_att de relación, política ON DELETE, `[ATTR]`, edición, selección múltiple, resaltado DSL, crear otro).

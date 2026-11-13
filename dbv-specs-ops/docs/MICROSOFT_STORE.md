@@ -66,6 +66,7 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 - [x] Generar `dbv-eer-studio_1.6.0.0.msixbundle` (2026-09-26) — identidad, versión y assets verificados.
 - [x] Documentación de la actualización v1.6.0: fichas ES/EN, 6 capturas nuevas y `docs/store/SUBMISSION_GUIDE_v1.6.0.md`.
 - [ ] Enviar la actualización v1.6.0 en Partner Center (acción del autor).
+- [x] **v1.7.0 no se envía a la Store** (decisión del autor, 2026-11-13): la app de escritorio no cambia de forma relevante (la novedad es la edición Moodle, que se distribuye en `dist-moodle/`; la retirada del botón de actualizaciones no afecta a Windows). No se genera MSIX ni documentación de la ficha para esta versión.
 - [x] Política de privacidad creada en [`docs/store/PRIVACY_POLICY.md`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/PRIVACY_POLICY.md).
 - [x] Capturas de pantalla para la ficha en [`docs/store/screenshots/`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/screenshots/).
 - [x] Metadatos de Store creados en [`docs/store/MICROSOFT_STORE_METADATA_ES.md`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/MICROSOFT_STORE_METADATA_ES.md) y `_EN.md`.
