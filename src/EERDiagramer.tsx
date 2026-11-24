@@ -132,6 +132,11 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   useEffect(() => {
     if (isValid && compiledCode !== null && compiledCode !== lastEERCodeRef.current) {
       lastEERCodeRef.current = compiledCode;
+      // Un EER vacío (Limpiar, deshacer hasta el principio) empieza un modelo nuevo: los tipos
+      // elegidos para el anterior no deben aplicarse a columnas homónimas del siguiente.
+      if (nodes.length === 0) {
+        typeOverridesRef.current = {};
+      }
       try {
         const inferred = eerToRelational(nodes, links, undefined, relationalPositions);
         inferredSchemaRef.current = inferred;
@@ -184,7 +189,22 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     const newPositions: Record<string, { x: number; y: number }> = {};
     const newOverrides: TypeOverrides = {};
 
-    lines.forEach(line => {
+    // Cabeceras que escribe `getSaveContent`: se regeneran al guardar, así que no se devuelven
+    // al EER (si no, se acumulaba una más en cada ciclo guardar/abrir).
+    const SEPARATOR = '// ==========================================';
+    const generatedHeader = new Set<number>();
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+      if (trimmed === '// RELATIONAL TYPES') generatedHeader.add(index);
+      if (trimmed === '// RELATIONAL LAYOUT') {
+        generatedHeader.add(index);
+        if (lines[index - 1]?.trim() === SEPARATOR) generatedHeader.add(index - 1);
+        if (lines[index + 1]?.trim() === SEPARATOR) generatedHeader.add(index + 1);
+      }
+    });
+
+    lines.forEach((line, index) => {
+      if (generatedHeader.has(index)) return;
       // Coordenadas negativas incluidas: una tabla arrastrada a la izquierda del origen se guardaba
       // como `(-40, 120)` pero no se leía, y volvía a su posición automática.
       const relMatch = line.match(/^relational\s+([A-Za-z0-9_]+)\s*\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)/);

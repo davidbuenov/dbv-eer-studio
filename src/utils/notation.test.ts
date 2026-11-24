@@ -77,6 +77,12 @@ describe('Especialización total y parcial (§3.11 D)', () => {
     expect(result.isValid).toBe(false);
     expect(result.diagnostics.map(d => d.code)).toEqual(['INVALID_SPECIALIZATION_OPTION']);
   });
+
+  it('un comentario al final de la línea no es una opción', () => {
+    const result = compileEER('ent EMPLEADO\nspec d -> EMPLEADO partial // por tipo de trabajo');
+    expect(result.isValid).toBe(true);
+    expect(result.nodes.find(n => n.id === 'd')).toMatchObject({ isPartial: true });
+  });
 });
 
 describe('Roles (§3.11 E)', () => {

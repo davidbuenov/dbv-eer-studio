@@ -10,7 +10,7 @@ import { compileEER } from '../compiler';
 import { eerToRelational } from './eerToRelational';
 import { generateRelationalDSL } from './relationalCodeGenerator';
 import { compileRelationalDSL } from './relationalCompiler';
-import { relationalToSQL } from './relationalToSQL';
+import { relationalToSQL, type SQLDialect } from './relationalToSQL';
 import type { RelationalSchema } from '../../types/relational';
 
 /*
@@ -36,8 +36,8 @@ const fksOf = (schema: RelationalSchema, table: string) =>
     .find(t => t.name === table)!
     .foreignKeys.map(f => `${f.sourceColumnNames.join(',')}->${f.targetTableName}(${f.targetColumnNames.join(',')}) ${f.onDelete}`);
 
-const sqlWithoutHeader = (schema: RelationalSchema) =>
-  relationalToSQL(schema, 'oracle').replace(/^--.*$/gm, '').replace(/\n{2,}/g, '\n');
+const sqlWithoutHeader = (schema: RelationalSchema, dialect: SQLDialect = 'oracle') =>
+  relationalToSQL(schema, dialect).replace(/^--.*$/gm, '').replace(/\n{2,}/g, '\n');
 
 const COMPITE = `ent CIRCUITO
 key_att Nombre -> CIRCUITO
@@ -123,7 +123,11 @@ table COMPITE {
 describe('DSL relacional y SQL — UNIQUE (§3.11 L5)', () => {
   it('la FK de una 1:1 es UNIQUE en el SQL (si no, la 1:1 sería una 1:N)', () => {
     const sql = sqlWithoutHeader(deriveSchema(DIRIGE_1_1));
-    expect(sql).toMatch(/CONSTRAINT UQ_DEPARTAMENTO_DIRIGE_EMPLEADO_DNI UNIQUE \(DIRIGE_EMPLEADO_DNI\)/);
+    // En Oracle (por defecto) `UQ_DEPARTAMENTO_DIRIGE_EMPLEADO_DNI` pasa de 30 caracteres: se abrevia.
+    expect(sql).toMatch(/CONSTRAINT UQ_DEPARTAMENTO_1 UNIQUE \(DIRIGE_EMPLEADO_DNI\)/);
+    expect(sqlWithoutHeader(deriveSchema(DIRIGE_1_1), 'postgres')).toMatch(
+      /CONSTRAINT UQ_DEPARTAMENTO_DIRIGE_EMPLEADO_DNI UNIQUE \(DIRIGE_EMPLEADO_DNI\)/
+    );
   });
 
   it('UNIQUE sobrevive a la ida y vuelta por el DSL relacional', () => {

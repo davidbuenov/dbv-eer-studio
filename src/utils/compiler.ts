@@ -209,7 +209,10 @@ export function compileEER(code: string): CompileResult {
       // Participación: palabra opcional tras la superclase (y tras `[ATTR]`, ya retirado de
       // `specParts`). Cualquier otra palabra es un error: hasta la v1.7.0 se ignoraba en silencio.
       const specArrow = specParts.indexOf('->');
-      const specOptions = command === 'spec' && specArrow !== -1 ? specParts.slice(specArrow + 2) : [];
+      const afterSuper = command === 'spec' && specArrow !== -1 ? specParts.slice(specArrow + 2) : [];
+      // Un comentario al final de la línea (`// …`) no es una opción, como en `att` o `link`.
+      const commentAt = afterSuper.findIndex(o => o.startsWith('//'));
+      const specOptions = commentAt === -1 ? afterSuper : afterSuper.slice(0, commentAt);
       const invalidOption = specOptions.find(o => !SPECIALIZATION_OPTIONS.includes(o.toLowerCase()));
       if (invalidOption) {
         diagnostics.push({

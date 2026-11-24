@@ -31,12 +31,18 @@ export function useFullscreen(native = false) {
   const toggle = useCallback(async (): Promise<FullscreenResult> => {
     let result: FullscreenResult;
     if (native) {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      const win = getCurrentWindow();
-      const next = !(await win.isFullscreen());
-      await win.setFullscreen(next);
-      setIsActive(next);
-      result = next ? 'entered' : 'exited';
+      // Como la ruta web: un fallo (permiso ausente, API de ventana) se devuelve, no se lanza.
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        const win = getCurrentWindow();
+        const next = !(await win.isFullscreen());
+        await win.setFullscreen(next);
+        setIsActive(next);
+        result = next ? 'entered' : 'exited';
+      } catch (err) {
+        console.error('[useFullscreen] No se pudo cambiar la pantalla completa de la ventana:', err);
+        result = 'failed';
+      }
     } else {
       result = await toggleFullscreen(document);
     }

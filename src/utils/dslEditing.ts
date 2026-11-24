@@ -198,6 +198,8 @@ export function suggestedAttributeOwner(selected: NodeData | undefined, nodes: r
 }
 
 export interface AttributeOwnerOption {
+  /** Id del nodo: clave estable aunque haya homónimos con el mismo propietario. */
+  id: string;
   label: string;
   /** Etiqueta del elemento del que cuelga (para mostrar «Direccion (CLIENTE)»). */
   ownerLabel: string;
@@ -215,7 +217,7 @@ export function attributeOwnerOptions(nodes: readonly NodeData[], links: readonl
     .map(n => {
       const link = findParentLinks(n, nodes, links)[0];
       const owner = n.parentEntity ?? (link ? (resolveNodeRef(link.source, nodes) === n ? link.target : link.source) : '');
-      return { label: n.label, ownerLabel: labelOf(owner, nodes), ambiguous: !isUniqueLabel(n, nodes) };
+      return { id: n.id, label: n.label, ownerLabel: labelOf(owner, nodes), ambiguous: !isUniqueLabel(n, nodes) };
     })
     .sort((a, b) => a.label.localeCompare(b.label));
 }

@@ -22,7 +22,7 @@ export function deleteNodeFromCode(code: string, nodeLabel: string): string {
 
     // Líneas que definen el nodo directamente
     const nodeDefinitionPattern = new RegExp(
-      `^(ent|weak_ent|rel|ident_rel|att|key_att|derived_att|multivalued_att)\\s+${escapeRegex(nodeLabel)}(\\s|$)`
+      `^(ent|weak_ent|rel|ident_rel|att|key_att|partial_key_att|derived_att|multivalued_attribute|multivalued_att)\\s+${escapeRegex(nodeLabel)}(\\s|$)`
     );
     
     if (nodeDefinitionPattern.test(trimmed)) {
@@ -89,7 +89,18 @@ export function deleteNodesFromCode(code: string, targets: readonly NodeData[], 
   const isSharedAttribute = (n: NodeData) =>
     isAttributeType(n.type) && allNodes.filter(o => o.label === n.label).length > 1;
 
-  const lineRemovals = new Set(targets.filter(isSharedAttribute).map(n => n.lineIndex));
+  // Un compuesto borrado por línea arrastra sus componentes (recursivamente): si no, sus
+  // `att X -> Compuesto` se resolverían contra el homónimo que queda.
+  const lineRemovals = new Set<number>();
+  const pending = targets.filter(isSharedAttribute);
+  const visited = new Set<string>();
+  while (pending.length > 0) {
+    const attr = pending.pop()!;
+    if (visited.has(attr.id)) continue;
+    visited.add(attr.id);
+    lineRemovals.add(attr.lineIndex);
+    pending.push(...allNodes.filter(n => n.parentEntity === attr.id && isAttributeType(n.type)));
+  }
   let result = code
     .split('\n')
     .filter((_line, index) => !lineRemovals.has(index))

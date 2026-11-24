@@ -241,7 +241,7 @@ export function ModalProperties({
                     <optgroup label={t('modalProperties.ownerGroup.attributes')}>
                       {attributeOwners.map(option => (
                         // Un nombre repetido no se puede referenciar sin ambigüedad: se muestra desactivado.
-                        <option key={`${option.label}-${option.ownerLabel}`} value={option.label} disabled={option.ambiguous}>
+                        <option key={option.id} value={option.label} disabled={option.ambiguous}>
                           {option.ownerLabel ? `${option.label} (${option.ownerLabel})` : option.label}
                           {option.ambiguous ? ` — ${t('modalProperties.ownerGroup.ambiguous')}` : ''}
                         </option>

@@ -61,6 +61,20 @@ function onDeleteClause(action: CascadeOption, dialect: SQLDialect): string {
   return isOracleImplicit ? '' : ` ON DELETE ${action}`;
 }
 
+/** Longitud máxima de un identificador en Oracle anterior a 12.2 (ORA-00972). */
+const ORACLE_MAX_IDENTIFIER = 30;
+
+/**
+ * Nombre de una restricción UNIQUE: `UQ_<TABLA>_<COLUMNAS>`. En Oracle, si pasa de 30 caracteres
+ * (habitual con las FK de una 1:1, `<REL>_<TABLA>_<PK>`), se abrevia a `UQ_<TABLA>_<n>`.
+ */
+function uniqueConstraintName(tableName: string, columns: readonly string[], index: number, dialect: SQLDialect): string {
+  const full = `UQ_${tableName}_${columns.join('_')}`;
+  if (dialect !== 'oracle' || full.length <= ORACLE_MAX_IDENTIFIER) return full;
+  const suffix = `_${index + 1}`;
+  return `UQ_${tableName.slice(0, ORACLE_MAX_IDENTIFIER - 'UQ_'.length - suffix.length)}${suffix}`;
+}
+
 /**
  * Genera el script DDL SQL completo para un esquema relacional.
  * Incluye cabecera explicativa con los 9 pasos formales e instrucciones CREATE TABLE y FKs.
@@ -119,8 +133,8 @@ export function relationalToSQL(schema: RelationalSchema, dialect: SQLDialect = 
       ...table.columns.filter(c => c.isUnique && !c.isPrimaryKey).map(c => [c.name]),
       ...(table.uniqueConstraints ?? []),
     ];
-    uniqueKeys.forEach(columns => {
-      colLines.push(`  CONSTRAINT UQ_${table.name}_${columns.join('_')} UNIQUE (${columns.join(', ')})`);
+    uniqueKeys.forEach((columns, index) => {
+      colLines.push(`  CONSTRAINT ${uniqueConstraintName(table.name, columns, index, dialect)} UNIQUE (${columns.join(', ')})`);
     });
 
     // Claves Foráneas (FK) inline o como constraints

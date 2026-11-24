@@ -64,7 +64,9 @@ function toFormCardinality(cardinality: string): { option: string; custom: strin
 
 /** Participante del formulario → extremo del DSL (cardinalidad resuelta, rol normalizado). */
 function toRelationshipEnd(p: ParticipantDraft) {
-  const role = toDslIdentifier(p.role);
+  // El compilador exige que un rol empiece por letra o `_` (`role:2` sería un error bloqueante).
+  const identifier = toDslIdentifier(p.role);
+  const role = /^\p{N}/u.test(identifier) ? `_${identifier}` : identifier;
   return {
     entity: p.entity,
     cardinality: p.cardinality === 'custom' ? p.customCardinality : p.cardinality,
@@ -177,6 +179,12 @@ export function usePropertiesForm({
     const attrType = modal.elementType2 as AttributeKind;
     // Participantes con entidad elegida; una relación necesita al menos dos (§3.11 I).
     const ends = modal.participants.filter(p => p.entity).map(toRelationshipEnd);
+    // Al editar una relación que ya tenía menos de dos participantes (DSL escrito a mano), se
+    // puede guardar sin completarla (renombrarla, p. ej.), pero no quitarle los que tenía.
+    const editingNode = modal.editingNodeId ? nodes.find(n => n.id === modal.editingNodeId) : undefined;
+    const original = editingNode ? describeNodeForEdit(editingNode, nodes, links) : undefined;
+    const originalEnds = original?.kind === 'relationship' ? original.ends.length : 2;
+    const minEnds = Math.min(2, originalEnds);
     let element: ElementEdit | null = null;
 
     if (ENTITY_TOOLS.includes(type) && name) {
@@ -189,7 +197,7 @@ export function usePropertiesForm({
         owner: modal.selectedEntity,
         isUnique: attrType === 'key' && modal.attrIsUnique,
       };
-    } else if (RELATIONSHIP_TOOLS.includes(type) && name && ends.length >= 2) {
+    } else if (RELATIONSHIP_TOOLS.includes(type) && name && ends.length >= minEnds) {
       element = { kind: 'relationship', name, isIdentifying: type === 'ident_rel', ends };
     } else if (type === 'specialization' && modal.specSuperclass && modal.specSubclasses.length > 0) {
       element = {
@@ -210,7 +218,7 @@ export function usePropertiesForm({
     }
 
     return element;
-  }, [modal]);
+  }, [modal, nodes, links]);
 
   const confirm = useCallback(() => {
     const element = buildFormElement();

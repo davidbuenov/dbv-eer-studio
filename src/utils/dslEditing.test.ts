@@ -257,7 +257,7 @@ rel COMPRA (500, 300)`;
   it('ofrece los atributos como propietarios, con su dueño y marcando los ambiguos', () => {
     const { nodes, links } = compile(COMPOSITE);
     const options = attributeOwnerOptions(nodes, links);
-    expect(options.find(o => o.label === 'Direccion')).toEqual({ label: 'Direccion', ownerLabel: 'CLIENTE', ambiguous: false });
+    expect(options.find(o => o.label === 'Direccion')).toMatchObject({ label: 'Direccion', ownerLabel: 'CLIENTE', ambiguous: false });
     expect(options.find(o => o.label === 'Calle')).toMatchObject({ ownerLabel: 'Direccion' });
     expect(options.find(o => o.label === 'Numero')).toMatchObject({ ownerLabel: 'Direccion' }); // colgado con `link`
     expect(options.filter(o => o.label === 'Nombre').every(o => o.ambiguous)).toBe(true);
@@ -314,6 +314,31 @@ describe('deleteNodesFromCode — borrado múltiple', () => {
     const result = deleteNodesFromCode(CODE, targets, nodes);
     expect(result).not.toMatch(/\bDEPARTAMENTO\b|\bINGENIERO\b/);
     expect(compileEER(result).isValid).toBe(true);
+  });
+
+  it('borra una clave parcial (partial_key_att)', () => {
+    const code = 'weak_ent DEPENDIENTE\npartial_key_att NombreDep -> DEPENDIENTE (100, 220)';
+    const { nodes } = compileEER(code);
+    const target = nodes.find(n => n.label === 'NombreDep')!;
+    expect(deleteNodesFromCode(code, [target], nodes)).not.toContain('NombreDep');
+  });
+
+  it('borrar un compuesto homónimo se lleva sus componentes, no los pasa al otro', () => {
+    const code = [
+      'ent CLIENTE',
+      'ent PROVEEDOR',
+      'att Direccion -> CLIENTE',
+      'att Calle -> Direccion',
+      'att Direccion -> PROVEEDOR',
+      'att Numero -> Direccion',
+    ].join('\n');
+    const { nodes } = compileEER(code);
+    const clienteDir = nodes.find(n => n.label === 'Direccion' && n.parentEntity === 'CLIENTE')!;
+    const result = deleteNodesFromCode(code, [clienteDir], nodes);
+    expect(result).not.toContain('att Direccion -> CLIENTE');
+    expect(result).not.toContain('att Calle -> Direccion');
+    expect(result).toContain('att Direccion -> PROVEEDOR');
+    expect(result).toContain('att Numero -> Direccion');
   });
 });
 
