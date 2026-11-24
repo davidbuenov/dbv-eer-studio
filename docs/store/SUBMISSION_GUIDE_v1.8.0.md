@@ -35,16 +35,17 @@ Es una **actualización**, no una app nueva: en Partner Center se crea una *nuev
 
 ## 3. Descripciones de la tienda (*Store listings*): Español e Inglés
 
-Para **cada idioma** (Español (España) y English (United States)), copia desde el fichero de metadatos correspondiente:
+Para **cada idioma** (Español (España) y English (United States)), abre el fichero de metadatos correspondiente. Cada campo es un bloque de código en texto plano: cópialo con el botón del bloque y pégalo tal cual.
 
-| Campo de Partner Center | Sección del fichero |
+| Campo de Partner Center | Sección del fichero (ES / EN) |
 | --- | --- |
-| Description | *Descripción Completa* / *Full Description* (actualizada: notación EER completa, deshacer, pantalla completa, FK compuestas y UNIQUE) |
-| What's new in this version | *Novedades de la Versión v1.8.0* / *Version v1.8.0 Release Notes* |
-| Product features | *Características Clave* / *Product Features* (13 líneas, una por campo) |
-| Screenshots | Sustituye las capturas por las 6 nuevas **en el orden de la tabla** de la sección *Capturas*, pegando su pie de foto |
-| Search terms | Sin cambios |
-| Additional system requirements | Línea *Entrada* / *Input* (táctil planificado para la v1.9.0) |
+| Description | §1 *Descripción* / *Description* (actualizada: notación EER completa, deshacer, pantalla completa, FK compuestas y UNIQUE) |
+| What's new in this version | §2 *Novedades de esta versión* / *What's new in this version* |
+| Product features | §3: 13 bloques, uno por campo |
+| Screenshots | §4: sustituye las capturas por las 6 nuevas en ese orden, con su pie de foto |
+| Short title / Short description | §5 (sin cambios de fondo) |
+| Search terms | §6 (sin cambios) |
+| Additional system requirements | §7 *Mínimo* y *Recomendado* (táctil planificado para la v1.9.0) |
 
 ## 4. Notas para la certificación (*Notes for certification*)
 
