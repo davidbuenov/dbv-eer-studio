@@ -1,6 +1,6 @@
 # Walkthrough — eer-studio v1.8.0
 
-> Fecha: 2026-11-24 · Origen: comentarios de usuarios del editor (segundo correo de Enrique Soler Castillo) y uso real de la edición Moodle en el Campus Virtual de la UMA.
+> Fecha: 2026-11-24 · Origen: sugerencias de mejora de María del Mar Roldán García, segundo correo de Enrique Soler Castillo (modelo relacional) y uso real de la edición Moodle en el Campus Virtual de la UMA.
 > Especificación: `docs/SPECIFICATIONS.md` §3.11 (A–L) · Arquitectura: `docs/ARCHITECTURE.md` §9 · Plan: `implementation_plan.md` (bloques B0–B8) · Detalle: `CHANGELOG.md` `[1.8.0]`.
 
 ## Qué se entrega

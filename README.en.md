@@ -386,6 +386,7 @@ Copyright (c) 2025-2026 David Bueno Vallejo
 ### 🤝 Contributors
 
 - **Enrique Soler Castillo** — thank you for testing the application thoroughly and for your proposals, which shaped version 1.6.0: editing elements from the diagram, multi-selection, locating each element in the DSL, fast attribute creation, relationship key attributes in the PK, the specialization defining attribute, and a rigorous `ON DELETE` policy instead of a blanket `CASCADE`.
+- **María del Mar Roldán García** — thank you for your improvement suggestions, which shaped version 1.8.0: the weak-entity partial key with its own notation, composite attributes with their components, and partial specialization.
 
 ### 📚 Academic reference
 

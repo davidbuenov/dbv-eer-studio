@@ -401,6 +401,7 @@ export const en: Record<TranslationKey, string> = {
   'modalHelp.rel.fkMandatory.desc': 'Mandatory FK: NO ACTION prevents deleting the referenced row while it has related rows.',
   'modalCredits.collaboratorsTitle': 'Contributors:',
   'modalCredits.collaborator.enrique': 'proposals for version 1.6.0 (visual editing, selection, ON DELETE policy and more).',
+  'modalCredits.collaborator.mariaDelMar': 'improvement suggestions for version 1.8.0 (partial keys, composite attributes, partial specialization and more).',
   'modalCredits.theoryText.and': 'and',
   'modalCredits.version': 'Version {{version}}',
 

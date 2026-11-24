@@ -185,7 +185,7 @@
 **H. Pantalla completa y barra adaptable (v1.8.0)** → ver §3.11 F.
 
 ### 3.11. Notación EER completa, deshacer y pantalla completa (v1.8.0) `[NUEVO]`
-> Decisión del autor (2026-11-24). Origen: comentarios de un usuario del editor (clave parcial, atributos compuestos, especialización parcial), el segundo correo de Enrique Soler Castillo sobre el modelo relacional (L), uso real de la edición Moodle en el Campus Virtual de la UMA (los paneles de Moodle quitan ancho en pantallas pequeñas) y propuestas de revisión aceptadas por el autor. El **soporte táctil** pasa a la v1.9.0.
+> Decisión del autor (2026-11-24). Origen: sugerencias de mejora de **María del Mar Roldán García** (clave parcial, atributos compuestos, especialización parcial), el segundo correo de Enrique Soler Castillo sobre el modelo relacional (L), uso real de la edición Moodle en el Campus Virtual de la UMA (los paneles de Moodle quitan ancho en pantallas pequeñas) y propuestas de revisión aceptadas por el autor. El **soporte táctil** pasa a la v1.9.0.
 
 **A. Compatibilidad (principio rector)**
 - [x] Todo diagrama `.eer`, plantilla de examen o bloque de entrega válido en la v1.7.0 **compila igual y significa lo mismo** en la v1.8.0: misma notación dibujada (salvo los fallos corregidos en C), mismo modelo relacional salvo las correcciones de C y E. Las construcciones nuevas son **aditivas** (comandos y palabras clave nuevas); ninguna existente cambia de significado.

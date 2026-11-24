@@ -386,6 +386,7 @@ Copyright (c) 2025-2026 David Bueno Vallejo
 ### 🤝 Colaboradores
 
 - **Enrique Soler Castillo** — gracias por probar la aplicación a fondo y por sus propuestas, que dieron forma a la versión 1.6.0: edición de elementos desde el diagrama, selección múltiple, localización de cada elemento en el DSL, creación ágil de atributos, atributos clave de relación en la PK, atributo definidor de las especializaciones y una política `ON DELETE` rigurosa en lugar del `CASCADE` universal.
+- **María del Mar Roldán García** — gracias por sus sugerencias de mejora, que dieron forma a la versión 1.8.0: la clave parcial de las entidades débiles con su notación propia, los atributos compuestos con sus componentes y la especialización parcial.
 
 ### 📚 Referencia académica
 

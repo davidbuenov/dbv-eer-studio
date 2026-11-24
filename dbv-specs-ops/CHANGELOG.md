@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [1.8.0] — 2026-11-24
 
-> Notación EER completa, claves y modelo relacional, deshacer y pantalla completa en Moodle (`SPECIFICATIONS.md §3.11`). Origen: comentarios de usuarios del editor, el segundo correo de **Enrique Soler Castillo** y el uso real de la edición Moodle en el Campus Virtual de la UMA. Compatible con la v1.7.0: los diagramas existentes compilan igual y solo cambian las salidas que eran erróneas.
+> Notación EER completa, claves y modelo relacional, deshacer y pantalla completa en Moodle (`SPECIFICATIONS.md §3.11`). Origen: las sugerencias de mejora de **María del Mar Roldán García**, el segundo correo de **Enrique Soler Castillo** y el uso real de la edición Moodle en el Campus Virtual de la UMA. Compatible con la v1.7.0: los diagramas existentes compilan igual y solo cambian las salidas que eran erróneas.
 
 ### Added
 - **Clave parcial de entidad débil** (`partial_key_att Numero -> AULA`): se dibuja con subrayado discontinuo (Elmasri) y forma la PK junto a la del propietario. `key_att` en una entidad débil sigue funcionando igual.

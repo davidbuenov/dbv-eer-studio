@@ -399,6 +399,7 @@ export const es = {
   'modalHelp.rel.fkMandatory.desc': 'FK obligatoria: NO ACTION impide borrar la fila referenciada mientras tenga filas asociadas.',
   'modalCredits.collaboratorsTitle': 'Colaboradores:',
   'modalCredits.collaborator.enrique': 'propuestas de la versión 1.6.0 (edición visual, selección, política ON DELETE y más).',
+  'modalCredits.collaborator.mariaDelMar': 'sugerencias de mejora de la versión 1.8.0 (clave parcial, atributos compuestos, especialización parcial y más).',
   'modalCredits.theoryText.and': 'y',
   'modalCredits.version': 'Versión {{version}}',
 

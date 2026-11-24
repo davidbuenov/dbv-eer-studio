@@ -65,6 +65,8 @@ export function AboutTab() {
           <strong className="text-indigo-900">{t('modalCredits.collaboratorsTitle')}</strong>
           <br />
           <strong className="text-indigo-700">Enrique Soler Castillo</strong> — {t('modalCredits.collaborator.enrique')}
+          <br />
+          <strong className="text-indigo-700">María del Mar Roldán García</strong> — {t('modalCredits.collaborator.mariaDelMar')}
         </p>
       </div>
 
