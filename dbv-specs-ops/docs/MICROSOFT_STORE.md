@@ -1,6 +1,6 @@
 # 🏬 Publicación en Microsoft Store: dbv-eer-studio
 
-> **Estado:** 🟢 v1.5.0 publicada en Microsoft Store · 🟡 v1.8.0.0 generada y documentada, pendiente de enviar como actualización (`docs/store/SUBMISSION_GUIDE_v1.8.0.md`); si la v1.6.0 no llegó a enviarse, la sustituye.
+> **Estado:** 🟢 v1.5.0 publicada en Microsoft Store · 🟡 v1.8.0.0 enviada a certificación el 2026-11-24 (`docs/store/SUBMISSION_GUIDE_v1.8.0.md`).
 > **Última revisión:** 2026-11-24
 
 Documento operativo (no una especificación de producto): checklist accionable para publicar `dbv-eer-studio` en la Microsoft Store, y registro de las decisiones técnicas que llevan hasta aquí. Complementa al instalador NSIS/MSI ya existente (GitHub Releases) sin sustituirlo — ambos canales de distribución coexisten.
@@ -69,7 +69,7 @@ El `.gitignore` que la propia herramienta genera en `src-tauri/gen/windows/.giti
 - [x] **v1.7.0 no se envía a la Store** (decisión del autor, 2026-11-13): la app de escritorio no cambia de forma relevante (la novedad es la edición Moodle, que se distribuye en `dist-moodle/`; la retirada del botón de actualizaciones no afecta a Windows). No se genera MSIX ni documentación de la ficha para esta versión.
 - [x] Generar `dbv-eer-studio_1.8.0.0.msixbundle` (2026-11-24): Identity, Publisher y `Version="1.8.0.0"` verificados en el `AppxManifest.xml`; los 4 assets no son placeholders.
 - [x] Documentación de la actualización v1.8.0: fichas ES/EN, 6 capturas regeneradas y `docs/store/SUBMISSION_GUIDE_v1.8.0.md`.
-- [ ] Enviar la actualización v1.8.0 en Partner Center (acción del autor; si la v1.6.0 sigue pendiente, la sustituye).
+- [x] Actualización v1.8.0 enviada a certificación en Partner Center (autor, 2026-11-24). Al publicarse, marcarla aquí y en el estado de la cabecera.
 - [x] Política de privacidad creada en [`docs/store/PRIVACY_POLICY.md`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/PRIVACY_POLICY.md).
 - [x] Capturas de pantalla para la ficha en [`docs/store/screenshots/`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/screenshots/).
 - [x] Metadatos de Store creados en [`docs/store/MICROSOFT_STORE_METADATA_ES.md`](file:///d:/Programacion/github-davidbuenov/eer-studio/docs/store/MICROSOFT_STORE_METADATA_ES.md) y `_EN.md`.

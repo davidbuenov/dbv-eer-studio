@@ -2,8 +2,8 @@
 
 ## Contexto del Proyecto (Context Snapshot)
 * **Objetivo**: Editor EER ↔ Modelo Relacional ↔ Oracle SQL DDL con compiladores interactivos, linter de 2 niveles y tolerancia a fallos Stale-while-error.
-* **Estado actual**: **v1.8.0 publicada** (2026-11-24): `main` + tag `v1.8.0` + release de GitHub (*Latest*, Linux y macOS). MSIX `1.8.0.0` y documentación de la Store listos, pendientes de envío. 266 tests, smoke editor 26/26, smoke Moodle 36/36.
-* **Próximo paso**: el autor envía la v1.8.0 a la Microsoft Store (`docs/store/SUBMISSION_GUIDE_v1.8.0.md`) y actualiza `MICROSOFT_STORE.md §4` al publicarse. Después, v1.9.0 (soporte táctil).
+* **Estado actual**: **v1.8.0 publicada** (2026-11-24): `main` + tag `v1.8.0` + release de GitHub (*Latest*, Linux y macOS). MSIX `1.8.0.0` enviado a la Microsoft Store (en certificación). **Versión cerrada por el autor.** 266 tests, smoke editor 26/26, smoke Moodle 36/36.
+* **Próximo paso**: cuando Microsoft publique la v1.8.0, marcarlo en `MICROSOFT_STORE.md §4`. Siguiente versión: v1.9.0 (soporte táctil).
 
 ## Checklist de Tareas
 
@@ -18,7 +18,7 @@
 - [x] **Fase `/code-simplify` — Edición Moodle**: tipo `ScormWindow` exportado en lugar de casts; secuencias de escape restauradas; security review sin hallazgos (sin dependencias nuevas ni secretos; plantilla con `<` escapado, manifiesto escapado en XML, nombres de fichero saneados, texto pegado renderizado solo por React).
 - [x] **Validación del autor en el Campus Virtual de la UMA** (navegador normal: SCORM, copiar y pegar en la Tarea). Pendiente: prueba con SEB.
 - [x] **Mejoras tras la validación**: guía ampliada (dos actividades, ocultar la navegación SCORM, instrucciones para el alumnado, lista de comprobación SEB, problemas frecuentes); PDF con Typst (diseño del autor: `main.typ` + `styles.typ` + `guia-profesor.typ`); crédito de autoría con la Universidad de Málaga; adjuntos de release con nombres fijos (`build:moodle:release`).
-- [x] **`/ship` v1.8.0** (2026-11-24): revisión de código de la rama (10 problemas corregidos, 3 tests nuevos); versión 1.8.0 en package.json/lock, Cargo.toml/lock, tauri.conf y `styles.typ`; CHANGELOG `[1.8.0]`; walkthrough; PDF de la guía y `build:moodle:release`; MSIX `1.8.0.0` verificado; fichas ES/EN, capturas y `SUBMISSION_GUIDE_v1.8.0.md`. Uptodown se abandona (decisión del autor). Agradecimiento a María del Mar Roldán García (sugerencias de la v1.8.0) en *Acerca de* y README. `main` + tag `v1.8.0` (movido al commit del agradecimiento antes de publicar) + release publicada. Pendiente: envío a la Store (autor).
+- [x] **`/ship` v1.8.0** (2026-11-24): revisión de código de la rama (10 problemas corregidos, 3 tests nuevos); versión 1.8.0 en package.json/lock, Cargo.toml/lock, tauri.conf y `styles.typ`; CHANGELOG `[1.8.0]`; walkthrough; PDF de la guía y `build:moodle:release`; MSIX `1.8.0.0` verificado; fichas ES/EN, capturas y `SUBMISSION_GUIDE_v1.8.0.md`. Uptodown se abandona (decisión del autor). Agradecimiento a María del Mar Roldán García (sugerencias de la v1.8.0) en *Acerca de* y README. `main` + tag `v1.8.0` (movido al commit del agradecimiento antes de publicar) + release publicada. Enviada a la Store el 2026-11-24; versión cerrada.
 - [x] **`/ship` v1.7.0** (2026-11-13): versión 1.7.0 en package.json/lock, Cargo y tauri.conf; CHANGELOG `[1.7.0]`; walkthrough; commit + tag + push; paquetes oficiales en `dist-moodle/`. **Sin MSIX ni envío a la Store** por decisión del autor (el escritorio no cambia de forma relevante).
 
 - [x] **Fase `/spec` v1.6.0: Usabilidad del editor EER y rigor del mapeo**
@@ -233,7 +233,7 @@
 
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
-> **Last update / Última actualización:** 2026-11-24 (`/ship` v1.8.0 completo: pasos b, c y d hechos; solo queda que el autor envíe la actualización a la Store)
+> **Last update / Última actualización:** 2026-11-24 (v1.8.0 cerrada: publicada en GitHub y enviada a la Microsoft Store)
 > **Punto exacto:** v1.8.0 completa (§3.11 A–L + ampliaciones del autor: pantalla completa en todas las ediciones, compuestos y propietario preseleccionado en el formulario, ejemplo completo del prompt IA, líneas paralelas en recursivas). Commit en la rama `feature/v1.8.0` (sin push, sin tag, versión aún 1.7.0 en `package.json`).
 > **Estado:** 263 tests, `tsc -b`, `eslint .`, `npm run build`, `npm run build:moodle`, `cargo check`, `node scripts/smoke-editor.mjs` (26/26) y `node scripts/smoke-moodle.mjs dist-moodle/examen-bd-hotel-prueba.html` (36/36) en verde.
 >
