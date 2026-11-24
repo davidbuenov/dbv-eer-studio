@@ -6,7 +6,7 @@
 // =============================================================================
 
 import type { RelationalSchema } from '../../types/relational';
-import { CARD_WIDTH, HEADER_HEIGHT, ROW_HEIGHT, FOOTER_HEIGHT, getTableHeight, computeFKEdges } from './relationalGeometry';
+import { CARD_WIDTH, HEADER_HEIGHT, ROW_HEIGHT, FOOTER_HEIGHT, getTableHeight, computeFKEdges, isUniqueColumn } from './relationalGeometry';
 import { RELATIONAL_COLORS as C } from './relationalColors';
 import { translateStepTitle } from '../../i18n/steps';
 import type { Language } from '../../i18n/language';
@@ -92,6 +92,12 @@ export function exportRelationalToSVG(schema: RelationalSchema, lang: Language =
       parts.push(
         `<text x="30" y="${rowY + ROW_HEIGHT / 2 + 4}" fill="${nameColor}" font-size="11" font-weight="${col.isPrimaryKey ? 'bold' : '500'}"${underlineAttr} font-family="ui-monospace, Menlo, monospace">${escapeXml(col.name)}</text>`
       );
+      if (isUniqueColumn(table, col.name)) {
+        // Marca UK tras el nombre (≈ 6,6 px por carácter monoespaciado de 11 px).
+        const ukX = 30 + col.name.length * 6.6 + 6;
+        parts.push(`<rect x="${ukX}" y="${rowY + ROW_HEIGHT / 2 - 6}" width="18" height="12" rx="2" fill="none" stroke="${C.uniqueText}" stroke-width="1" />`);
+        parts.push(`<text x="${ukX + 9}" y="${rowY + ROW_HEIGHT / 2 + 3}" fill="${C.uniqueText}" font-size="8" font-weight="bold" text-anchor="middle">UK</text>`);
+      }
 
       const typeText = col.dataType;
       const typeWidth = Math.max(34, Math.round(typeText.length * 6 + 12));

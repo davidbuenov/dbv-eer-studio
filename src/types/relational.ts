@@ -103,6 +103,11 @@ export interface RelationalTable {
   sourceNodeType?: string;
   /** Índice de línea en el DSL relacional */
   lineIndex?: number;
+  /**
+   * Restricciones UNIQUE de varias columnas (`UNIQUE (A, B)`): FK de una 1:1 hacia una PK
+   * compuesta o clave alternativa compuesta. Las de una sola columna van en `isUnique`.
+   */
+  uniqueConstraints?: string[][];
 }
 
 /**

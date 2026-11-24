@@ -14,6 +14,10 @@ import {
   renameReferences,
   replaceElementBlock,
   toDslIdentifier,
+  suggestedAttributeOwner,
+  attributeOwnerOptions,
+  generateElementCode,
+  type ElementEdit,
 } from './dslEditing';
 import { deleteNodesFromCode } from './deleteNode';
 
@@ -149,10 +153,68 @@ describe('applyElementEdit — edición desde el formulario', () => {
     const { nodes, links } = compile(CODE);
     const spec = nodes.find(n => n.type === 'specialization')!;
     const result = applyElementEdit(CODE, spec, nodes, links, {
-      kind: 'specialization', specType: 'd', superclass: 'EMPLEADO', subclasses: ['INGENIERO'], definingAttribute: 'TipoTrabajo',
+      kind: 'specialization', specType: 'd', superclass: 'EMPLEADO', subclasses: ['INGENIERO'], definingAttribute: 'TipoTrabajo', isTotal: true,
     });
     expect(result).toContain('spec d -> EMPLEADO [TipoTrabajo] (400, 420)');
     expect(nodeByLabel(result, 'd').definingAttribute).toBe('TipoTrabajo');
+  });
+
+  it('marca una especialización como parcial: escribe `partial` y la arista pasa a simple (§3.11 D)', () => {
+    const { nodes, links } = compile(CODE);
+    const spec = nodes.find(n => n.type === 'specialization')!;
+    const result = applyElementEdit(CODE, spec, nodes, links, {
+      ...(describeNodeForEdit(spec, nodes, links) as Extract<ElementEdit, { kind: 'specialization' }>),
+      isTotal: false,
+    });
+    expect(result).toContain('spec d -> EMPLEADO partial (400, 420)');
+    const compiled = compile(result);
+    expect(compiled.links.find(l => l.source === 'EMPLEADO' && l.target === 'd')?.style).toBe('solid');
+    expect(describeNodeForEdit(compiled.nodes.find(n => n.type === 'specialization')!, compiled.nodes, compiled.links))
+      .toMatchObject({ isTotal: false });
+  });
+
+  it('convierte una relación binaria en ternaria con roles (§3.11 I y E)', () => {
+    const { nodes, links } = compile(CODE);
+    const rel = nodes.find(n => n.label === 'TRABAJA_PARA')!;
+    const result = applyElementEdit(CODE, rel, nodes, links, {
+      kind: 'relationship',
+      name: 'TRABAJA_PARA',
+      isIdentifying: false,
+      ends: [
+        { entity: 'EMPLEADO', cardinality: 'N', isTotal: true, role: 'Trabajador' },
+        { entity: 'DEPARTAMENTO', cardinality: '1', isTotal: false },
+        { entity: 'EMPLEADO', cardinality: 'M', isTotal: false, role: 'Jefe' },
+      ],
+    });
+
+    expect(result).toContain('link EMPLEADO TRABAJA_PARA "N" role:Trabajador [total]');
+    expect(result).toContain('link EMPLEADO TRABAJA_PARA "M" role:Jefe');
+    const compiled = compile(result);
+    const relNode = compiled.nodes.find(n => n.label === 'TRABAJA_PARA')!;
+    const description = describeNodeForEdit(relNode, compiled.nodes, compiled.links);
+    expect(description).toMatchObject({ kind: 'relationship' });
+    expect((description as Extract<ElementEdit, { kind: 'relationship' }>).ends.map(e => `${e.entity}:${e.role ?? ''}`)).toEqual([
+      'EMPLEADO:Trabajador',
+      'DEPARTAMENTO:',
+      'EMPLEADO:Jefe',
+    ]);
+  });
+
+  it('una clave alternativa y una clave parcial se escriben y se releen (§3.11 L4 y B)', () => {
+    const { nodes, links } = compile(CODE);
+    const dni = nodes.find(n => n.label === 'Dni')!;
+    const result = applyElementEdit(CODE, dni, nodes, links, {
+      kind: 'attribute', name: 'Dni', attrType: 'key', owner: 'EMPLEADO', isUnique: true,
+    });
+    expect(result).toContain('key_att Dni -> EMPLEADO unique (350, 220)');
+    const compiled = compile(result);
+    expect(compiled.nodes.find(n => n.label === 'Dni')).toMatchObject({ type: 'key_attribute', isUnique: true });
+
+    const partial = applyElementEdit(CODE, dni, nodes, links, {
+      kind: 'attribute', name: 'Dni', attrType: 'partial_key', owner: 'EMPLEADO',
+    });
+    expect(partial).toContain('partial_key_att Dni -> EMPLEADO (350, 220)');
+    expect(compile(partial).nodes.find(n => n.label === 'Dni')?.type).toBe('partial_key_attribute');
   });
 
   it('describir y volver a aplicar sin cambios deja un diagrama equivalente (ida y vuelta)', () => {
@@ -168,6 +230,50 @@ describe('applyElementEdit — edición desde el formulario', () => {
         expect(after.links.map(l => `${l.source}>${l.target}:${l.label}:${l.style}`).sort())
           .toEqual(before.links.map(l => `${l.source}>${l.target}:${l.label}:${l.style}`).sort());
       });
+  });
+});
+
+describe('Atributos compuestos y propietario sugerido desde el formulario', () => {
+  const COMPOSITE = `ent CLIENTE (300, 300)
+att Direccion -> CLIENTE (400, 200)
+att Calle -> Direccion (350, 100)
+att Numero (450, 100)
+link Direccion Numero
+ent PROVEEDOR (700, 300)
+att Nombre -> CLIENTE (200, 200)
+att Nombre -> PROVEEDOR (700, 200)
+rel COMPRA (500, 300)`;
+
+  it('sugiere como propietario la entidad, relación o atributo seleccionado', () => {
+    const { nodes } = compile(COMPOSITE);
+    const byLabel = (label: string) => nodes.find(n => n.label === label);
+    expect(suggestedAttributeOwner(byLabel('CLIENTE'), nodes)).toBe('CLIENTE');
+    expect(suggestedAttributeOwner(byLabel('COMPRA'), nodes)).toBe('COMPRA');
+    expect(suggestedAttributeOwner(byLabel('Direccion'), nodes)).toBe('Direccion');
+    expect(suggestedAttributeOwner(byLabel('Nombre'), nodes)).toBeUndefined(); // nombre repetido: ambiguo
+    expect(suggestedAttributeOwner(undefined, nodes)).toBeUndefined();
+  });
+
+  it('ofrece los atributos como propietarios, con su dueño y marcando los ambiguos', () => {
+    const { nodes, links } = compile(COMPOSITE);
+    const options = attributeOwnerOptions(nodes, links);
+    expect(options.find(o => o.label === 'Direccion')).toEqual({ label: 'Direccion', ownerLabel: 'CLIENTE', ambiguous: false });
+    expect(options.find(o => o.label === 'Calle')).toMatchObject({ ownerLabel: 'Direccion' });
+    expect(options.find(o => o.label === 'Numero')).toMatchObject({ ownerLabel: 'Direccion' }); // colgado con `link`
+    expect(options.filter(o => o.label === 'Nombre').every(o => o.ambiguous)).toBe(true);
+    // El atributo en edición no puede colgar de sí mismo.
+    const direccion = nodes.find(n => n.label === 'Direccion')!;
+    expect(attributeOwnerOptions(nodes, links, direccion.id).some(o => o.label === 'Direccion')).toBe(false);
+  });
+
+  it('crear un componente desde el formulario lo cuelga del compuesto (y el relacional lo expande)', () => {
+    const { nodes, links } = compile(COMPOSITE);
+    const component = generateElementCode({ kind: 'attribute', name: 'Piso', attrType: 'simple', owner: 'Direccion' }, 500, 100);
+    expect(component).toBe('att Piso -> Direccion (500, 100)');
+    const result = compile(`${COMPOSITE}\n${component}`);
+    const direccion = result.nodes.find(n => n.label === 'Direccion')!;
+    expect(result.nodes.find(n => n.label === 'Piso')?.parentEntity).toBe(direccion.id);
+    expect(describeNodeForEdit(nodes.find(n => n.label === 'Numero')!, nodes, links)).toMatchObject({ owner: 'Direccion' });
   });
 });
 

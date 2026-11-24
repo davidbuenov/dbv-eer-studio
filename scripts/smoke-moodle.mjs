@@ -104,6 +104,30 @@ check('el canvas dibuja nodos', (await page.locator('svg text').count()) > 10);
   await page.getByRole('dialog').getByRole('button', { name: 'Empezar de nuevo' }).click();
   check('empezar de nuevo restaura la plantilla', (await code()).includes('ent HOTEL (150, 100)') && !(await code()).includes('PRUEBA'));
 
+  // Deshacer en el examen (v1.8.0, §3.11 H): "Empezar de nuevo" tiene vuelta atrás
+  await page.locator('svg.h-full.w-full').click({ position: { x: 20, y: 20 } });
+  await page.keyboard.press('Control+z');
+  check('Ctrl+Z deshace "Empezar de nuevo"', (await code()).includes('link HOTEL') && !(await code()).includes('ent HOTEL (150, 100)'));
+  await page.keyboard.press('Control+y');
+  check('Ctrl+Y lo rehace', (await code()).includes('ent HOTEL (150, 100)'));
+
+  // Pantalla completa (§3.11 F)
+  await page.getByRole('button', { name: 'Pantalla completa' }).click();
+  await page.waitForTimeout(200);
+  check('pantalla completa: entra', await page.evaluate(() => document.fullscreenElement !== null));
+  check('pantalla completa: el botón pasa a "Salir"', await page.getByRole('button', { name: 'Salir de pantalla completa' }).isVisible());
+  await page.getByRole('button', { name: 'Salir de pantalla completa' }).click();
+  await page.waitForTimeout(200);
+  check('pantalla completa: sale', await page.evaluate(() => document.fullscreenElement === null));
+
+  // Barra adaptable: a 1024 px el título no se reduce a "E.." y Copiar sigue con texto (§3.11 F)
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const titleWidth = (await page.getByRole('heading', { name: /Examen BD/ }).boundingBox())?.width ?? 0;
+  check('barra a 1024 px: título legible', titleWidth >= 100, `${Math.round(titleWidth)} px`);
+  check('barra a 1024 px: botones secundarios solo con icono', !(await page.getByText('Cargar entrega', { exact: true }).isVisible()));
+  check('barra a 1024 px: "Copiar para entregar" visible con texto', await page.getByText('Copiar para entregar', { exact: true }).isVisible());
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   // Ayuda reducida
   await page.keyboard.press('F1');
   const tabs = await page.getByRole('tab').allInnerTexts();
@@ -160,7 +184,7 @@ check('el canvas dibuja nodos', (await page.locator('svg text').count()) > 10);
   </script><iframe id="sco" src="/exam.html" style="width:1400px;height:800px"></iframe>`;
   const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(req.url === '/exam.html' ? exam : player);
+    res.end(req.url.startsWith('/exam.html') ? exam : player);
   });
   await new Promise(r => server.listen(0, r));
   const { port } = server.address();
@@ -174,6 +198,27 @@ check('el canvas dibuja nodos', (await page.locator('svg text').count()) > 10);
   await frame.getByRole('button', { name: 'Copiar para entregar' }).click();
   await page.waitForTimeout(300);
   check('SCORM: copiar marca completed', (await calls()).includes('cmi.core.lesson_status=completed'), (await calls()).join(','));
+  // Iframe del mismo origen (como el reproductor SCORM de Moodle): la pantalla completa se permite
+  // por defecto aunque no lleve allowfullscreen.
+  await frame.getByRole('button', { name: 'Pantalla completa' }).click();
+  await page.waitForTimeout(200);
+  check('SCORM (mismo origen): la pantalla completa funciona', await page.evaluate(() => document.fullscreenElement !== null));
+  await frame.getByRole('button', { name: 'Salir de pantalla completa' }).click();
+  await page.waitForTimeout(200);
+
+  // Reproductor que la bloquea (allow="fullscreen 'none'"): el botón avisa en lugar de no hacer nada.
+  await page.evaluate(() => {
+    const iframe = document.getElementById('sco');
+    iframe.setAttribute('allow', "fullscreen 'none'");
+    iframe.src = '/exam.html?blocked';
+  });
+  await page.waitForTimeout(500);
+  await frame.locator('textarea').first().waitFor();
+  await frame.getByRole('button', { name: 'Pantalla completa' }).click();
+  check(
+    'SCORM con pantalla completa bloqueada: avisa de la alternativa',
+    await frame.getByRole('status').filter({ hasText: /no permite la pantalla completa/ }).isVisible()
+  );
   await context.close();
   server.close();
 }

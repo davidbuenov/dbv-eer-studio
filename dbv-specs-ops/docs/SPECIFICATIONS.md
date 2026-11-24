@@ -2,7 +2,7 @@
 
 > **Fase:** `/spec` (Especificación)
 > **Estado:** Validado (Requisitos ampliados con feedback universitario: Oracle SQL, Ayuda Pedagógica de 9 Pasos, DSL Relacional bidireccional con coordenadas)
-> **Última Revisión:** 2026-09-26 (§3.7 — v1.6.0)
+> **Última Revisión:** 2026-11-24 (§3.11 — v1.8.0)
 
 ---
 
@@ -123,7 +123,7 @@
 - [ ] Guía de sintaxis integrada, prompt de IA, README (ES/EN) y `eer-to-relational-mapping.md` documentan la sintaxis `[ATRIBUTO]`, la política `ON DELETE` y los nuevos gestos del canvas. Se corrige la guía integrada, que mostraba una sintaxis de atributos (`att DNI [key]`) que el compilador no reconoce.
 - [ ] Agradecimiento en el README a **Enrique Soler Castillo** como colaborador por sus propuestas.
 
-**Fuera de alcance de 3.7:** implementar las opciones 8B/8C/8D (el motor solo aplica 8A), deshacer/rehacer y el **soporte táctil** (tablets), planificado para la v1.7.0: hoy el canvas solo escucha eventos de ratón, así que en una tablet se puede tocar para seleccionar pero no arrastrar nodos ni desplazar el lienzo. La v1.7.0 migrará el canvas a Pointer Events (`touch-action: none`) con la convención táctil habitual: un dedo sobre un nodo lo arrastra, un dedo en el fondo desplaza, dos dedos hacen zoom/desplazamiento, mantener pulsado y arrastrar dibuja el rectángulo de selección y doble toque edita.
+**Fuera de alcance de 3.7:** implementar las opciones 8B/8C/8D (el motor solo aplica 8A), deshacer/rehacer (llega en la v1.8.0, §3.11 H) y el **soporte táctil** (tablets), replanificado para la **v1.9.0** (2026-11-24; en el texto original de esta sección, "v1.7.0"): hoy el canvas solo escucha eventos de ratón, así que en una tablet se puede tocar para seleccionar pero no arrastrar nodos ni desplazar el lienzo. La v1.7.0 migrará el canvas a Pointer Events (`touch-action: none`) con la convención táctil habitual: un dedo sobre un nodo lo arrastra, un dedo en el fondo desplaza, dos dedos hacen zoom/desplazamiento, mantener pulsado y arrastrar dibuja el rectángulo de selección y doble toque edita.
 
 ### 3.8. Centro de Ayuda Unificado (v1.6.0) `[NUEVO]`
 > Origen: petición del usuario tras validar §3.7 — la app no tenía una ayuda de uso y los gestos nuevos solo se explicaban en un tooltip de la toolbar.
@@ -181,6 +181,98 @@
 
 **G. Corrección (fase posterior)**
 - [ ] El bloque de entrega es analizable por máquina: tanto la descarga masiva de entregas en texto en línea (HTML) como los ficheros `.eer` se pueden procesar con un script offline. La corrección automática se especificará aparte.
+
+**H. Pantalla completa y barra adaptable (v1.8.0)** → ver §3.11 F.
+
+### 3.11. Notación EER completa, deshacer y pantalla completa (v1.8.0) `[NUEVO]`
+> Decisión del autor (2026-11-24). Origen: comentarios de un usuario del editor (clave parcial, atributos compuestos, especialización parcial), el segundo correo de Enrique Soler Castillo sobre el modelo relacional (L), uso real de la edición Moodle en el Campus Virtual de la UMA (los paneles de Moodle quitan ancho en pantallas pequeñas) y propuestas de revisión aceptadas por el autor. El **soporte táctil** pasa a la v1.9.0.
+
+**A. Compatibilidad (principio rector)**
+- [x] Todo diagrama `.eer`, plantilla de examen o bloque de entrega válido en la v1.7.0 **compila igual y significa lo mismo** en la v1.8.0: misma notación dibujada (salvo los fallos corregidos en C), mismo modelo relacional salvo las correcciones de C y E. Las construcciones nuevas son **aditivas** (comandos y palabras clave nuevas); ninguna existente cambia de significado.
+- [ ] El bloque de entrega Moodle mantiene el formato `v1`. Un diagrama que use sintaxis nueva no se puede abrir con un paquete v1.7.0 (dará `UNKNOWN_COMMAND`); se documenta en la guía del profesor (usar el mismo paquete en todo el examen y para corregir).
+- [x] Los ficheros `.eer` de la v1.8.0 solo añaden líneas que la v1.7.0 ignora sin error (`relational TABLA.COLUMNA : TIPO`, ver L3), salvo que el diagrama use comandos o palabras nuevos.
+- [x] Un test de compatibilidad compila los ejemplos y plantillas de la v1.7.0 (ayuda, `SAMPLE_CODE`, plantilla Hoteles Royal UMA) y comprueba que nodos, enlaces y tablas no cambian.
+
+**B. Clave parcial de entidad débil**
+- [x] Nuevo comando `partial_key_att Nombre -> ENTIDAD_DEBIL` (tipo de nodo `partial_key_attribute`): elipse con el nombre **subrayado con línea discontinua** (Elmasri). En SVG el subrayado se dibuja como una línea discontinua bajo el texto (no `text-decoration`, que no admite discontinuo).
+- [x] **Mapeo (Paso 2):** la clave parcial forma la PK de la tabla débil junto a la FK del propietario, igual que hoy hace `key_att` sobre una entidad débil (que sigue funcionando por compatibilidad, ver G).
+- [x] Formulario de atributo: nuevo tipo *Clave parcial* en el selector de tipo (sin botón nuevo en la barra de inserción, que ya está llena). Edición, código generado y borrado lo reconocen. Los cuatro listados de tipos de atributo hoy duplicados (`deleteNode.ts`, `dslEditing.ts`, `layout.ts`, `eerToRelational.ts`) pasan a una única constante.
+
+**C. Atributos compuestos (corrección de fallo)**
+- [x] `att Calle -> Direccion` (o `link Direccion Calle`) **dibuja la línea** entre el compuesto y su componente.
+- [x] **Mapeo:** un atributo compuesto se sustituye por sus componentes simples (Elmasri, Paso 1). Hoy no ocurre: con `att Direccion -> CLIENTE` + `att Calle -> Direccion` + `att Numero -> Direccion` la tabla sale con una sola columna `DIRECCION` (reproducido el 2026-11-24).
+- [x] Causa común: el compilador guarda en el enlace y en `parentEntity` la **etiqueta** del padre (`Direccion`), pero los atributos tienen id con sufijo (`Direccion_3`) y el dibujo y el motor buscan por id. Corrección en el compilador: tras el primer pase, cada extremo de enlace y cada `parentEntity` se resuelve al **id** del nodo (primero por id, luego por etiqueta, como `resolveNodeRef`).
+- [x] Si una etiqueta de atributo es ambigua (dos atributos `Direccion` en entidades distintas), se resuelve al **último declarado antes de la línea** que la referencia y se emite el aviso `AMBIGUOUS_ATTRIBUTE_REFERENCE` (sugiere nombres distintos).
+- [x] **Desde el formulario** (petición del autor, 2026-11-24): «Pertenece a» ofrece también los atributos, mostrados con su dueño («Direccion (CLIENTE)»), para crear componentes. Los nombres repetidos aparecen desactivados. Si hay un elemento seleccionado en el diagrama (entidad, relación o atributo de nombre único), el atributo nuevo lo trae ya elegido como propietario.
+
+**D. Especialización total y parcial**
+- [x] Sintaxis: palabra clave opcional al final, después del atributo definidor si lo hay: `spec d -> EMPLEADO` (total, **como hasta ahora**), `spec d -> EMPLEADO partial` (parcial), `spec o -> PERSONA [Tipo] partial`; `total` se acepta como marca explícita. Cualquier otra palabra suelta tras la superclase ⇒ error `INVALID_SPECIALIZATION_OPTION`.
+- [x] Dibujo: participación total = doble línea superclase–círculo (actual); parcial = línea simple.
+- [x] Formulario de especialización: casilla *Participación total* (marcada por defecto); el generador de código emite `partial` solo cuando está desmarcada, de modo que el código de los diagramas totales no cambia.
+- [x] Mapeo: sin cambios (el motor solo implementa 8A, válida para total y parcial). La guía de 9 pasos menciona que 8C/8D dependen de esta distinción.
+- [x] `union` no cambia (participación de categorías fuera de alcance).
+
+**E. Roles en relaciones (recursivas y generales)**
+- [x] Sintaxis: `link EMPLEADO SUPERVISA "1" role:Supervisor` y `link EMPLEADO SUPERVISA "N" role:Supervisado [total]`. El rol es un identificador (mismas reglas que los nombres); `role:` vacío ⇒ error `INVALID_ROLE`. Admitido en cualquier enlace entidad–relación.
+- [x] Dibujo: el rol se escribe en cursiva junto a la arista, en el tercio más cercano a la entidad, sin tapar la cardinalidad (que sigue en el centro).
+- [x] Formulario de relación: campo opcional *Rol* por participante.
+- [x] **Mapeo (corrección de fallo):** en una relación donde la misma entidad participa más de una vez (recursiva), los nombres de columna y de restricción FK deben ser únicos. Hoy una recursiva M:N genera `SUPERVISA(EMPLEADO_DNI, EMPLEADO_DNI)` y dos `FK_SUPERVISA_EMPLEADO` (DDL inválido en Oracle; reproducido el 2026-11-24). Con rol, la FK toma el rol como prefijo (`SUPERVISOR_DNI`, `SUPERVISADO_DNI`, como `Super_ssn` en Elmasri); sin rol, se numera (`EMPLEADO_DNI`, `EMPLEADO_DNI_2`) y el linter avisa `RECURSIVE_RELATIONSHIP_WITHOUT_ROLES`. Aplica a los Pasos 3, 4, 5 y 7. En la recursiva 1:N la columna FK con rol usa el rol del lado 1 (el referenciado).
+- [x] Una relación no recursiva con rol usa también el rol como prefijo de su FK (comportamiento uniforme y predecible).
+
+**F. Pantalla completa (todas las ediciones) y barra adaptable en Moodle**
+- [x] Botón **Pantalla completa** en la barra del examen (icono maximizar / minimizar, tooltip). Usa la Fullscreen API sobre el documento del paquete; se sale con el mismo botón o con `Esc`. Si la API no está disponible (`document.fullscreenEnabled === false`, p. ej. el iframe del reproductor SCORM no lo permite), el botón muestra un aviso que indica la alternativa: el profesor configura el SCORM con *Mostrar paquete = Nueva ventana*.
+- [ ] La **guía del profesor** recomienda *Nueva ventana* (y explica cómo plegar los paneles laterales de Moodle) y la lista de comprobación SEB incluye probar el botón. La vía que funciona en el Moodle 5 de la UMA y en SEB se verifica con el autor antes del `/ship`.
+- [x] Autoguardado, copiar para entregar, ayuda y modales siguen funcionando en pantalla completa (los modales se montan dentro del elemento a pantalla completa).
+- [x] Barra de acciones adaptable: por debajo de ~1100 px de ancho los botones secundarios muestran solo icono (con tooltip y `aria-label`) y el título no se trunca a una letra (mínimo legible o se oculta, priorizando "Copiar para entregar").
+- [x] **También en la edición completa** (decisión del autor, 2026-11-24): botón en la cabecera. En el navegador usa la misma Fullscreen API; en la app de escritorio, la ventana nativa de Tauri (`setFullscreen`, permiso `core:window:allow-set-fullscreen`), con F11 para alternar y Esc para salir, porque en WebView2 la Fullscreen API solo llena la vista web y no la ventana.
+
+**G. Avisos pedagógicos del linter (entidades débiles y roles)**
+- [x] `WEAK_ENTITY_WITHOUT_IDENTIFYING_RELATIONSHIP` — entidad débil que no participa en ninguna `ident_rel`.
+- [x] `WEAK_ENTITY_WITHOUT_PARTIAL_KEY` — entidad débil sin `partial_key_att` ni `key_att` (el Paso 2 no puede completar su PK; enlaza con el caso ya documentado en los tests del Paso 2).
+- [x] `KEY_ATTRIBUTE_ON_WEAK_ENTITY` — `key_att` en entidad débil: sugiere `partial_key_att` (sigue compilando igual).
+- [x] `PARTIAL_KEY_ON_STRONG_ENTITY` — `partial_key_att` en entidad fuerte o relación: sugiere `key_att`.
+- [x] `RECURSIVE_RELATIONSHIP_WITHOUT_ROLES` (ver E).
+- [x] Todos `warning` (no bloquean), con mensaje ES/EN y navegación a la línea, como los existentes.
+
+**H. Deshacer / rehacer**
+- [x] `Ctrl+Z` / `Ctrl+Y` (y `Ctrl+Shift+Z`; `Cmd` en macOS) y dos botones en la barra, en la edición web/escritorio y en la Moodle.
+- [x] Un único historial sobre el **texto del DSL EER** (todo el estado del diagrama vive en él): crear, editar, borrar, mover (un arrastre = un paso), cargar ejemplo/fichero/entrega, *Limpiar* y *Empezar de nuevo* se pueden deshacer. Lo tecleado en el panel de código se agrupa en un paso por pausa (≥ 1 s) y el atajo, con el foco en el panel de código, usa este mismo historial (no el nativo del `<textarea>`, que se rompería con los cambios hechos desde el lienzo).
+- [x] Límite de 100 pasos; el historial no se persiste (al recargar empieza vacío; el autoguardado de Moodle no cambia).
+- [x] Las coordenadas del modelo relacional (pestaña relacional) quedan fuera del historial en esta versión.
+
+**I. Relaciones n-arias desde la interfaz gráfica**
+- [x] El formulario de relación pasa de "primera/segunda entidad" a una **lista de participantes** (entidad, cardinalidad, participación total, rol) con *+ Añadir entidad* y quitar (mínimo dos). Crear y editar relaciones de cualquier grado; desaparece el aviso `modalProperties.naryNote`.
+- [x] El código generado y la edición (renombrar, reescribir bloque) mantienen el formato actual de líneas `link`.
+
+**J. Repaso de la notación de Elmasri**
+- [x] Diagrama de referencia con todas las construcciones (entidad fuerte/débil, relación/identificativa, binaria/ternaria/recursiva con roles, cardinalidades y participación total, atributos simple/clave/clave parcial/compuesto/multivaluado/derivado/de relación, especialización d/o total/parcial con y sin atributo definidor, unión, ⊂).
+- [x] Se usa como **test** (compila sin errores; cada construcción produce el nodo/enlace/estilo esperado y un modelo relacional sin columnas ni restricciones duplicadas) y como **ejemplo** en la pestaña *Sintaxis* de la ayuda. Los huecos que aparezcan se corrigen en esta versión o se registran como deuda.
+
+**K. Documentación**
+- [ ] Ayuda (*Sintaxis* y *Uso del editor*, con la tabla de atajos), prompt de IA (ES/EN), README ES/EN, guía del profesor (pantalla completa, compatibilidad de paquetes) y `eer-to-relational-mapping.md` (compuestos, roles en recursivas) describen lo nuevo. Todos los ejemplos de la ayuda compilan (test existente).
+
+**L. Claves y modelo relacional (correo de Enrique Soler Castillo, 2026-09-28, posterior a la v1.6.0)**
+> Su primer correo (añadir y crear otro, editar relaciones, resaltar la línea del DSL, especialización sin discriminante, selección múltiple, atributos de relación, `VUELTA` en la PK de `CIRCULA`, política `ON DELETE`) quedó resuelto en la v1.6.0 (§3.7). Los cuatro puntos del segundo se reprodujeron el 2026-11-24 con pruebas temporales:
+- [x] **L1. El modelo relacional va un cambio por detrás del EER (corrección de fallo).** Al borrar una entidad desde el lienzo, su tabla sigue en el modelo relacional. Causa: `useEERParser` compila con 300 ms de retardo, pero el efecto de `EERDiagramer` que deriva el relacional se dispara al cambiar `code`, todavía con los nodos anteriores, y marca ese código como procesado. Cuando llegan los nodos nuevos, el código coincide y no se regenera. El motor en sí borra bien la tabla. Corrección: el parser expone el código del que proceden sus nodos (`compiledCode`) y la derivación se basa en él. Además, con el EER vacío (*Limpiar*), el modelo relacional también se vacía; hoy se queda con las tablas anteriores (`nodes.length > 0`). Test con temporizadores simulados.
+- [x] **L2. FK compuestas en el DSL relacional (corrección de fallo).** El motor genera bien `FOREIGN KEY (CIRCUITO_NOMBRE, CIRCUITO_FECHA) REFERENCES CIRCUITO (NOMBRE, FECHA)`, pero el DSL relacional solo admite FK por columna. Al pasar por él (cualquier edición en la pestaña relacional), la FK se parte en dos `FK_COMPITE_CIRCUITO_CIRCUITO_NOMBRE/FECHA` que referencian una parte de la PK, y Oracle las rechaza (ORA-02270). Nueva sintaxis a nivel de tabla: `FK (CIRCUITO_NOMBRE, CIRCUITO_FECHA) -> CIRCUITO(NOMBRE, FECHA) ON DELETE NO ACTION`. El generador la usa para toda FK de más de una columna; la sintaxis por columna se mantiene para las simples. El DSL relacional no se guarda en el `.eer` (solo las posiciones), así que el cambio de formato no afecta a ficheros existentes. El linter avisa si una FK no referencia la PK completa ni una clave UNIQUE de la tabla destino.
+- [x] **L3. Tipos de columna: se conservan y se propagan** (decisión del autor). Tipos editados en el DSL relacional:
+  - Se recuerdan por `TABLA.COLUMNA` y se reaplican al regenerar el modelo desde el EER; hoy cualquier cambio en el EER los borra.
+  - Se guardan en el `.eer` junto a las posiciones, con una línea `relational TABLA.COLUMNA : TIPO` que la v1.7.0 ignora sin error.
+  - Se olvidan si la columna desaparece.
+
+  Columnas FK:
+  - Heredan siempre el tipo de la columna referenciada. El generador las escribe sin tipo (`CIRCUITO_NOMBRE PK FK -> ...`) y el compilador lo resuelve, así que cambiar el tipo de una PK cambia el de todas sus FK.
+  - Si se escribe a mano un tipo distinto en una FK, se avisa con `FK_TYPE_MISMATCH`.
+
+  Las demás ediciones manuales del DSL relacional se siguen perdiendo al cambiar el EER: la pestaña relacional lo indica con un aviso visible.
+- [x] **L4. Claves alternativas (UNIQUE) y compuestas en el EER** (decisión del autor, compatible con la v1.7.0):
+  - Varios `key_att` en la misma entidad siguen formando **una** PK compuesta, como hoy. Así se obtiene la PK (NOMBRE, FECHA) del CIRCUITO de Enrique.
+  - También se acepta la compuesta al estilo de Elmasri, un `key_att` con componentes: `key_att Clave -> CIRCUITO` con `att Nombre -> Clave` y `att Fecha -> Clave`. Funciona una vez corregido C.
+  - Nueva marca `unique` para claves alternativas: `key_att Email -> CLIENTE unique`. Se dibuja subrayada con una pequeña etiqueta «UK» y se mapea a columna `NOT NULL` + `UNIQUE`. Si es compuesta, a una restricción `UNIQUE (A, B)` de tabla.
+  - La ayuda explica las tres formas y en qué se diferencian.
+- [x] **L5. UNIQUE no llega ni al SQL ni al DSL relacional (corrección de fallo).** El motor marca `isUnique` (p. ej. la FK del Paso 3 en una 1:1, que la guía de 9 pasos describe como UNIQUE), pero ni `relationalToSQL` ni el generador del DSL relacional lo emiten. Tampoco el compilador relacional lo lee. Hoy una 1:1 genera una FK sin `UNIQUE`, es decir, una 1:N. Corrección: palabra `UNIQUE` en columna y `UNIQUE (A, B)` a nivel de tabla en el DSL relacional; se emite en el SQL de todos los dialectos y se muestra en la tarjeta de la tabla y en el SVG exportado.
+
+**Fuera de alcance de 3.11:** restricción de igualdad de roles en uniones/categorías (descartada por el autor), participación total/parcial de uniones, opciones de mapeo 8B/8C/8D, deshacer en el modelo relacional y soporte táctil (v1.9.0).
 
 ## 🏗️ 4. Propuesta de Solución Técnica
 - **Modelos de Dominio:** `EERDiagram` (Conceptual) ↔ `RelationalSchema` (Lógico con DSL + Coordenadas) ↔ `SQLScript` (Físico Oracle / Multi-SGBD).

@@ -1,5 +1,5 @@
 import { X, Trash2 } from 'lucide-react';
-import type { NodeData } from '../types';
+import type { NodeData, NodeType } from '../types';
 import { useLanguage } from '../i18n/language';
 import type { TranslationKey } from '../i18n/es';
 
@@ -11,13 +11,14 @@ interface ModalDeleteConfirmProps {
 }
 
 // Indexado por `NodeType` (el tipo real del nodo), no por el nombre de la herramienta de la toolbar.
-const NODE_TYPE_KEYS: Record<string, TranslationKey> = {
+const NODE_TYPE_KEYS: Record<NodeType, TranslationKey> = {
   entity: 'nodeType.entity',
   weak_entity: 'nodeType.weak_entity',
   relationship: 'nodeType.relationship',
   identifying_relationship: 'nodeType.ident_rel',
   attribute: 'nodeType.attribute',
   key_attribute: 'nodeType.key_attr',
+  partial_key_attribute: 'nodeType.partial_key_attr',
   derived_attribute: 'nodeType.derived_attr',
   multivalued_attribute: 'nodeType.multivalued_attr',
   specialization: 'nodeType.specialization',

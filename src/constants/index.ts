@@ -30,6 +30,8 @@ link DEPARTAMENTO CONTROLA "1"
 link PROYECTO CONTROLA "N"
 
 // Entidad Débil y Relación Identificativa
+// La clave parcial (subrayado discontinuo) identifica al dependiente dentro de su empleado
+partial_key_att NombreDep -> DEPENDIENTE (100, 220)
 ident_rel TIENE_DEP (250, 300)
 link EMPLEADO TIENE_DEP "1"
 link DEPENDIENTE TIENE_DEP "N" [total]

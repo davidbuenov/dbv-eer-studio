@@ -10,6 +10,7 @@ import type { TranslationKey } from '../i18n/es';
 import type { ExamConfig } from './examConfig';
 import { clearAutosave, loadAutosave, saveAutosave } from './autosave';
 import { createScormSession, findScormApi, type ScormSession, type ScormWindow } from './scorm12';
+import { useCodeHistory } from '../hooks/useCodeHistory';
 
 const AUTOSAVE_DELAY_MS = 400;
 
@@ -27,7 +28,10 @@ export function useExamSession(config: ExamConfig) {
     const saved = loadAutosave(config.examId);
     return { code: saved ?? config.template, restored: saved !== null && saved !== config.template };
   });
-  const [code, setCode] = useState(initial.code);
+  // Con deshacer/rehacer (§3.11 H): un borrado accidental en el examen tiene vuelta atrás.
+  // "Empezar de nuevo" también es un paso del historial; el autoguardado sigue al código.
+  const history = useCodeHistory(initial.code);
+  const { code, setCode } = history;
   const [status, setStatus] = useState<ExamStatus | null>(
     initial.restored ? { key: 'moodle.status.restored', tone: 'info' } : null,
   );
@@ -64,9 +68,21 @@ export function useExamSession(config: ExamConfig) {
     clearAutosave(config.examId);
     setCode(config.template);
     setStatus(null);
-  }, [config.examId, config.template]);
+  }, [config.examId, config.template, setCode]);
 
   const markSubmitted = useCallback(() => scormRef.current?.complete(), []);
 
-  return { code, setCode, status, setStatus, reset, markSubmitted };
+  return {
+    code,
+    setCode,
+    setCodeFromTyping: history.setCodeFromTyping,
+    undo: history.undo,
+    redo: history.redo,
+    canUndo: history.canUndo,
+    canRedo: history.canRedo,
+    status,
+    setStatus,
+    reset,
+    markSubmitted,
+  };
 }

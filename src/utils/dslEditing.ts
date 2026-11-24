@@ -5,7 +5,7 @@
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 
-import type { NodeData, LinkData } from '../types';
+import { isAttributeType, type AttributeKind, type NodeData, type LinkData } from '../types';
 import {
   generateEntityCode,
   generateAttributeCode,
@@ -22,26 +22,34 @@ import {
  * pantalla pueden pertenecer a un texto anterior y sus índices ya no corresponderían.
  */
 
-export type AttributeKind = 'simple' | 'key' | 'derived' | 'multivalued';
+export type { AttributeKind };
 
 export interface RelationshipEnd {
   entity: string;
   cardinality: string;
   isTotal: boolean;
+  /** Rol del participante (`role:Supervisor`), §3.11 E. */
+  role?: string;
 }
 
 /** Cambios pedidos desde el formulario de propiedades en modo edición. */
 export type ElementEdit =
   | { kind: 'entity'; name: string; isWeak: boolean }
-  | { kind: 'attribute'; name: string; attrType: AttributeKind; owner: string }
-  // `ends` ausente = relación n-aria: solo se editan nombre y carácter identificativo.
-  | { kind: 'relationship'; name: string; isIdentifying: boolean; ends?: [RelationshipEnd, RelationshipEnd] }
-  | { kind: 'specialization'; specType: 'd' | 'o'; superclass: string; subclasses: string[]; definingAttribute: string }
+  | { kind: 'attribute'; name: string; attrType: AttributeKind; owner: string; isUnique?: boolean }
+  // Cualquier grado: binaria, ternaria… (§3.11 I). Sin participantes solo se escribe la declaración.
+  | { kind: 'relationship'; name: string; isIdentifying: boolean; ends: RelationshipEnd[] }
+  | {
+      kind: 'specialization';
+      specType: 'd' | 'o';
+      superclass: string;
+      subclasses: string[];
+      definingAttribute: string;
+      isTotal: boolean;
+    }
   | { kind: 'union'; name: string; superclasses: string[]; category: string };
 
 const ENTITY_TYPES = ['entity', 'weak_entity'];
 const RELATIONSHIP_TYPES = ['relationship', 'identifying_relationship'];
-const ATTRIBUTE_TYPES = ['attribute', 'key_attribute', 'derived_attribute', 'multivalued_attribute'];
 
 /**
  * Resuelve una referencia del DSL como lo hace el motor: primero por id y, si no, por etiqueta.
@@ -65,7 +73,7 @@ export function getOwnedLineIndices(node: NodeData, nodes: readonly NodeData[], 
   let ownedLinks: LinkData[] = [];
   if (RELATIONSHIP_TYPES.includes(node.type)) {
     ownedLinks = links.filter(l => touchesNode(l) && (isEntityRef(l.source) || isEntityRef(l.target)));
-  } else if (ATTRIBUTE_TYPES.includes(node.type)) {
+  } else if (isAttributeType(node.type)) {
     // Un atributo colgado con `link ENTIDAD attr` en vez de `->`: esa línea también es suya.
     ownedLinks = findParentLinks(node, nodes, links);
   } else if (node.type === 'specialization' || node.type === 'union') {
@@ -133,13 +141,17 @@ export function renameReferences(code: string, oldLabel: string, newLabel: strin
   return result.join('\n');
 }
 
-/** Enlaces que unen un atributo con su propietario (entidad o relación). */
+/**
+ * Enlaces que unen un atributo con su propietario: una entidad o relación (en cualquier sentido)
+ * o, si es un componente, el atributo compuesto del que sale el enlace (`Direccion → Calle`).
+ */
 function findParentLinks(attr: NodeData, nodes: readonly NodeData[], links: readonly LinkData[]): LinkData[] {
   const isOwnerType = (n?: NodeData) => ENTITY_TYPES.includes(n?.type ?? '') || RELATIONSHIP_TYPES.includes(n?.type ?? '');
   return links.filter(l => {
     const source = resolveNodeRef(l.source, nodes);
     const target = resolveNodeRef(l.target, nodes);
-    return (source === attr && isOwnerType(target)) || (target === attr && isOwnerType(source));
+    const fromComposite = target === attr && !!source && isAttributeType(source.type);
+    return (source === attr && isOwnerType(target)) || (target === attr && isOwnerType(source)) || fromComposite;
   });
 }
 
@@ -156,6 +168,7 @@ export function toDslIdentifier(name: string): string {
 const ATTRIBUTE_KIND_BY_TYPE: Record<string, AttributeKind> = {
   attribute: 'simple',
   key_attribute: 'key',
+  partial_key_attribute: 'partial_key',
   derived_attribute: 'derived',
   multivalued_attribute: 'multivalued',
 };
@@ -166,6 +179,46 @@ export function attributeKindOf(node: NodeData): AttributeKind {
 }
 
 const labelOf = (ref: string, nodes: readonly NodeData[]) => resolveNodeRef(ref, nodes)?.label ?? ref;
+
+/** Un nombre de atributo repetido en el diagrama no sirve como propietario: `-> Nombre` sería ambiguo. */
+const isUniqueLabel = (node: NodeData, nodes: readonly NodeData[]) => nodes.filter(n => n.label === node.label).length === 1;
+
+/**
+ * Propietario que se sugiere al crear un atributo con un elemento seleccionado: una entidad,
+ * una relación o un atributo (el nuevo será un componente suyo: atributo compuesto). Un atributo
+ * con nombre repetido no se sugiere, porque la referencia por nombre sería ambigua.
+ */
+export function suggestedAttributeOwner(selected: NodeData | undefined, nodes: readonly NodeData[]): string | undefined {
+  const canOwn =
+    !!selected &&
+    (ENTITY_TYPES.includes(selected.type) ||
+      RELATIONSHIP_TYPES.includes(selected.type) ||
+      (isAttributeType(selected.type) && isUniqueLabel(selected, nodes)));
+  return canOwn ? selected.label : undefined;
+}
+
+export interface AttributeOwnerOption {
+  label: string;
+  /** Etiqueta del elemento del que cuelga (para mostrar «Direccion (CLIENTE)»). */
+  ownerLabel: string;
+  /** Hay otro atributo con el mismo nombre: no se puede elegir desde el formulario. */
+  ambiguous: boolean;
+}
+
+/**
+ * Atributos que pueden ser propietarios de otro (componentes de un atributo compuesto, §3.11 C),
+ * para el desplegable «Pertenece a». `exclude` es el atributo en edición (no puede colgar de sí mismo).
+ */
+export function attributeOwnerOptions(nodes: readonly NodeData[], links: readonly LinkData[], exclude?: string): AttributeOwnerOption[] {
+  return nodes
+    .filter(n => isAttributeType(n.type) && n.id !== exclude)
+    .map(n => {
+      const link = findParentLinks(n, nodes, links)[0];
+      const owner = n.parentEntity ?? (link ? (resolveNodeRef(link.source, nodes) === n ? link.target : link.source) : '');
+      return { label: n.label, ownerLabel: labelOf(owner, nodes), ambiguous: !isUniqueLabel(n, nodes) };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
 
 /**
  * Estado inicial del formulario de edición de un nodo: lo que hoy dice el DSL sobre él.
@@ -178,7 +231,7 @@ export function describeNodeForEdit(node: NodeData, nodes: readonly NodeData[], 
 
   if (ENTITY_TYPES.includes(node.type)) {
     description = { kind: 'entity', name: node.label, isWeak: node.type === 'weak_entity' };
-  } else if (ATTRIBUTE_TYPES.includes(node.type)) {
+  } else if (isAttributeType(node.type)) {
     const parentLink = findParentLinks(node, nodes, links)[0];
     const linkedOwner = parentLink ? (isNode(parentLink.source) ? parentLink.target : parentLink.source) : '';
     description = {
@@ -186,6 +239,7 @@ export function describeNodeForEdit(node: NodeData, nodes: readonly NodeData[], 
       name: node.label,
       attrType: attributeKindOf(node),
       owner: labelOf(node.parentEntity ?? linkedOwner, nodes),
+      isUnique: node.isUnique ?? false,
     };
   } else if (RELATIONSHIP_TYPES.includes(node.type)) {
     const ends: RelationshipEnd[] = links
@@ -195,12 +249,13 @@ export function describeNodeForEdit(node: NodeData, nodes: readonly NodeData[], 
         entity: labelOf(isNode(l.source) ? l.target : l.source, nodes),
         cardinality: l.label ?? '',
         isTotal: l.style === 'double',
+        ...(l.role ? { role: l.role } : {}),
       }));
     description = {
       kind: 'relationship',
       name: node.label,
       isIdentifying: node.type === 'identifying_relationship',
-      ends: ends.length === 2 ? [ends[0]!, ends[1]!] : undefined,
+      ends,
     };
   } else if (node.type === 'specialization') {
     const superLink = links.find(l => isNode(l.target) && !isNode(l.source));
@@ -210,6 +265,7 @@ export function describeNodeForEdit(node: NodeData, nodes: readonly NodeData[], 
       superclass: superLink ? labelOf(superLink.source, nodes) : '',
       subclasses: links.filter(l => isNode(l.source)).map(l => labelOf(l.target, nodes)),
       definingAttribute: node.definingAttribute ?? '',
+      isTotal: !node.isPartial,
     };
   } else {
     const categoryLink = links.find(l => isNode(l.source));
@@ -233,29 +289,29 @@ export function generateElementCode(element: ElementEdit, x: number, y: number):
   if (element.kind === 'entity') {
     code = generateEntityCode({ name: element.name, x, y, isWeak: element.isWeak });
   } else if (element.kind === 'attribute') {
-    code = generateAttributeCode({ name: element.name, entity: element.owner, x, y, type: element.attrType });
-  } else if (element.kind === 'relationship' && element.ends) {
-    const [first, second] = element.ends;
-    code = generateRelationshipCode({
+    code = generateAttributeCode({
       name: element.name,
+      entity: element.owner,
       x,
       y,
-      isIdentifying: element.isIdentifying,
-      entity1: first.entity,
-      entity2: second.entity,
-      cardinality1: first.cardinality,
-      cardinality2: second.cardinality,
-      isTotal1: first.isTotal,
-      isTotal2: second.isTotal,
+      type: element.attrType,
+      isUnique: element.isUnique ?? false,
     });
   } else if (element.kind === 'relationship') {
-    code = `${element.isIdentifying ? 'ident_rel' : 'rel'} ${element.name} (${Math.round(x)}, ${Math.round(y)})`;
+    code = generateRelationshipCode({
+      name: element.name,
+      x: Math.round(x),
+      y: Math.round(y),
+      isIdentifying: element.isIdentifying,
+      ends: element.ends,
+    });
   } else if (element.kind === 'specialization') {
     code = generateSpecializationCode({
       type: element.specType,
       superclass: element.superclass,
       subclasses: element.subclasses,
       definingAttribute: element.definingAttribute,
+      isTotal: element.isTotal,
       x,
       y,
     });
@@ -278,8 +334,8 @@ export function applyElementEdit(
 ): string {
   const oldLabel = node.label;
   const newLabel = edit.kind === 'specialization' ? edit.specType : edit.name;
-  // Una relación n-aria solo reescribe su declaración: sus enlaces se editan en el DSL.
-  const onlyDeclaration = edit.kind === 'entity' || (edit.kind === 'relationship' && !edit.ends);
+  // Una entidad (o una relación aún sin participantes) solo reescribe su declaración.
+  const onlyDeclaration = edit.kind === 'entity' || (edit.kind === 'relationship' && edit.ends.length === 0);
   const ownedLines = onlyDeclaration ? [node.lineIndex] : getOwnedLineIndices(node, nodes, links);
   const newCode = replaceElementBlock(code, ownedLines, generateElementCode(edit, node.x, node.y));
 

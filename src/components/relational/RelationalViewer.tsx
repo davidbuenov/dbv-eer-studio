@@ -11,7 +11,7 @@ import { Key, Link, BookOpen, Database, Plus, Minus, RotateCcw, Maximize2, Layou
 import type { RelationalSchema, RelationalTable } from '../../types/relational';
 import { useLanguage } from '../../i18n/language';
 import { translateStepTitle } from '../../i18n/steps';
-import { CARD_WIDTH, getTableHeight, computeFKEdges } from '../../utils/relational/relationalGeometry';
+import { CARD_WIDTH, getTableHeight, computeFKEdges, isUniqueColumn } from '../../utils/relational/relationalGeometry';
 import { RELATIONAL_COLORS as C } from '../../utils/relational/relationalColors';
 
 interface RelationalViewerProps {
@@ -327,6 +327,7 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
               return (
               <div
                 key={table.id}
+                data-table-name={table.name}
                 onMouseDown={e => handleTableMouseDown(table, e)}
                 onMouseEnter={() => setHoveredTableId(table.id)}
                 onMouseLeave={() => setHoveredTableId(null)}
@@ -394,6 +395,14 @@ export const RelationalViewer: React.FC<RelationalViewerProps> = ({
                         >
                           {col.name}
                         </span>
+                        {isUniqueColumn(table, col.name) && (
+                          <span
+                            title={t('relationalViewer.ukTooltip')}
+                            className="rounded border border-violet-400/60 px-1 text-[9px] font-bold leading-tight text-violet-300"
+                          >
+                            UK
+                          </span>
+                        )}
                       </div>
                       <span className="font-mono text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
                         {col.dataType}

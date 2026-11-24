@@ -1,4 +1,4 @@
-import type { NodeData } from '../types';
+import { isAttributeType, type NodeData } from '../types';
 
 /**
  * Elimina un nodo del código DSL y todas sus referencias
@@ -75,7 +75,6 @@ export function deleteNodeFromCode(code: string, nodeLabel: string): string {
   return filteredLines.join('\n');
 }
 
-const ATTRIBUTE_TYPES = ['attribute', 'key_attribute', 'derived_attribute', 'multivalued_attribute'];
 
 /**
  * Elimina varios nodos del DSL (selección múltiple).
@@ -88,7 +87,7 @@ const ATTRIBUTE_TYPES = ['attribute', 'key_attribute', 'derived_attribute', 'mul
  */
 export function deleteNodesFromCode(code: string, targets: readonly NodeData[], allNodes: readonly NodeData[]): string {
   const isSharedAttribute = (n: NodeData) =>
-    ATTRIBUTE_TYPES.includes(n.type) && allNodes.filter(o => o.label === n.label).length > 1;
+    isAttributeType(n.type) && allNodes.filter(o => o.label === n.label).length > 1;
 
   const lineRemovals = new Set(targets.filter(isSharedAttribute).map(n => n.lineIndex));
   let result = code

@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { getAIPrompt, AI_PROMPT_PLACEHOLDER } from './aiPrompt';
 import { compileEER } from '../utils/compiler';
 
-const DSL_COMMANDS = ['ent', 'weak_ent', 'att', 'key_att', 'derived_att', 'multivalued_att', 'rel', 'ident_rel', 'link', 'spec', 'union'];
+const DSL_COMMANDS = ['ent', 'weak_ent', 'att', 'key_att', 'partial_key_att', 'derived_att', 'multivalued_att', 'rel', 'ident_rel', 'link', 'spec', 'union'];
 
 /** Comandos del DSL que aparecen al inicio de un ejemplo en código (`\`cmd ...`). */
 function commandsUsed(prompt: string): string[] {
@@ -38,5 +38,39 @@ describe('Prompt IA bilingüe', () => {
     const result = compileEER(fullExample(getAIPrompt(lang)));
     expect(result.nodes.length).toBeGreaterThan(5);
     expect(result.diagnostics).toEqual([]);
+  });
+
+  // La IA aprende sobre todo del ejemplo: debe usar toda la notación (§3.11), no solo describirla.
+  it.each(['es', 'en'] as const)('el ejemplo completo del prompt %s usa toda la notación', lang => {
+    const { nodes, links } = compileEER(fullExample(getAIPrompt(lang)));
+    const node = (id: string) => nodes.find(n => n.id === id);
+    expect(new Set(nodes.map(n => n.type))).toEqual(
+      new Set([
+        'entity', 'weak_entity', 'relationship', 'identifying_relationship', 'attribute', 'key_attribute',
+        'partial_key_attribute', 'derived_attribute', 'multivalued_attribute', 'specialization', 'union',
+      ])
+    );
+    expect(nodes.some(n => n.isUnique)).toBe(true); // clave alternativa
+    expect(nodes.some(n => n.isPartial)).toBe(true); // especialización parcial
+    expect(nodes.some(n => n.definingAttribute)).toBe(true); // especialización definida por atributo
+    expect(links.filter(l => l.role)).toHaveLength(2); // recursiva con roles
+    expect(links.some(l => node(l.source)?.type === 'attribute' && node(l.target)?.type === 'attribute')).toBe(true); // compuesto
+    const degree = (relId: string) => links.filter(l => l.source === relId || l.target === relId).filter(l => node(l.source === relId ? l.target : l.source)?.type === 'entity').length;
+    expect(nodes.filter(n => n.type === 'relationship').some(r => degree(r.id) === 3)).toBe(true); // ternaria
+    expect(links.some(l => l.style === 'double')).toBe(true);
+  });
+
+  it('el ejemplo ES y el EN tienen la misma estructura (solo cambian los nombres)', () => {
+    const shape = (lang: 'es' | 'en') => {
+      const { nodes, links } = compileEER(fullExample(getAIPrompt(lang)));
+      // La etiqueta es una cardinalidad o, en la arista de una especialización, un nombre (se traduce).
+      const label = (l: string | undefined) => (/^(\d+|[NMP])?$/.test(l ?? '') ? l : '<nombre>');
+      return { types: nodes.map(n => n.type), links: links.map(l => `${label(l.label)}|${l.style}|${l.role ? 'rol' : ''}`) };
+    };
+    expect(shape('en')).toEqual(shape('es'));
+  });
+
+  it.each(['es', 'en'] as const)('el prompt %s no contiene restos de plantilla', lang => {
+    expect(getAIPrompt(lang)).not.toMatch(/\$nl|\$\{/);
   });
 });

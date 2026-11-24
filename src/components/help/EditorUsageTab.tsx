@@ -18,6 +18,10 @@ const USAGE_SECTIONS: UsageSection[] = [
       ['help.usage.create.tool.g', 'help.usage.create.tool.d'],
       ['help.usage.create.another.g', 'help.usage.create.another.d'],
       ['help.usage.create.relAttr.g', 'help.usage.create.relAttr.d'],
+      ['help.usage.create.composite.g', 'help.usage.create.composite.d'],
+      ['help.usage.create.attrTypes.g', 'help.usage.create.attrTypes.d'],
+      ['help.usage.create.specPartial.g', 'help.usage.create.specPartial.d'],
+      ['help.usage.create.nary.g', 'help.usage.create.nary.d'],
       ['help.usage.create.code.g', 'help.usage.create.code.d'],
     ],
   },
@@ -36,6 +40,7 @@ const USAGE_SECTIONS: UsageSection[] = [
     rows: [
       ['help.usage.edit.dbl.g', 'help.usage.edit.dbl.d'],
       ['help.usage.edit.delete.g', 'help.usage.edit.delete.d'],
+      ['help.usage.edit.undo.g', 'help.usage.edit.undo.d'],
       ['help.usage.edit.blocked.g', 'help.usage.edit.blocked.d'],
     ],
   },
@@ -54,6 +59,7 @@ const USAGE_SECTIONS: UsageSection[] = [
       ['help.usage.navigate.wheel.g', 'help.usage.navigate.wheel.d'],
       ['help.usage.navigate.zoom.g', 'help.usage.navigate.zoom.d'],
       ['help.usage.navigate.controls.g', 'help.usage.navigate.controls.d'],
+      ['help.usage.navigate.fullscreen.g', 'help.usage.navigate.fullscreen.d'],
     ],
   },
   {
@@ -68,6 +74,7 @@ const USAGE_SECTIONS: UsageSection[] = [
     titleKey: 'help.usage.relational.title',
     rows: [
       ['help.usage.relational.tab.g', 'help.usage.relational.tab.d'],
+      ['help.usage.relational.types.g', 'help.usage.relational.types.d'],
       ['help.usage.relational.book.g', 'help.usage.relational.book.d'],
       ['help.usage.relational.export.g', 'help.usage.relational.export.d'],
       ['help.usage.relational.files.g', 'help.usage.relational.files.d'],
@@ -81,6 +88,8 @@ const SHORTCUTS: [keys: (string | TranslationKey)[], action: TranslationKey][] =
   [['F2', 'Enter'], 'help.usage.shortcuts.f2'],
   [['help.usage.key.delete'], 'help.usage.shortcuts.delete'],
   [['help.usage.key.esc'], 'help.usage.shortcuts.esc'],
+  [['Ctrl+Z'], 'help.usage.shortcuts.undo'],
+  [['Ctrl+Y', 'Ctrl+Shift+Z'], 'help.usage.shortcuts.redo'],
   [['Enter'], 'help.usage.shortcuts.enter'],
 ];
 

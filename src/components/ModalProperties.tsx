@@ -1,12 +1,18 @@
-import { X, AlertCircle } from 'lucide-react';
-import type { NodeData } from '../types';
-import type { ModalState } from '../hooks/useModalState';
+import { X, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import type { NodeData, LinkData } from '../types';
+import { attributeOwnerOptions } from '../utils/dslEditing';
+import { newParticipant, type ModalState, type ParticipantDraft } from '../hooks/useModalState';
 import { useLanguage } from '../i18n/language';
+
+// Una relación tiene al menos dos participantes (binaria); con más es n-aria (§3.11 I).
+const MIN_PARTICIPANTS = 2;
 
 interface ModalPropertiesProps {
   isOpen: boolean;
   onClose: () => void;
   nodes: NodeData[];
+  /** Para mostrar de quién cuelga cada atributo en «Pertenece a» (componentes de compuestos). */
+  links: LinkData[];
   modalState: ModalState;
   /** Edición bloqueada: el DSL tiene errores y los índices de línea no son fiables. */
   isEditBlocked: boolean;
@@ -14,19 +20,14 @@ interface ModalPropertiesProps {
     setElementType: (v: string) => void;
     setElementName: (v: string) => void;
     setElementType2: (v: string) => void;
+    setAttrIsUnique: (v: boolean) => void;
     setSelectedEntity: (v: string) => void;
-    setSelectedEntity1: (v: string) => void;
-    setSelectedEntity2: (v: string) => void;
-    setCardinalityE1: (v: string) => void;
-    setCardinalityE2: (v: string) => void;
-    setCustomCard1: (v: string) => void;
-    setCustomCard2: (v: string) => void;
-    setTotalE1: (v: boolean) => void;
-    setTotalE2: (v: boolean) => void;
+    setParticipants: (v: ParticipantDraft[]) => void;
     setSpecType: (v: string) => void;
     setSpecSuperclass: (v: string) => void;
     setSpecSubclasses: (v: string[]) => void;
     setSpecDefiningAttribute: (v: string) => void;
+    setSpecIsTotal: (v: boolean) => void;
     setUnionName: (v: string) => void;
     setUnionSuperclasses: (v: string[]) => void;
     setUnionCategory: (v: string) => void;
@@ -53,6 +54,7 @@ export function ModalProperties({
   isOpen,
   onClose,
   nodes,
+  links,
   modalState: state,
   isEditBlocked,
   setters,
@@ -75,6 +77,8 @@ export function ModalProperties({
   const relationships = nodes
     .filter(n => n.type === 'relationship' || n.type === 'identifying_relationship')
     .sort(byLabel);
+  // Un atributo también puede ser propietario: el nuevo será su componente (atributo compuesto).
+  const attributeOwners = isAttribute ? attributeOwnerOptions(nodes, links, state.editingNodeId ?? undefined) : [];
 
   const title = isEntity ? t('modalProperties.title.entity')
     : isRelationship ? t('modalProperties.title.relationship')
@@ -155,38 +159,29 @@ export function ModalProperties({
                 {t('modalProperties.isIdentifying')}
               </label>
 
-              {state.isNaryRelationship ? (
-                <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                  {t('modalProperties.naryNote')}
-                </p>
-              ) : (
-                <>
-                  <RelationshipEndFields
-                    heading={t('modalProperties.firstEntity')}
-                    entities={entities}
-                    entity={state.selectedEntity1}
-                    cardinality={state.cardinalityE1}
-                    customCardinality={state.customCard1}
-                    isTotal={state.totalE1}
-                    onEntity={setters.setSelectedEntity1}
-                    onCardinality={setters.setCardinalityE1}
-                    onCustomCardinality={setters.setCustomCard1}
-                    onTotal={setters.setTotalE1}
-                  />
-                  <RelationshipEndFields
-                    heading={t('modalProperties.secondEntity')}
-                    entities={entities}
-                    entity={state.selectedEntity2}
-                    cardinality={state.cardinalityE2}
-                    customCardinality={state.customCard2}
-                    isTotal={state.totalE2}
-                    onEntity={setters.setSelectedEntity2}
-                    onCardinality={setters.setCardinalityE2}
-                    onCustomCardinality={setters.setCustomCard2}
-                    onTotal={setters.setTotalE2}
-                  />
-                </>
-              )}
+              {state.participants.map((participant, index) => (
+                <RelationshipEndFields
+                  key={index}
+                  heading={t('modalProperties.participant', { n: index + 1 })}
+                  entities={entities}
+                  participant={participant}
+                  onChange={next =>
+                    setters.setParticipants(state.participants.map((p, i) => (i === index ? next : p)))
+                  }
+                  onRemove={
+                    state.participants.length > MIN_PARTICIPANTS
+                      ? () => setters.setParticipants(state.participants.filter((_p, i) => i !== index))
+                      : undefined
+                  }
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => setters.setParticipants([...state.participants, newParticipant()])}
+                className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-indigo-300 px-3 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-50"
+              >
+                <Plus className="h-4 w-4" /> {t('modalProperties.addParticipant')}
+              </button>
             </>
           )}
 
@@ -201,10 +196,26 @@ export function ModalProperties({
                 >
                   <option value="simple">{t('modalProperties.attrType.simple')}</option>
                   <option value="key">{t('modalProperties.attrType.key')}</option>
+                  <option value="partial_key">{t('modalProperties.attrType.partialKey')}</option>
                   <option value="derived">{t('modalProperties.attrType.derived')}</option>
                   <option value="multivalued">{t('modalProperties.attrType.multivalued')}</option>
                 </select>
               </div>
+
+              {state.elementType2 === 'key' && (
+                <label className="flex items-start gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={state.attrIsUnique}
+                    onChange={(e) => setters.setAttrIsUnique(e.target.checked)}
+                    className={`${checkboxClass} mt-0.5`}
+                  />
+                  <span>
+                    {t('modalProperties.alternateKey')}
+                    <span className="block text-[11px] text-slate-500">{t('modalProperties.alternateKeyHint')}</span>
+                  </span>
+                </label>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">{t('modalProperties.associateEntity')}</label>
@@ -226,7 +237,19 @@ export function ModalProperties({
                       ))}
                     </optgroup>
                   )}
+                  {attributeOwners.length > 0 && (
+                    <optgroup label={t('modalProperties.ownerGroup.attributes')}>
+                      {attributeOwners.map(option => (
+                        // Un nombre repetido no se puede referenciar sin ambigüedad: se muestra desactivado.
+                        <option key={`${option.label}-${option.ownerLabel}`} value={option.label} disabled={option.ambiguous}>
+                          {option.ownerLabel ? `${option.label} (${option.ownerLabel})` : option.label}
+                          {option.ambiguous ? ` — ${t('modalProperties.ownerGroup.ambiguous')}` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
+                <p className="mt-1 text-[11px] text-slate-500">{t('modalProperties.ownerHint')}</p>
               </div>
             </>
           )}
@@ -270,6 +293,19 @@ export function ModalProperties({
                 />
                 <p className="mt-1 text-[11px] text-slate-500">{t('modalProperties.definingAttributeHint')}</p>
               </div>
+
+              <label className="flex items-start gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={state.specIsTotal}
+                  onChange={(e) => setters.setSpecIsTotal(e.target.checked)}
+                  className={`${checkboxClass} mt-0.5`}
+                />
+                <span>
+                  {t('modalProperties.specTotal')}
+                  <span className="block text-[11px] text-slate-500">{t('modalProperties.specTotalHint')}</span>
+                </span>
+              </label>
 
               <CheckboxList
                 label={t('modalProperties.subclasses')}
@@ -350,37 +386,38 @@ export function ModalProperties({
 interface RelationshipEndFieldsProps {
   heading: string;
   entities: NodeData[];
-  entity: string;
-  cardinality: string;
-  customCardinality: string;
-  isTotal: boolean;
-  onEntity: (v: string) => void;
-  onCardinality: (v: string) => void;
-  onCustomCardinality: (v: string) => void;
-  onTotal: (v: boolean) => void;
+  participant: ParticipantDraft;
+  onChange: (next: ParticipantDraft) => void;
+  /** Ausente cuando no se puede quitar (quedarían menos de dos participantes). */
+  onRemove?: () => void;
 }
 
-/** Entidad, cardinalidad y participación de uno de los dos extremos de una relación binaria. */
-function RelationshipEndFields({
-  heading,
-  entities,
-  entity,
-  cardinality,
-  customCardinality,
-  isTotal,
-  onEntity,
-  onCardinality,
-  onCustomCardinality,
-  onTotal,
-}: RelationshipEndFieldsProps) {
+/** Entidad, cardinalidad, participación y rol de un participante de la relación. */
+function RelationshipEndFields({ heading, entities, participant, onChange, onRemove }: RelationshipEndFieldsProps) {
   const { t } = useLanguage();
+  const { entity, cardinality, customCardinality, isTotal, role } = participant;
+  const set = (patch: Partial<ParticipantDraft>) => onChange({ ...participant, ...patch });
+
   return (
     <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-      <h3 className="text-xs font-bold text-slate-600 uppercase mb-3">{heading}</h3>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-xs font-bold text-slate-600 uppercase">{heading}</h3>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            title={t('modalProperties.removeParticipant')}
+            aria-label={t('modalProperties.removeParticipant')}
+            className="rounded p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
       <div className="space-y-3">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">{t('modalProperties.entity')}</label>
-          <select value={entity} onChange={(e) => onEntity(e.target.value)} className={inputClass}>
+          <select value={entity} onChange={(e) => set({ entity: e.target.value })} className={inputClass}>
             <option value="">{t('modalProperties.selectPlaceholder')}</option>
             {entities.map(n => (
               <option key={n.id} value={n.label}>{n.label}</option>
@@ -389,7 +426,7 @@ function RelationshipEndFields({
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">{t('modalProperties.cardinality')}</label>
-          <select value={cardinality} onChange={(e) => onCardinality(e.target.value)} className={inputClass}>
+          <select value={cardinality} onChange={(e) => set({ cardinality: e.target.value })} className={inputClass}>
             <option value="1">1</option>
             <option value="N">N</option>
             <option value="M">M</option>
@@ -402,14 +439,24 @@ function RelationshipEndFields({
             <input
               type="text"
               value={customCardinality}
-              onChange={(e) => onCustomCardinality(e.target.value)}
+              onChange={(e) => set({ customCardinality: e.target.value })}
               className={inputClass}
               placeholder={t('modalProperties.customCardPlaceholder')}
             />
           </div>
         )}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{t('modalProperties.role')}</label>
+          <input
+            type="text"
+            value={role}
+            onChange={(e) => set({ role: e.target.value })}
+            className={inputClass}
+            placeholder={t('modalProperties.rolePlaceholder')}
+          />
+        </div>
         <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={isTotal} onChange={(e) => onTotal(e.target.checked)} className={checkboxClass} />
+          <input type="checkbox" checked={isTotal} onChange={(e) => set({ isTotal: e.target.checked })} className={checkboxClass} />
           {t('modalProperties.totalParticipation')}
         </label>
       </div>

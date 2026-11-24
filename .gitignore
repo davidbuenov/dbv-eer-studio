@@ -32,3 +32,6 @@ dist-moodle/*
 # Testing & temporary scratch
 test-results/
 scratch/
+
+# Corrección de exámenes (privado: rúbricas, soluciones y entregas de alumnos)
+correccion/

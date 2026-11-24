@@ -113,6 +113,16 @@ export function relationalToSQL(schema: RelationalSchema, dialect: SQLDialect = 
       colLines.push(`  CONSTRAINT ${pkName} PRIMARY KEY (${pkCols.join(', ')})`);
     }
 
+    // Claves UNIQUE: columnas sueltas (FK de una 1:1, claves alternativas) y de tabla. Sin ellas
+    // una 1:1 se comporta como una 1:N (§3.11 L5). La PK ya es única: no se repite.
+    const uniqueKeys = [
+      ...table.columns.filter(c => c.isUnique && !c.isPrimaryKey).map(c => [c.name]),
+      ...(table.uniqueConstraints ?? []),
+    ];
+    uniqueKeys.forEach(columns => {
+      colLines.push(`  CONSTRAINT UQ_${table.name}_${columns.join('_')} UNIQUE (${columns.join(', ')})`);
+    });
+
     // Claves Foráneas (FK) inline o como constraints
     table.foreignKeys.forEach(fk => {
       const sourceColsStr = fk.sourceColumnNames.join(', ');

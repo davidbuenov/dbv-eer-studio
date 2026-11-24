@@ -21,8 +21,15 @@ export function generateRelationalDSL(schema: RelationalSchema): string {
 
     lines.push(`table ${table.name} [x: ${posX}, y: ${posY}] {`);
 
+    // Una FK de varias columnas no cabe en la línea de una columna: partirla en una FK por
+    // columna referenciaría media PK compuesta, que Oracle rechaza (§3.11 L2). Va a nivel de tabla.
+    const tableLevelFKs = table.foreignKeys.filter(f => f.sourceColumnNames.length > 1);
+    const fkColumns = new Set(table.foreignKeys.flatMap(f => f.sourceColumnNames));
+
     table.columns.forEach(col => {
-      let colLine = `  ${col.name} ${col.dataType}`;
+      // Una FK no lleva tipo: lo hereda de la columna que referencia, así que cambiar el tipo
+      // de una PK cambia el de todas sus FK (§3.11 L3).
+      let colLine = fkColumns.has(col.name) ? `  ${col.name}` : `  ${col.name} ${col.dataType}`;
 
       if (col.isPrimaryKey) {
         colLine += ' PK';
@@ -30,18 +37,26 @@ export function generateRelationalDSL(schema: RelationalSchema): string {
         // También en FKs: sin esto una FK obligatoria volvería como nullable al recompilar el DSL.
         colLine += ' NOT NULL';
       }
+      if (col.isUnique && !col.isPrimaryKey) {
+        colLine += ' UNIQUE';
+      }
 
       // La acción referencial se escribe siempre, para que el alumno vea la política de cada FK
       // y la ida y vuelta DSL → esquema → DSL no la pierda.
-      const fk = table.foreignKeys.find(f => f.sourceColumnNames.includes(col.name));
+      const fk = table.foreignKeys.find(f => f.sourceColumnNames.length === 1 && f.sourceColumnNames[0] === col.name);
       if (fk) {
-        const sourceIdx = fk.sourceColumnNames.indexOf(col.name);
-        const targetCol = fk.targetColumnNames[sourceIdx] ?? 'ID';
-        colLine += ` FK -> ${fk.targetTableName}(${targetCol}) ON DELETE ${fk.onDelete}`;
+        colLine += ` FK -> ${fk.targetTableName}(${fk.targetColumnNames[0] ?? 'ID'}) ON DELETE ${fk.onDelete}`;
       }
 
       lines.push(colLine);
     });
+
+    tableLevelFKs.forEach(fk => {
+      lines.push(
+        `  FK (${fk.sourceColumnNames.join(', ')}) -> ${fk.targetTableName}(${fk.targetColumnNames.join(', ')}) ON DELETE ${fk.onDelete}`
+      );
+    });
+    (table.uniqueConstraints ?? []).forEach(columns => lines.push(`  UNIQUE (${columns.join(', ')})`));
 
     lines.push(`}`);
     if (index < schema.tables.length - 1) {

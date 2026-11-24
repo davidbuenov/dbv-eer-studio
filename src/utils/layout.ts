@@ -5,6 +5,8 @@
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 
+import { isAttributeType } from '../types';
+
 export interface Point {
   x: number;
   y: number;
@@ -47,8 +49,6 @@ interface GroupableNode {
   parentEntity?: string;
 }
 
-const ATTRIBUTE_TYPES = ['attribute', 'key_attribute', 'derived_attribute', 'multivalued_attribute'];
-
 /**
  * Nodos que se mueven juntos al arrastrar: los seleccionados más, salvo que se pida lo contrario
  * (`Alt`), todos los atributos que cuelgan de ellos, recursivamente (componentes de compuestos).
@@ -68,7 +68,7 @@ export function collectDragGroup(
     frontier = nodes.filter(
       n =>
         !group.has(n.id) &&
-        ATTRIBUTE_TYPES.includes(n.type) &&
+        isAttributeType(n.type) &&
         parents.some(p => n.parentEntity === p.id || n.parentEntity === p.label)
     );
     frontier.forEach(n => group.add(n.id));
@@ -92,6 +92,7 @@ const HALF_SIZE_BY_TYPE: Record<string, Point> = {
   identifying_relationship: { x: 60, y: 40 },
   attribute: { x: 45, y: 25 },
   key_attribute: { x: 45, y: 25 },
+  partial_key_attribute: { x: 45, y: 25 },
   derived_attribute: { x: 45, y: 25 },
   multivalued_attribute: { x: 45, y: 25 },
   specialization: { x: 18, y: 18 },

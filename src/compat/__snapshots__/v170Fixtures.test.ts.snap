@@ -1,0 +1,881 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Compatibilidad con la v1.7.0 (§3.11 A) > helpExamples produce el mismo modelo 1`] = `
+{
+  "diagnostics": [
+    "9:warning:UNDECLARED_NODE_REFERENCE",
+    "11:warning:UNDECLARED_NODE_REFERENCE",
+    "14:warning:UNDECLARED_NODE_REFERENCE",
+    "16:warning:UNDECLARED_NODE_REFERENCE",
+    "17:warning:UNDECLARED_NODE_REFERENCE",
+    "2:warning:WEAK_ENTITY_WITHOUT_IDENTIFYING_RELATIONSHIP",
+    "2:warning:WEAK_ENTITY_WITHOUT_PARTIAL_KEY",
+  ],
+  "isValid": true,
+  "links": [
+    "EMPLEADO | Nombre_4 |  | solid",
+    "EMPLEADO | DNI_5 |  | solid",
+    "EMPLEADO | Edad_6 |  | solid",
+    "EMPLEADO | Telefono_7 |  | solid",
+    "EMPLEADO | TRABAJA_EN | N | solid",
+    "EMPLEADO | d |  | double",
+    "EMPLEADO | d_12 | TipoTrabajo | double",
+  ],
+  "nodes": [
+    "EMPLEADO | entity | EMPLEADO |  | ",
+    "DEPENDIENTE | weak_entity | DEPENDIENTE |  | ",
+    "TRABAJA_EN | relationship | TRABAJA_EN |  | ",
+    "TIENE_DEP | identifying_relationship | TIENE_DEP |  | ",
+    "Nombre_4 | attribute | Nombre | EMPLEADO | ",
+    "DNI_5 | key_attribute | DNI | EMPLEADO | ",
+    "Edad_6 | derived_attribute | Edad | EMPLEADO | ",
+    "Telefono_7 | multivalued_attribute | Telefono | EMPLEADO | ",
+    "Vuelta_8 | key_attribute | Vuelta | CIRCULA | ",
+    "d | specialization | d |  | ",
+    "d_12 | specialization | d |  | TipoTrabajo",
+    "u | union | u |  | ",
+  ],
+  "relationalDSL": "table EMPLEADO {
+  NOMBRE VARCHAR2(100)
+  DNI NUMBER(10) PK
+  TIPOTRABAJO VARCHAR2(100)
+}
+
+table DEPENDIENTE {
+}
+
+table EMPLEADO_TELEFONO {
+  EMPLEADO_DNI PK FK -> EMPLEADO(DNI) ON DELETE CASCADE
+  TELEFONO VARCHAR2(100) PK
+}",
+  "sql": "-- =============================================================================
+-- Script SQL DDL generado automáticamente por eer-studio
+-- Dialecto Destino: ORACLE (Dialecto Universitario Principal)
+<fecha>
+-- Basado en el Algoritmo Formal de Mapeo EER-a-Relacional (Pasos 1-9)
+-- =============================================================================
+
+-- Borrado previo de tablas (si existen)
+-- DROP TABLE EMPLEADO CASCADE CONSTRAINTS;
+-- DROP TABLE DEPENDIENTE CASCADE CONSTRAINTS;
+-- DROP TABLE EMPLEADO_TELEFONO CASCADE CONSTRAINTS;
+
+-- -----------------------------------------------------------------------------
+-- Tabla: EMPLEADO
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'EMPLEADO' para la entidad fuerte 'EMPLEADO'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE EMPLEADO (
+  NOMBRE                    VARCHAR2(100)   NULL,
+  DNI                       NUMBER(10)      NOT NULL,
+  TIPOTRABAJO               VARCHAR2(100)   NULL,
+  CONSTRAINT PK_EMPLEADO PRIMARY KEY (DNI)
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: DEPENDIENTE
+-- Regla Aplicada: Paso 2: Mapeado de Entidades Débiles
+-- Justificación: Se crea la tabla 'DEPENDIENTE' para la entidad débil 'DEPENDIENTE'. Incluye la PK de la entidad propietaria como FK y forma su PK compuesta con su clave parcial.
+-- -----------------------------------------------------------------------------
+CREATE TABLE DEPENDIENTE (
+
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: EMPLEADO_TELEFONO
+-- Regla Aplicada: Paso 6: Mapeado de Atributos Multivalorados
+-- Justificación: Se crea la tabla independiente 'EMPLEADO_TELEFONO' para evitar violar la Primera Forma Normal (1FN).
+-- -----------------------------------------------------------------------------
+CREATE TABLE EMPLEADO_TELEFONO (
+  EMPLEADO_DNI              NUMBER(10)      NOT NULL,
+  TELEFONO                  VARCHAR2(100)   NOT NULL,
+  CONSTRAINT PK_EMPLEADO_TELEFONO PRIMARY KEY (EMPLEADO_DNI, TELEFONO),
+  CONSTRAINT FK_EMPLEADO_TELEFONO_EMPLEADO FOREIGN KEY (EMPLEADO_DNI) REFERENCES EMPLEADO (DNI) ON DELETE CASCADE
+);
+",
+  "tables": [
+    {
+      "columns": [
+        "NOMBRE VARCHAR2(100) NULL",
+        "DNI NUMBER(10) PK NOT NULL UNIQUE",
+        "TIPOTRABAJO VARCHAR2(100) NULL",
+      ],
+      "foreignKeys": [],
+      "name": "EMPLEADO",
+    },
+    {
+      "columns": [],
+      "foreignKeys": [],
+      "name": "DEPENDIENTE",
+    },
+    {
+      "columns": [
+        "EMPLEADO_DNI NUMBER(10) PK FK NOT NULL",
+        "TELEFONO VARCHAR2(100) PK NOT NULL",
+      ],
+      "foreignKeys": [
+        "FK_EMPLEADO_TELEFONO_EMPLEADO (EMPLEADO_DNI) -> EMPLEADO(DNI) CASCADE",
+      ],
+      "name": "EMPLEADO_TELEFONO",
+    },
+  ],
+}
+`;
+
+exports[`Compatibilidad con la v1.7.0 (§3.11 A) > hotelTemplate produce el mismo modelo 1`] = `
+{
+  "diagnostics": [
+    "10:warning:KEY_ATTRIBUTE_ON_WEAK_ENTITY",
+  ],
+  "isValid": true,
+  "links": [
+    "HOTEL | Nombre_4 |  | solid",
+    "HOTEL | Direccion_5 |  | solid",
+    "HOTEL | Categoria_6 |  | solid",
+    "HABITACION | NumPuerta_9 |  | solid",
+    "HABITACION | Piso_10 |  | solid",
+    "HABITACION | Tipo_11 |  | solid",
+    "HOTEL | TIENE | 1 | solid",
+    "HABITACION | TIENE | N | double",
+    "SERVICIO | Codigo_23 |  | solid",
+    "SERVICIO | Nombre_24 |  | solid",
+    "SERVICIO | CosteBase_25 |  | solid",
+    "HOTEL | OFRECE | M | solid",
+    "SERVICIO | OFRECE | N | double",
+    "SERVICIO | d |  | double",
+    "RESTAURANTE | TipoComida_36 |  | solid",
+    "RESTAURANTE | Terraza_37 |  | solid",
+    "SPA | Masajes_40 |  | solid",
+    "SALON_EVENTOS | Capacidad_43 |  | solid",
+    "SALON_EVENTOS | EquipoAV_44 |  | solid",
+    "d | RESTAURANTE |  | solid",
+    "d | SPA |  | solid",
+    "d | SALON_EVENTOS |  | solid",
+    "EMPLEADO | DNI_54 |  | solid",
+    "EMPLEADO | Nombre_55 |  | solid",
+    "EMPLEADO | Salario_56 |  | solid",
+    "EMPLEADO | Antiguedad_57 |  | solid",
+    "HOTEL | TRABAJA_EN | 1 | solid",
+    "EMPLEADO | TRABAJA_EN | N | solid",
+    "CLIENTE | DNI_66 |  | solid",
+    "CLIENTE | Nombre_67 |  | solid",
+    "RESERVA | PrecioFinal_71 |  | solid",
+    "RESERVA | Fecha_72 |  | solid",
+    "SALON_EVENTOS | RESERVA | N | solid",
+    "EMPLEADO | RESERVA | 1 | solid",
+    "CLIENTE | RESERVA | M | solid",
+  ],
+  "nodes": [
+    "HOTEL | entity | HOTEL |  | ",
+    "Nombre_4 | key_attribute | Nombre | HOTEL | ",
+    "Direccion_5 | attribute | Direccion | HOTEL | ",
+    "Categoria_6 | attribute | Categoria | HOTEL | ",
+    "HABITACION | weak_entity | HABITACION |  | ",
+    "NumPuerta_9 | key_attribute | NumPuerta | HABITACION | ",
+    "Piso_10 | attribute | Piso | HABITACION | ",
+    "Tipo_11 | attribute | Tipo | HABITACION | ",
+    "TIENE | identifying_relationship | TIENE |  | ",
+    "SERVICIO | entity | SERVICIO |  | ",
+    "Codigo_23 | key_attribute | Codigo | SERVICIO | ",
+    "Nombre_24 | attribute | Nombre | SERVICIO | ",
+    "CosteBase_25 | attribute | CosteBase | SERVICIO | ",
+    "OFRECE | relationship | OFRECE |  | ",
+    "d | specialization | d |  | ",
+    "RESTAURANTE | entity | RESTAURANTE |  | ",
+    "TipoComida_36 | attribute | TipoComida | RESTAURANTE | ",
+    "Terraza_37 | attribute | Terraza | RESTAURANTE | ",
+    "SPA | entity | SPA |  | ",
+    "Masajes_40 | attribute | Masajes | SPA | ",
+    "SALON_EVENTOS | entity | SALON_EVENTOS |  | ",
+    "Capacidad_43 | attribute | Capacidad | SALON_EVENTOS | ",
+    "EquipoAV_44 | attribute | EquipoAV | SALON_EVENTOS | ",
+    "EMPLEADO | entity | EMPLEADO |  | ",
+    "DNI_54 | key_attribute | DNI | EMPLEADO | ",
+    "Nombre_55 | attribute | Nombre | EMPLEADO | ",
+    "Salario_56 | attribute | Salario | EMPLEADO | ",
+    "Antiguedad_57 | attribute | Antiguedad | EMPLEADO | ",
+    "TRABAJA_EN | relationship | TRABAJA_EN |  | ",
+    "CLIENTE | entity | CLIENTE |  | ",
+    "DNI_66 | key_attribute | DNI | CLIENTE | ",
+    "Nombre_67 | attribute | Nombre | CLIENTE | ",
+    "RESERVA | relationship | RESERVA |  | ",
+    "PrecioFinal_71 | attribute | PrecioFinal | RESERVA | ",
+    "Fecha_72 | attribute | Fecha | RESERVA | ",
+  ],
+  "relationalDSL": "table HOTEL {
+  NOMBRE NUMBER(10) PK
+  DIRECCION VARCHAR2(100)
+  CATEGORIA VARCHAR2(100)
+}
+
+table SERVICIO {
+  CODIGO NUMBER(10) PK
+  NOMBRE VARCHAR2(100)
+  COSTEBASE VARCHAR2(100)
+}
+
+table RESTAURANTE {
+  CODIGO PK FK -> SERVICIO(CODIGO) ON DELETE CASCADE
+  TIPOCOMIDA NUMBER(10)
+  TERRAZA VARCHAR2(100)
+}
+
+table SPA {
+  CODIGO PK FK -> SERVICIO(CODIGO) ON DELETE CASCADE
+  MASAJES VARCHAR2(100)
+}
+
+table SALON_EVENTOS {
+  CODIGO PK FK -> SERVICIO(CODIGO) ON DELETE CASCADE
+  CAPACIDAD NUMBER(10)
+  EQUIPOAV VARCHAR2(100)
+}
+
+table EMPLEADO {
+  DNI NUMBER(10) PK
+  NOMBRE VARCHAR2(100)
+  SALARIO NUMBER(12, 2)
+  ANTIGUEDAD VARCHAR2(100)
+  HOTEL_NOMBRE FK -> HOTEL(NOMBRE) ON DELETE SET NULL
+}
+
+table CLIENTE {
+  DNI NUMBER(10) PK
+  NOMBRE VARCHAR2(100)
+}
+
+table HABITACION {
+  HOTEL_NOMBRE PK FK -> HOTEL(NOMBRE) ON DELETE CASCADE
+  NUMPUERTA NUMBER(10) PK
+  PISO VARCHAR2(100)
+  TIPO VARCHAR2(100)
+}
+
+table OFRECE {
+  HOTEL_NOMBRE PK FK -> HOTEL(NOMBRE) ON DELETE NO ACTION
+  SERVICIO_CODIGO PK FK -> SERVICIO(CODIGO) ON DELETE NO ACTION
+}
+
+table RESERVA {
+  SALON_EVENTOS_CODIGO PK FK -> SALON_EVENTOS(CODIGO) ON DELETE NO ACTION
+  EMPLEADO_DNI NOT NULL FK -> EMPLEADO(DNI) ON DELETE NO ACTION
+  CLIENTE_DNI PK FK -> CLIENTE(DNI) ON DELETE NO ACTION
+  PRECIOFINAL NUMBER(12, 2)
+  FECHA DATE
+}",
+  "sql": "-- =============================================================================
+-- Script SQL DDL generado automáticamente por eer-studio
+-- Dialecto Destino: ORACLE (Dialecto Universitario Principal)
+<fecha>
+-- Basado en el Algoritmo Formal de Mapeo EER-a-Relacional (Pasos 1-9)
+-- =============================================================================
+
+-- Borrado previo de tablas (si existen)
+-- DROP TABLE HOTEL CASCADE CONSTRAINTS;
+-- DROP TABLE SERVICIO CASCADE CONSTRAINTS;
+-- DROP TABLE RESTAURANTE CASCADE CONSTRAINTS;
+-- DROP TABLE SPA CASCADE CONSTRAINTS;
+-- DROP TABLE SALON_EVENTOS CASCADE CONSTRAINTS;
+-- DROP TABLE EMPLEADO CASCADE CONSTRAINTS;
+-- DROP TABLE CLIENTE CASCADE CONSTRAINTS;
+-- DROP TABLE HABITACION CASCADE CONSTRAINTS;
+-- DROP TABLE OFRECE CASCADE CONSTRAINTS;
+-- DROP TABLE RESERVA CASCADE CONSTRAINTS;
+
+-- -----------------------------------------------------------------------------
+-- Tabla: HOTEL
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'HOTEL' para la entidad fuerte 'HOTEL'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE HOTEL (
+  NOMBRE                    NUMBER(10)      NOT NULL,
+  DIRECCION                 VARCHAR2(100)   NULL,
+  CATEGORIA                 VARCHAR2(100)   NULL,
+  CONSTRAINT PK_HOTEL PRIMARY KEY (NOMBRE)
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: SERVICIO
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'SERVICIO' para la entidad fuerte 'SERVICIO'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE SERVICIO (
+  CODIGO                    NUMBER(10)      NOT NULL,
+  NOMBRE                    VARCHAR2(100)   NULL,
+  COSTEBASE                 VARCHAR2(100)   NULL,
+  CONSTRAINT PK_SERVICIO PRIMARY KEY (CODIGO)
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: RESTAURANTE
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'RESTAURANTE' para la entidad fuerte 'RESTAURANTE'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE RESTAURANTE (
+  CODIGO                    NUMBER(10)      NOT NULL,
+  TIPOCOMIDA                NUMBER(10)      NULL,
+  TERRAZA                   VARCHAR2(100)   NULL,
+  CONSTRAINT PK_RESTAURANTE PRIMARY KEY (CODIGO),
+  CONSTRAINT FK_RESTAURANTE_SERVICIO FOREIGN KEY (CODIGO) REFERENCES SERVICIO (CODIGO) ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: SPA
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'SPA' para la entidad fuerte 'SPA'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE SPA (
+  CODIGO                    NUMBER(10)      NOT NULL,
+  MASAJES                   VARCHAR2(100)   NULL,
+  CONSTRAINT PK_SPA PRIMARY KEY (CODIGO),
+  CONSTRAINT FK_SPA_SERVICIO FOREIGN KEY (CODIGO) REFERENCES SERVICIO (CODIGO) ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: SALON_EVENTOS
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'SALON_EVENTOS' para la entidad fuerte 'SALON_EVENTOS'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE SALON_EVENTOS (
+  CODIGO                    NUMBER(10)      NOT NULL,
+  CAPACIDAD                 NUMBER(10)      NULL,
+  EQUIPOAV                  VARCHAR2(100)   NULL,
+  CONSTRAINT PK_SALON_EVENTOS PRIMARY KEY (CODIGO),
+  CONSTRAINT FK_SALON_EVENTOS_SERVICIO FOREIGN KEY (CODIGO) REFERENCES SERVICIO (CODIGO) ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: EMPLEADO
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'EMPLEADO' para la entidad fuerte 'EMPLEADO'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE EMPLEADO (
+  DNI                       NUMBER(10)      NOT NULL,
+  NOMBRE                    VARCHAR2(100)   NULL,
+  SALARIO                   NUMBER(12, 2)   NULL,
+  ANTIGUEDAD                VARCHAR2(100)   NULL,
+  HOTEL_NOMBRE              NUMBER(10)      NULL,
+  CONSTRAINT PK_EMPLEADO PRIMARY KEY (DNI),
+  CONSTRAINT FK_EMPLEADO_HOTEL FOREIGN KEY (HOTEL_NOMBRE) REFERENCES HOTEL (NOMBRE) ON DELETE SET NULL
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: CLIENTE
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'CLIENTE' para la entidad fuerte 'CLIENTE'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE CLIENTE (
+  DNI                       NUMBER(10)      NOT NULL,
+  NOMBRE                    VARCHAR2(100)   NULL,
+  CONSTRAINT PK_CLIENTE PRIMARY KEY (DNI)
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: HABITACION
+-- Regla Aplicada: Paso 2: Mapeado de Entidades Débiles
+-- Justificación: Se crea la tabla 'HABITACION' para la entidad débil 'HABITACION'. Incluye la PK de la entidad propietaria como FK y forma su PK compuesta con su clave parcial.
+-- -----------------------------------------------------------------------------
+CREATE TABLE HABITACION (
+  HOTEL_NOMBRE              NUMBER(10)      NOT NULL,
+  NUMPUERTA                 NUMBER(10)      NOT NULL,
+  PISO                      VARCHAR2(100)   NULL,
+  TIPO                      VARCHAR2(100)   NULL,
+  CONSTRAINT PK_HABITACION PRIMARY KEY (HOTEL_NOMBRE, NUMPUERTA),
+  CONSTRAINT FK_HABITACION_HOTEL FOREIGN KEY (HOTEL_NOMBRE) REFERENCES HOTEL (NOMBRE) ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: OFRECE
+-- Regla Aplicada: Paso 5: Mapeado de Relaciones M:N Binarias
+-- Justificación: Se crea la tabla puente 'OFRECE' para representar la relación muchos-a-muchos. Su PK es la unión de las FKs de ambas entidades.
+-- -----------------------------------------------------------------------------
+CREATE TABLE OFRECE (
+  HOTEL_NOMBRE              NUMBER(10)      NOT NULL,
+  SERVICIO_CODIGO           NUMBER(10)      NOT NULL,
+  CONSTRAINT PK_OFRECE PRIMARY KEY (HOTEL_NOMBRE, SERVICIO_CODIGO),
+  CONSTRAINT FK_OFRECE_HOTEL FOREIGN KEY (HOTEL_NOMBRE) REFERENCES HOTEL (NOMBRE),
+  CONSTRAINT FK_OFRECE_SERVICIO FOREIGN KEY (SERVICIO_CODIGO) REFERENCES SERVICIO (CODIGO)
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: RESERVA
+-- Regla Aplicada: Paso 7: Mapeado de Relaciones N-arias (n > 2)
+-- Justificación: Se crea la tabla de relación 'RESERVA' para representar la relación n-aria entre 3 entidades. Su PK es la combinación de las FKs de las entidades sin restricción de cardinalidad 1.
+-- -----------------------------------------------------------------------------
+CREATE TABLE RESERVA (
+  SALON_EVENTOS_CODIGO      NUMBER(10)      NOT NULL,
+  EMPLEADO_DNI              NUMBER(10)      NOT NULL,
+  CLIENTE_DNI               NUMBER(10)      NOT NULL,
+  PRECIOFINAL               NUMBER(12, 2)   NULL,
+  FECHA                     DATE            NULL,
+  CONSTRAINT PK_RESERVA PRIMARY KEY (SALON_EVENTOS_CODIGO, CLIENTE_DNI),
+  CONSTRAINT FK_RESERVA_SALON_EVENTOS FOREIGN KEY (SALON_EVENTOS_CODIGO) REFERENCES SALON_EVENTOS (CODIGO),
+  CONSTRAINT FK_RESERVA_EMPLEADO FOREIGN KEY (EMPLEADO_DNI) REFERENCES EMPLEADO (DNI),
+  CONSTRAINT FK_RESERVA_CLIENTE FOREIGN KEY (CLIENTE_DNI) REFERENCES CLIENTE (DNI)
+);
+",
+  "tables": [
+    {
+      "columns": [
+        "NOMBRE NUMBER(10) PK NOT NULL UNIQUE",
+        "DIRECCION VARCHAR2(100) NULL",
+        "CATEGORIA VARCHAR2(100) NULL",
+      ],
+      "foreignKeys": [],
+      "name": "HOTEL",
+    },
+    {
+      "columns": [
+        "CODIGO NUMBER(10) PK NOT NULL UNIQUE",
+        "NOMBRE VARCHAR2(100) NULL",
+        "COSTEBASE VARCHAR2(100) NULL",
+      ],
+      "foreignKeys": [],
+      "name": "SERVICIO",
+    },
+    {
+      "columns": [
+        "CODIGO NUMBER(10) PK FK NOT NULL UNIQUE",
+        "TIPOCOMIDA NUMBER(10) NULL",
+        "TERRAZA VARCHAR2(100) NULL",
+      ],
+      "foreignKeys": [
+        "FK_RESTAURANTE_SERVICIO (CODIGO) -> SERVICIO(CODIGO) CASCADE",
+      ],
+      "name": "RESTAURANTE",
+    },
+    {
+      "columns": [
+        "CODIGO NUMBER(10) PK FK NOT NULL UNIQUE",
+        "MASAJES VARCHAR2(100) NULL",
+      ],
+      "foreignKeys": [
+        "FK_SPA_SERVICIO (CODIGO) -> SERVICIO(CODIGO) CASCADE",
+      ],
+      "name": "SPA",
+    },
+    {
+      "columns": [
+        "CODIGO NUMBER(10) PK FK NOT NULL UNIQUE",
+        "CAPACIDAD NUMBER(10) NULL",
+        "EQUIPOAV VARCHAR2(100) NULL",
+      ],
+      "foreignKeys": [
+        "FK_SALON_EVENTOS_SERVICIO (CODIGO) -> SERVICIO(CODIGO) CASCADE",
+      ],
+      "name": "SALON_EVENTOS",
+    },
+    {
+      "columns": [
+        "DNI NUMBER(10) PK NOT NULL UNIQUE",
+        "NOMBRE VARCHAR2(100) NULL",
+        "SALARIO NUMBER(12, 2) NULL",
+        "ANTIGUEDAD VARCHAR2(100) NULL",
+        "HOTEL_NOMBRE NUMBER(10) FK NULL",
+      ],
+      "foreignKeys": [
+        "FK_EMPLEADO_HOTEL (HOTEL_NOMBRE) -> HOTEL(NOMBRE) SET NULL",
+      ],
+      "name": "EMPLEADO",
+    },
+    {
+      "columns": [
+        "DNI NUMBER(10) PK NOT NULL UNIQUE",
+        "NOMBRE VARCHAR2(100) NULL",
+      ],
+      "foreignKeys": [],
+      "name": "CLIENTE",
+    },
+    {
+      "columns": [
+        "HOTEL_NOMBRE NUMBER(10) PK FK NOT NULL",
+        "NUMPUERTA NUMBER(10) PK NOT NULL",
+        "PISO VARCHAR2(100) NULL",
+        "TIPO VARCHAR2(100) NULL",
+      ],
+      "foreignKeys": [
+        "FK_HABITACION_HOTEL (HOTEL_NOMBRE) -> HOTEL(NOMBRE) CASCADE",
+      ],
+      "name": "HABITACION",
+    },
+    {
+      "columns": [
+        "HOTEL_NOMBRE NUMBER(10) PK FK NOT NULL",
+        "SERVICIO_CODIGO NUMBER(10) PK FK NOT NULL",
+      ],
+      "foreignKeys": [
+        "FK_OFRECE_HOTEL (HOTEL_NOMBRE) -> HOTEL(NOMBRE) NO ACTION",
+        "FK_OFRECE_SERVICIO (SERVICIO_CODIGO) -> SERVICIO(CODIGO) NO ACTION",
+      ],
+      "name": "OFRECE",
+    },
+    {
+      "columns": [
+        "SALON_EVENTOS_CODIGO NUMBER(10) PK FK NOT NULL",
+        "EMPLEADO_DNI NUMBER(10) FK NOT NULL",
+        "CLIENTE_DNI NUMBER(10) PK FK NOT NULL",
+        "PRECIOFINAL NUMBER(12, 2) NULL",
+        "FECHA DATE NULL",
+      ],
+      "foreignKeys": [
+        "FK_RESERVA_SALON_EVENTOS (SALON_EVENTOS_CODIGO) -> SALON_EVENTOS(CODIGO) NO ACTION",
+        "FK_RESERVA_EMPLEADO (EMPLEADO_DNI) -> EMPLEADO(DNI) NO ACTION",
+        "FK_RESERVA_CLIENTE (CLIENTE_DNI) -> CLIENTE(DNI) NO ACTION",
+      ],
+      "name": "RESERVA",
+    },
+  ],
+}
+`;
+
+exports[`Compatibilidad con la v1.7.0 (§3.11 A) > sampleCode produce el mismo modelo 1`] = `
+{
+  "diagnostics": [],
+  "isValid": true,
+  "links": [
+    "EMPLEADO | Dni_10 |  | solid",
+    "EMPLEADO | Nombre_11 |  | solid",
+    "EMPLEADO | Edad_12 |  | solid",
+    "EMPLEADO | TRABAJA_PARA | N | solid",
+    "DEPARTAMENTO | TRABAJA_PARA | 1 | solid",
+    "DEPARTAMENTO | CONTROLA | 1 | solid",
+    "PROYECTO | CONTROLA | N | solid",
+    "DEPENDIENTE | NombreDep_25 |  | solid",
+    "EMPLEADO | TIENE_DEP | 1 | solid",
+    "DEPENDIENTE | TIENE_DEP | N | double",
+    "EMPLEADO | d | TipoTrabajo | double",
+    "d | SECRETARIA |  | solid",
+    "d | INGENIERO |  | solid",
+    "d | TECNICO |  | solid",
+    "PERSONA | u |  | solid",
+    "BANCO | u |  | solid",
+    "EMPRESA | u |  | solid",
+    "u | PROPIETARIO |  | double",
+  ],
+  "nodes": [
+    "EMPLEADO | entity | EMPLEADO |  | ",
+    "DEPARTAMENTO | entity | DEPARTAMENTO |  | ",
+    "PROYECTO | entity | PROYECTO |  | ",
+    "DEPENDIENTE | weak_entity | DEPENDIENTE |  | ",
+    "Dni_10 | key_attribute | Dni | EMPLEADO | ",
+    "Nombre_11 | attribute | Nombre | EMPLEADO | ",
+    "Edad_12 | derived_attribute | Edad | EMPLEADO | ",
+    "TRABAJA_PARA | relationship | TRABAJA_PARA |  | ",
+    "CONTROLA | relationship | CONTROLA |  | ",
+    "NombreDep_25 | partial_key_attribute | NombreDep | DEPENDIENTE | ",
+    "TIENE_DEP | identifying_relationship | TIENE_DEP |  | ",
+    "d | specialization | d |  | TipoTrabajo",
+    "SECRETARIA | entity | SECRETARIA |  | ",
+    "INGENIERO | entity | INGENIERO |  | ",
+    "TECNICO | entity | TECNICO |  | ",
+    "PERSONA | entity | PERSONA |  | ",
+    "BANCO | entity | BANCO |  | ",
+    "EMPRESA | entity | EMPRESA |  | ",
+    "u | union | u |  | ",
+    "PROPIETARIO | entity | PROPIETARIO |  | ",
+  ],
+  "relationalDSL": "table EMPLEADO {
+  DNI NUMBER(10) PK
+  NOMBRE VARCHAR2(100)
+  TIPOTRABAJO VARCHAR2(100)
+  DEPARTAMENTO_ID_DEPARTAMENTO FK -> DEPARTAMENTO(ID_DEPARTAMENTO) ON DELETE SET NULL
+}
+
+table DEPARTAMENTO {
+  ID_DEPARTAMENTO NUMBER(10) PK
+}
+
+table PROYECTO {
+  ID_PROYECTO NUMBER(10) PK
+  DEPARTAMENTO_ID_DEPARTAMENTO FK -> DEPARTAMENTO(ID_DEPARTAMENTO) ON DELETE SET NULL
+}
+
+table SECRETARIA {
+  DNI PK FK -> EMPLEADO(DNI) ON DELETE CASCADE
+}
+
+table INGENIERO {
+  DNI PK FK -> EMPLEADO(DNI) ON DELETE CASCADE
+}
+
+table TECNICO {
+  DNI PK FK -> EMPLEADO(DNI) ON DELETE CASCADE
+}
+
+table PERSONA {
+  ID_PERSONA NUMBER(10) PK
+  PROPIETARIO_ID_PROPIETARIO FK -> PROPIETARIO(ID_PROPIETARIO) ON DELETE SET NULL
+}
+
+table BANCO {
+  ID_BANCO NUMBER(10) PK
+  PROPIETARIO_ID_PROPIETARIO FK -> PROPIETARIO(ID_PROPIETARIO) ON DELETE SET NULL
+}
+
+table EMPRESA {
+  ID_EMPRESA NUMBER(10) PK
+  PROPIETARIO_ID_PROPIETARIO FK -> PROPIETARIO(ID_PROPIETARIO) ON DELETE SET NULL
+}
+
+table PROPIETARIO {
+  ID_PROPIETARIO NUMBER(10) PK
+}
+
+table DEPENDIENTE {
+  EMPLEADO_DNI PK FK -> EMPLEADO(DNI) ON DELETE CASCADE
+  NOMBREDEP NUMBER(10) PK
+}",
+  "sql": "-- =============================================================================
+-- Script SQL DDL generado automáticamente por eer-studio
+-- Dialecto Destino: ORACLE (Dialecto Universitario Principal)
+<fecha>
+-- Basado en el Algoritmo Formal de Mapeo EER-a-Relacional (Pasos 1-9)
+-- =============================================================================
+
+-- Borrado previo de tablas (si existen)
+-- DROP TABLE EMPLEADO CASCADE CONSTRAINTS;
+-- DROP TABLE DEPARTAMENTO CASCADE CONSTRAINTS;
+-- DROP TABLE PROYECTO CASCADE CONSTRAINTS;
+-- DROP TABLE SECRETARIA CASCADE CONSTRAINTS;
+-- DROP TABLE INGENIERO CASCADE CONSTRAINTS;
+-- DROP TABLE TECNICO CASCADE CONSTRAINTS;
+-- DROP TABLE PERSONA CASCADE CONSTRAINTS;
+-- DROP TABLE BANCO CASCADE CONSTRAINTS;
+-- DROP TABLE EMPRESA CASCADE CONSTRAINTS;
+-- DROP TABLE PROPIETARIO CASCADE CONSTRAINTS;
+-- DROP TABLE DEPENDIENTE CASCADE CONSTRAINTS;
+
+-- -----------------------------------------------------------------------------
+-- Tabla: EMPLEADO
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'EMPLEADO' para la entidad fuerte 'EMPLEADO'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE EMPLEADO (
+  DNI                       NUMBER(10)      NOT NULL,
+  NOMBRE                    VARCHAR2(100)   NULL,
+  TIPOTRABAJO               VARCHAR2(100)   NULL,
+  DEPARTAMENTO_ID_DEPARTAMENTO NUMBER(10)      NULL,
+  CONSTRAINT PK_EMPLEADO PRIMARY KEY (DNI),
+  CONSTRAINT FK_EMPLEADO_DEPARTAMENTO FOREIGN KEY (DEPARTAMENTO_ID_DEPARTAMENTO) REFERENCES DEPARTAMENTO (ID_DEPARTAMENTO) ON DELETE SET NULL
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: DEPARTAMENTO
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'DEPARTAMENTO' para la entidad fuerte 'DEPARTAMENTO'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE DEPARTAMENTO (
+  ID_DEPARTAMENTO           NUMBER(10)      NOT NULL,
+  CONSTRAINT PK_DEPARTAMENTO PRIMARY KEY (ID_DEPARTAMENTO)
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: PROYECTO
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'PROYECTO' para la entidad fuerte 'PROYECTO'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE PROYECTO (
+  ID_PROYECTO               NUMBER(10)      NOT NULL,
+  DEPARTAMENTO_ID_DEPARTAMENTO NUMBER(10)      NULL,
+  CONSTRAINT PK_PROYECTO PRIMARY KEY (ID_PROYECTO),
+  CONSTRAINT FK_PROYECTO_DEPARTAMENTO FOREIGN KEY (DEPARTAMENTO_ID_DEPARTAMENTO) REFERENCES DEPARTAMENTO (ID_DEPARTAMENTO) ON DELETE SET NULL
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: SECRETARIA
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'SECRETARIA' para la entidad fuerte 'SECRETARIA'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE SECRETARIA (
+  DNI                       NUMBER(10)      NOT NULL,
+  CONSTRAINT PK_SECRETARIA PRIMARY KEY (DNI),
+  CONSTRAINT FK_SECRETARIA_EMPLEADO FOREIGN KEY (DNI) REFERENCES EMPLEADO (DNI) ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: INGENIERO
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'INGENIERO' para la entidad fuerte 'INGENIERO'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE INGENIERO (
+  DNI                       NUMBER(10)      NOT NULL,
+  CONSTRAINT PK_INGENIERO PRIMARY KEY (DNI),
+  CONSTRAINT FK_INGENIERO_EMPLEADO FOREIGN KEY (DNI) REFERENCES EMPLEADO (DNI) ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: TECNICO
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'TECNICO' para la entidad fuerte 'TECNICO'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE TECNICO (
+  DNI                       NUMBER(10)      NOT NULL,
+  CONSTRAINT PK_TECNICO PRIMARY KEY (DNI),
+  CONSTRAINT FK_TECNICO_EMPLEADO FOREIGN KEY (DNI) REFERENCES EMPLEADO (DNI) ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: PERSONA
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'PERSONA' para la entidad fuerte 'PERSONA'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE PERSONA (
+  ID_PERSONA                NUMBER(10)      NOT NULL,
+  PROPIETARIO_ID_PROPIETARIO NUMBER(10)      NULL,
+  CONSTRAINT PK_PERSONA PRIMARY KEY (ID_PERSONA),
+  CONSTRAINT FK_PERSONA_PROPIETARIO FOREIGN KEY (PROPIETARIO_ID_PROPIETARIO) REFERENCES PROPIETARIO (ID_PROPIETARIO) ON DELETE SET NULL
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: BANCO
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'BANCO' para la entidad fuerte 'BANCO'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE BANCO (
+  ID_BANCO                  NUMBER(10)      NOT NULL,
+  PROPIETARIO_ID_PROPIETARIO NUMBER(10)      NULL,
+  CONSTRAINT PK_BANCO PRIMARY KEY (ID_BANCO),
+  CONSTRAINT FK_BANCO_PROPIETARIO FOREIGN KEY (PROPIETARIO_ID_PROPIETARIO) REFERENCES PROPIETARIO (ID_PROPIETARIO) ON DELETE SET NULL
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: EMPRESA
+-- Regla Aplicada: Paso 1: Mapeado de Entidades Fuertes
+-- Justificación: Se crea la tabla 'EMPRESA' para la entidad fuerte 'EMPRESA'. Se mapean los atributos simples y componentes simples de compuestos.
+-- -----------------------------------------------------------------------------
+CREATE TABLE EMPRESA (
+  ID_EMPRESA                NUMBER(10)      NOT NULL,
+  PROPIETARIO_ID_PROPIETARIO NUMBER(10)      NULL,
+  CONSTRAINT PK_EMPRESA PRIMARY KEY (ID_EMPRESA),
+  CONSTRAINT FK_EMPRESA_PROPIETARIO FOREIGN KEY (PROPIETARIO_ID_PROPIETARIO) REFERENCES PROPIETARIO (ID_PROPIETARIO) ON DELETE SET NULL
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: PROPIETARIO
+-- Regla Aplicada: Paso 9: Mapeado de Categoría (Tipo de Unión)
+-- Justificación: Se crea la tabla de categoría 'PROPIETARIO' con su clave sustituta artificial como PK.
+-- -----------------------------------------------------------------------------
+CREATE TABLE PROPIETARIO (
+  ID_PROPIETARIO            NUMBER(10)      NOT NULL,
+  CONSTRAINT PK_PROPIETARIO PRIMARY KEY (ID_PROPIETARIO)
+);
+
+-- -----------------------------------------------------------------------------
+-- Tabla: DEPENDIENTE
+-- Regla Aplicada: Paso 2: Mapeado de Entidades Débiles
+-- Justificación: Se crea la tabla 'DEPENDIENTE' para la entidad débil 'DEPENDIENTE'. Incluye la PK de la entidad propietaria como FK y forma su PK compuesta con su clave parcial.
+-- -----------------------------------------------------------------------------
+CREATE TABLE DEPENDIENTE (
+  EMPLEADO_DNI              NUMBER(10)      NOT NULL,
+  NOMBREDEP                 NUMBER(10)      NOT NULL,
+  CONSTRAINT PK_DEPENDIENTE PRIMARY KEY (EMPLEADO_DNI, NOMBREDEP),
+  CONSTRAINT FK_DEPENDIENTE_EMPLEADO FOREIGN KEY (EMPLEADO_DNI) REFERENCES EMPLEADO (DNI) ON DELETE CASCADE
+);
+",
+  "tables": [
+    {
+      "columns": [
+        "DNI NUMBER(10) PK NOT NULL UNIQUE",
+        "NOMBRE VARCHAR2(100) NULL",
+        "TIPOTRABAJO VARCHAR2(100) NULL",
+        "DEPARTAMENTO_ID_DEPARTAMENTO NUMBER(10) FK NULL",
+      ],
+      "foreignKeys": [
+        "FK_EMPLEADO_DEPARTAMENTO (DEPARTAMENTO_ID_DEPARTAMENTO) -> DEPARTAMENTO(ID_DEPARTAMENTO) SET NULL",
+      ],
+      "name": "EMPLEADO",
+    },
+    {
+      "columns": [
+        "ID_DEPARTAMENTO NUMBER(10) PK NOT NULL UNIQUE",
+      ],
+      "foreignKeys": [],
+      "name": "DEPARTAMENTO",
+    },
+    {
+      "columns": [
+        "ID_PROYECTO NUMBER(10) PK NOT NULL UNIQUE",
+        "DEPARTAMENTO_ID_DEPARTAMENTO NUMBER(10) FK NULL",
+      ],
+      "foreignKeys": [
+        "FK_PROYECTO_DEPARTAMENTO (DEPARTAMENTO_ID_DEPARTAMENTO) -> DEPARTAMENTO(ID_DEPARTAMENTO) SET NULL",
+      ],
+      "name": "PROYECTO",
+    },
+    {
+      "columns": [
+        "DNI NUMBER(10) PK FK NOT NULL UNIQUE",
+      ],
+      "foreignKeys": [
+        "FK_SECRETARIA_EMPLEADO (DNI) -> EMPLEADO(DNI) CASCADE",
+      ],
+      "name": "SECRETARIA",
+    },
+    {
+      "columns": [
+        "DNI NUMBER(10) PK FK NOT NULL UNIQUE",
+      ],
+      "foreignKeys": [
+        "FK_INGENIERO_EMPLEADO (DNI) -> EMPLEADO(DNI) CASCADE",
+      ],
+      "name": "INGENIERO",
+    },
+    {
+      "columns": [
+        "DNI NUMBER(10) PK FK NOT NULL UNIQUE",
+      ],
+      "foreignKeys": [
+        "FK_TECNICO_EMPLEADO (DNI) -> EMPLEADO(DNI) CASCADE",
+      ],
+      "name": "TECNICO",
+    },
+    {
+      "columns": [
+        "ID_PERSONA NUMBER(10) PK NOT NULL UNIQUE",
+        "PROPIETARIO_ID_PROPIETARIO NUMBER(10) FK NULL",
+      ],
+      "foreignKeys": [
+        "FK_PERSONA_PROPIETARIO (PROPIETARIO_ID_PROPIETARIO) -> PROPIETARIO(ID_PROPIETARIO) SET NULL",
+      ],
+      "name": "PERSONA",
+    },
+    {
+      "columns": [
+        "ID_BANCO NUMBER(10) PK NOT NULL UNIQUE",
+        "PROPIETARIO_ID_PROPIETARIO NUMBER(10) FK NULL",
+      ],
+      "foreignKeys": [
+        "FK_BANCO_PROPIETARIO (PROPIETARIO_ID_PROPIETARIO) -> PROPIETARIO(ID_PROPIETARIO) SET NULL",
+      ],
+      "name": "BANCO",
+    },
+    {
+      "columns": [
+        "ID_EMPRESA NUMBER(10) PK NOT NULL UNIQUE",
+        "PROPIETARIO_ID_PROPIETARIO NUMBER(10) FK NULL",
+      ],
+      "foreignKeys": [
+        "FK_EMPRESA_PROPIETARIO (PROPIETARIO_ID_PROPIETARIO) -> PROPIETARIO(ID_PROPIETARIO) SET NULL",
+      ],
+      "name": "EMPRESA",
+    },
+    {
+      "columns": [
+        "ID_PROPIETARIO NUMBER(10) PK NOT NULL UNIQUE",
+      ],
+      "foreignKeys": [],
+      "name": "PROPIETARIO",
+    },
+    {
+      "columns": [
+        "EMPLEADO_DNI NUMBER(10) PK FK NOT NULL",
+        "NOMBREDEP NUMBER(10) PK NOT NULL",
+      ],
+      "foreignKeys": [
+        "FK_DEPENDIENTE_EMPLEADO (EMPLEADO_DNI) -> EMPLEADO(DNI) CASCADE",
+      ],
+      "name": "DEPENDIENTE",
+    },
+  ],
+}
+`;

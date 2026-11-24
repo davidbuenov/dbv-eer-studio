@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Sin publicar]
 
+> Notación EER completa, claves y modelo relacional, deshacer y pantalla completa en Moodle (`SPECIFICATIONS.md §3.11`). Origen: comentarios de usuarios del editor, el segundo correo de **Enrique Soler Castillo** y el uso real de la edición Moodle en el Campus Virtual de la UMA. Compatible con la v1.7.0: los diagramas existentes compilan igual y solo cambian las salidas que eran erróneas.
+
+### Added
+- **Clave parcial de entidad débil** (`partial_key_att Numero -> AULA`): se dibuja con subrayado discontinuo (Elmasri) y forma la PK junto a la del propietario. `key_att` en una entidad débil sigue funcionando igual.
+- **Especialización parcial** (`spec d -> EMPLEADO partial`): línea simple entre la superclase y el círculo. Sin la palabra sigue siendo total (doble línea), como hasta ahora; también se admite `total`.
+- **Roles** (`link EMPLEADO SUPERVISA "1" role:Supervisor`): se dibujan en cursiva junto a la línea y dan nombre a la clave foránea (`SUPERVISOR_DNI`, como `Super_ssn` en Elmasri).
+- **Claves alternativas** (`key_att Email -> CLIENTE unique`): se marcan con «UK» y se mapean a `NOT NULL` + `UNIQUE` (de tabla si son compuestas). Varios `key_att` sin `unique` siguen formando una PK compuesta; también vale un `key_att` con componentes.
+- **Atributos compuestos desde el formulario**: «Pertenece a» ofrece también los atributos (con su dueño, p. ej. «Direccion (CLIENTE)»); el atributo nuevo es un componente suyo. Los nombres repetidos aparecen desactivados por ambiguos.
+- **Propietario preseleccionado**: con una entidad, relación o atributo seleccionado en el diagrama, el formulario de un atributo nuevo lo trae ya elegido en «Pertenece a».
+- **Relaciones ternarias y de mayor grado desde el formulario**: lista de participantes con «+ Añadir entidad», cardinalidad, participación total y rol. Las n-arias ya se pueden editar desde el diagrama.
+- **Deshacer / rehacer** (`Ctrl+Z`, `Ctrl+Y`, `Ctrl+Mayús+Z` y botones ↶ ↷) en la edición completa y en la de Moodle: mover, crear, editar, eliminar, Limpiar, Empezar de nuevo y lo tecleado en el código (agrupado por pausas).
+- **Avisos pedagógicos del linter**: entidad débil sin relación identificativa o sin clave parcial, `key_att` en entidad débil (sugiere `partial_key_att`), clave parcial en entidad fuerte y relación recursiva sin roles.
+- **DSL relacional**: FK compuestas a nivel de tabla (`FK (A, B) -> T(X, Y)`), `UNIQUE` en columna y `UNIQUE (A, B)` de tabla, y FK sin tipo (heredan el de la columna referenciada). Avisos `FK_NOT_REFERENCING_KEY` (la FK no apunta a una clave completa, ORA-02270) y `FK_TYPE_MISMATCH`.
+- **Tipos del modelo relacional conservados**: los tipos cambiados en el DSL relacional sobreviven a los cambios del EER, se propagan a las FK que los referencian y se guardan en el `.eer` (`relational TABLA.COLUMNA : TIPO`, que la v1.7.0 ignora). Un aviso en el panel relacional indica qué ediciones se conservan.
+- **Pantalla completa** en todas las ediciones. En Moodle (botón en la barra del examen, `Esc` para salir) evita que los paneles laterales del curso quiten espacio; si el reproductor la bloquea, se avisa de la alternativa (*Mostrar paquete = Nueva ventana*), y la barra se adapta a pantallas estrechas (solo iconos por debajo de 1280 px). En la edición web, botón en la cabecera; en la app de escritorio, la ventana nativa (`F11` o `Esc` para salir).
+- **Ayuda**: ejemplos de la notación nueva, atajos de deshacer, explicación de la pantalla completa y de cómo se conservan los tipos del modelo relacional, y un **diagrama de referencia con toda la notación de Elmasri**, que además se usa como test de punta a punta.
+- **Prompt de IA (ES/EN)**: explica la notación nueva y su ejemplo completo la usa toda (clave alternativa, clave parcial, compuesto, multivaluado, derivado, roles, ternaria, especializaciones total y parcial, unión). Un test exige que el ejemplo compile sin avisos, cubra toda la notación y tenga la misma estructura en los dos idiomas.
+
+### Fixed
+- **Atributos compuestos**: no se dibujaban las líneas entre el compuesto y sus componentes, y el modelo relacional ignoraba los componentes (`CLIENTE(DNI, DIRECCION)` en lugar de `CALLE`, `NUMERO`). El compilador guardaba la etiqueta del compuesto y el dibujo y el motor buscaban por id.
+- **El modelo relacional iba un cambio por detrás del EER**: al borrar una entidad desde el diagrama su tabla seguía en el relacional; *Limpiar* no vaciaba el relacional.
+- **FK compuestas partidas en dos** al pasar por el DSL relacional (cualquier edición en la pestaña relacional), cada una hacia media PK: Oracle las rechazaba.
+- **`UNIQUE` nunca llegaba al SQL**: la FK de una relación 1:1 no era única, así que la 1:1 se comportaba como 1:N.
+- **Relaciones recursivas**: una M:N recursiva generaba dos columnas `EMPLEADO_DNI` y dos restricciones con el mismo nombre (DDL inválido). Ahora se usan los roles o se numeran; también dos 1:N entre las mismas entidades.
+- Los tipos con decimales (`NUMBER(12, 2)`) se truncaban al recompilar el DSL relacional; las posiciones negativas de las tablas no se leían al abrir un `.eer`.
+- Los nombres de restricción del DSL relacional coinciden ahora con los del motor (`FK_TABLA_DESTINO`).
+- **Relaciones recursivas en el diagrama**: las dos líneas entre la entidad y la relación se dibujaban superpuestas, con cardinalidades y roles uno encima de otro; ahora se dibujan paralelas. Se corrige también la clave de React repetida de esos enlaces.
+
+### Changed
+- El ejemplo inicial incluye la clave parcial de `DEPENDIENTE`.
+- Las confirmaciones de *Limpiar*, *Eliminar* y *Empezar de nuevo* indican que se pueden deshacer.
+
 ## [1.7.0] — 2026-11-13
 
 > Edición Moodle para exámenes EER (`SPECIFICATIONS.md §3.10`) y retirada del auto-actualizador (§3.9).

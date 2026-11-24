@@ -128,20 +128,25 @@ Implementa el algoritmo de los **9 pasos formales** expuesto en *"Fundamentos de
 
 - **Editor bidireccional DSL ↔ Canvas:** escribe el código y el diagrama se dibuja al instante; arrastra un nodo en el canvas y las coordenadas se actualizan solas en el código.
 - **Barra de herramientas visual:** inserta entidades, relaciones y atributos con un clic en el canvas y configúralos mediante formularios, sin escribir una línea de DSL.
-- **Notación de Chen completa:** entidades fuertes y débiles, relaciones normales e identificativas, atributos simples/clave/derivados/multivaluados, cardinalidades (1, N, M), participación total, jerarquías de especialización (disjuntas y solapadas) y uniones/categorías.
+- **Notación de Elmasri y Navathe completa:** entidades fuertes y débiles, relaciones normales e identificativas (binarias, recursivas con **roles** y de cualquier grado), atributos simples, clave, **clave parcial** (subrayado discontinuo), **clave alternativa** (UK), **compuestos**, derivados y multivaluados, cardinalidades (1, N, M), participación total, jerarquías de especialización (disjuntas y solapadas, **totales y parciales**) y uniones/categorías. La ayuda incluye un diagrama de referencia con toda la notación.
+- **Deshacer y rehacer** (`Ctrl+Z` / `Ctrl+Y` o los botones ↶ ↷): mover, crear, editar, eliminar, *Limpiar* o lo escrito en el código.
+- **Avisos pedagógicos** mientras dibujas: entidad débil sin relación identificativa o sin clave parcial, relación recursiva sin roles, claves mal colocadas…
 - **Edición directa en el diagrama:** doble clic (o `F2`) sobre cualquier elemento abre su formulario para renombrarlo, cambiar cardinalidades y participación de una relación, convertir una entidad en débil, cambiar el propietario de un atributo, etc. Renombrar actualiza todas las referencias del DSL.
 - **Localiza cada elemento en el código:** al seleccionar un nodo, sus líneas del DSL se resaltan y el editor se desplaza hasta ellas.
 - **Selección múltiple:** arrastra en el fondo para dibujar un **rectángulo de selección** (selecciona lo que queda entero dentro) o usa `Ctrl` + clic para añadir o quitar nodos; arrastrar mueve todo el grupo y `Supr` lo elimina.
 - **Los atributos siguen a su entidad o relación** al arrastrarla (`Alt` + arrastrar mueve solo el nodo).
 - **Atributos en serie:** "Añadir y crear otro" deja el formulario abierto para el siguiente atributo y lo coloca 100 px a la derecha; los atributos nunca se crean encima de otro nodo.
 - **Atributos de relación** desde el formulario visual (también clave, que en relaciones M:N y n-arias entran en la PK).
+- **Atributos compuestos desde el formulario:** en «Pertenece a» puedes elegir otro atributo, y el nuevo será un componente suyo (`Calle` de `Direccion`). Si tienes seleccionada una entidad, relación o atributo al pulsar *Atributo*, el formulario la trae ya elegida.
+- **Relaciones ternarias y de mayor grado desde el formulario:** «+ Añadir entidad», con cardinalidad, participación total y rol por participante.
 - **Navegación como en draw.io:** botón derecho (o central) + arrastrar desplaza el lienzo, la rueda también (`Shift` = horizontal) y `Ctrl` + rueda (o pellizco en el touchpad) hace zoom hacia el cursor. Además, controles +/−, reinicio y ajuste automático al contenido.
 
 ### Conversión al Modelo Relacional
 
 - **Motor de los 9 pasos formales** con trazabilidad completa: cada tabla, columna y clave ajena guarda qué paso la generó.
 - **Inspector pedagógico:** la pestaña "Guía de 9 Pasos" de la Ayuda resume el algoritmo, y el icono 📖 de cada tabla abre la explicación concreta de la regla que la creó.
-- **Editor relacional propio:** el Modelo Relacional tiene su propio DSL de texto, también bidireccional y con coordenadas persistentes.
+- **Editor relacional propio:** el Modelo Relacional tiene su propio DSL de texto, también bidireccional y con coordenadas persistentes, con claves foráneas compuestas y restricciones `UNIQUE`.
+- **Tipos de columna que se conservan:** el EER no tiene tipos; si cambias uno en el DSL relacional, se mantiene aunque modifiques el EER, se guarda en el `.eer` y las claves foráneas que lo referencian lo heredan.
 - **Resaltado interactivo:** al pasar el ratón por una tabla se destacan sus conexiones de integridad referencial.
 
 ### Exportación
@@ -154,6 +159,7 @@ Implementa el algoritmo de los **9 pasos formales** expuesto en *"Fundamentos de
 
 - **Centro de Ayuda unificado** (botón **Ayuda** o `F1`), con pestañas: *Uso del editor* (gestos, atajos de teclado y flujo de trabajo), *Sintaxis* de ambos DSL, *Guía de 9 Pasos*, *Prompt IA* (para que ChatGPT, Claude o Gemini generen el DSL a partir de un enunciado) y *Acerca de*.
 - **Español e inglés** en toda la interfaz, la ayuda y el prompt de IA, conmutables desde la cabecera; el idioma elegido se recuerda.
+- **Pantalla completa** (en el navegador, en la app de escritorio con `F11` y en la edición Moodle, donde oculta los paneles laterales del curso).
 - **Fijar ventana encima** (solo escritorio) para mantener el diagrama visible junto a otra aplicación.
 
 ---
@@ -189,7 +195,10 @@ weak_ent DEPENDIENTE (100, 300)
 
 // Atributos
 key_att DNI -> EMPLEADO (350, 220)
+key_att Email -> EMPLEADO unique       // clave alternativa (UNIQUE NOT NULL)
 att Nombre -> EMPLEADO (450, 220)
+att Direccion -> EMPLEADO             // atributo compuesto…
+att Calle -> Direccion                //   …y sus componentes
 derived_att Edad -> EMPLEADO (400, 180)
 multivalued_att Telefono -> EMPLEADO (300, 180)
 key_att Vuelta -> CIRCULA (700, 120)   // atributo clave de una relación M:N
@@ -198,15 +207,20 @@ key_att Vuelta -> CIRCULA (700, 120)   // atributo clave de una relación M:N
 rel TRABAJA_PARA (550, 300)
 link EMPLEADO TRABAJA_PARA "N"
 link DEPARTAMENTO TRABAJA_PARA "1"
+rel SUPERVISA                          // recursiva: los roles nombran cada participación
+link EMPLEADO SUPERVISA "1" role:Supervisor
+link EMPLEADO SUPERVISA "N" role:Supervisado
 
-// Entidad débil y relación identificativa
+// Entidad débil, clave parcial y relación identificativa
+partial_key_att NombreDep -> DEPENDIENTE
 ident_rel TIENE_DEP (250, 300)
 link EMPLEADO TIENE_DEP "1"
 link DEPENDIENTE TIENE_DEP "N" [total]
 
 // Jerarquías
-spec d -> EMPLEADO                  // 'd' disjunta, 'o' solapada; definida por el usuario
+spec d -> EMPLEADO                  // 'd' disjunta, 'o' solapada; total (doble línea)
 spec d -> EMPLEADO [TipoTrabajo]    // definida por atributo (atributo definidor)
+spec o -> EMPLEADO partial          // parcial (línea simple)
 link d INGENIERO
 
 // Categorías
@@ -232,7 +246,7 @@ La carpeta [`ejemplos/`](ejemplos/) contiene ficheros listos para abrir desde la
 
 ## 🎓 Edición Moodle para exámenes
 
-Variante de examen que se integra en **Moodle** como paquete **SCORM 1.2**: un único HTML que funciona **sin internet** y dentro de **Safe Exam Browser**. Incluye solo el editor EER (con su ayuda), una plantilla de partida opcional y autoguardado. El alumno entrega pegando su diagrama en el texto en línea de una **Tarea**, que es la que impide modificarlo después de enviarlo o de cerrarse.
+Variante de examen que se integra en **Moodle** como paquete **SCORM 1.2**: un único HTML que funciona **sin internet** y dentro de **Safe Exam Browser**. Incluye solo el editor EER (con su ayuda), una plantilla de partida opcional, autoguardado, deshacer/rehacer y un botón de **pantalla completa** para que los paneles laterales de Moodle no quiten espacio. El alumno entrega pegando su diagrama en el texto en línea de una **Tarea**, que es la que impide modificarlo después de enviarlo o de cerrarse.
 
 ```bash
 npm run build:moodle -- --template examen.eer --title "Examen BD · Junio"

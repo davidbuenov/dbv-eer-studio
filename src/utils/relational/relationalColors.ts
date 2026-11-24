@@ -20,6 +20,7 @@ export const RELATIONAL_COLORS = {
   rowDivider: '#1e293b', // divide-slate-800
   pkText: '#fcd34d', // text-amber-300
   fkText: '#67e8f9', // text-cyan-300
+  uniqueText: '#c4b5fd', // text-violet-300 (marca UK)
   regularText: '#cbd5e1', // text-slate-300
   dataTypeText: '#94a3b8', // text-slate-400
   dataTypeBg: '#1e293b', // bg-slate-800

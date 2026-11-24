@@ -21,6 +21,16 @@ export const FOOTER_HEIGHT = 26;
 
 export type Side = 'top' | 'bottom' | 'left' | 'right';
 
+/**
+ * ¿La columna lleva marca UK? Columna UNIQUE que no es PK (la PK ya es única) o parte de una
+ * restricción UNIQUE de tabla. Compartido por la vista y el exportador SVG.
+ */
+export function isUniqueColumn(table: RelationalTable, columnName: string): boolean {
+  const column = table.columns.find(c => c.name === columnName);
+  const inTableConstraint = (table.uniqueConstraints ?? []).some(cols => cols.includes(columnName));
+  return Boolean(column && !column.isPrimaryKey && (column.isUnique || inTableConstraint));
+}
+
 /** Calcula la altura total estimada de una tarjeta de tabla */
 export function getTableHeight(table: RelationalTable): number {
   return HEADER_HEIGHT + table.columns.length * ROW_HEIGHT + FOOTER_HEIGHT;

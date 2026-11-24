@@ -26,6 +26,10 @@ export function useEERParser(code: string) {
   const [links, setLinks] = useState<LinkData[]>([]);
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   const [isValid, setIsValid] = useState<boolean>(true);
+  // Texto del que proceden `nodes`/`links`/`isValid`. Como se compila con retardo, `code` va
+  // por delante durante 300 ms: quien derive datos de los nodos (el modelo relacional) debe
+  // usar este valor como clave de "ya procesado", no `code` (§3.11 L1).
+  const [compiledCode, setCompiledCode] = useState<string | null>(null);
 
   // Referencias para retención Stale-while-error
   const lastValidNodesRef = useRef<NodeData[]>([]);
@@ -36,6 +40,7 @@ export function useEERParser(code: string) {
       const result = compileEER(code);
       setDiagnostics(result.diagnostics);
       setIsValid(result.isValid);
+      setCompiledCode(code);
 
       if (result.isValid) {
         lastValidNodesRef.current = result.nodes;
@@ -55,5 +60,5 @@ export function useEERParser(code: string) {
     return () => clearTimeout(timer);
   }, [code]);
 
-  return { nodes, links, setNodes, diagnostics, isValid };
+  return { nodes, links, setNodes, diagnostics, isValid, compiledCode };
 }

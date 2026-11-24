@@ -1,5 +1,5 @@
 import React from 'react';
-import type { NodeData } from '../types';
+import { isAttributeType, type NodeData } from '../types';
 import { NODE_STYLES } from '../constants';
 
 interface NodeRendererProps {
@@ -20,7 +20,8 @@ interface NodeRendererProps {
  * - relationship: Rombo/Diamante
  * - identifying_relationship: Rombo doble
  * - attribute: Elipse
- * - key_attribute: Elipse con texto subrayado
+ * - key_attribute: Elipse con texto subrayado («UK» encima si es clave alternativa)
+ * - partial_key_attribute: Elipse con texto subrayado a trazos (clave parcial de entidad débil)
  * - derived_attribute: Elipse con borde discontinuo
  * - multivalued_attribute: Elipse doble
  * - specialization/union: Círculo con letra (d, o, u)
@@ -83,17 +84,27 @@ function NodeRendererComponent({ node, isDragged, isSelected, onMouseDown, onCli
         </>
       )}
 
-      {(node.type === 'attribute' || node.type === 'key_attribute' || node.type === 'multivalued_attribute' || node.type === 'derived_attribute') && (
+      {isAttributeType(node.type) && (
         <>
           {(() => {
             const isKey = node.type === 'key_attribute';
+            const isPartialKey = node.type === 'partial_key_attribute';
             const isMulti = node.type === 'multivalued_attribute';
             const isDerived = node.type === 'derived_attribute';
+            // `text-decoration` no admite subrayado discontinuo en SVG: la clave parcial de una
+            // entidad débil (Elmasri) se dibuja con una línea a trazos bajo el texto (§3.11 B).
+            const underlineHalfWidth = Math.min(40, node.label.length * 3.1);
             return (
               <>
                 <ellipse cx="0" cy="0" rx="45" ry="25" fill="#f1f5f9" stroke={strokeColor} strokeWidth={strokeWidth} strokeDasharray={isDerived ? "4" : "0"} className="drop-shadow-sm"/>
                 {isMulti && <ellipse cx="0" cy="0" rx="38" ry="18" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} />}
                 <text x="0" y="4" textAnchor="middle" fill={TEXT_COLOR} fontSize="11" textDecoration={isKey ? "underline" : "none"} style={{ pointerEvents: 'none', userSelect: 'none' }}>{node.label}</text>
+                {isPartialKey && (
+                  <line x1={-underlineHalfWidth} y1="7" x2={underlineHalfWidth} y2="7" stroke={TEXT_COLOR} strokeWidth="1" strokeDasharray="3 2" style={{ pointerEvents: 'none' }} />
+                )}
+                {isKey && node.isUnique && (
+                  <text x="0" y="-11" textAnchor="middle" fill="#7c3aed" fontSize="8" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>UK</text>
+                )}
               </>
             );
           })()}
@@ -116,6 +127,7 @@ export const NodeRenderer = React.memo(NodeRendererComponent, (prevProps, nextPr
     prevProps.node.id === nextProps.node.id &&
     prevProps.node.type === nextProps.node.type &&
     prevProps.node.label === nextProps.node.label &&
+    prevProps.node.isUnique === nextProps.node.isUnique &&
     prevProps.node.x === nextProps.node.x &&
     prevProps.node.y === nextProps.node.y &&
     prevProps.isDragged === nextProps.isDragged &&

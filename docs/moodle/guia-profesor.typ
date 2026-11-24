@@ -170,6 +170,10 @@ _Añadir una actividad o recurso → Paquete SCORM_, y sube el `.zip`.
   [Gestión de intentos], [*Número de intentos*], [Sin límite], [Volver a entrar no debe consumir intentos.],
 )
 
+#callout(title: "Espacio para el editor")[
+  Con _Ventana actual_, Moodle muestra sus paneles laterales (navegación, administración…) junto al examen, y en pantallas pequeñas le quitan mucho ancho. Desde la v1.8.0 la barra del examen tiene un botón *Pantalla completa* (Esc para salir): el reproductor SCORM está en el mismo dominio que el curso, así que el navegador lo permite sin configurar nada. Si en tu Moodle no funcionara, la app lo avisa; entonces pliega los paneles laterales del curso o, si no usas SEB, pon _Mostrar paquete_ = *Nueva ventana*.
+]
+
 == Tarea «Entrega del examen EER»
 
 _Añadir una actividad o recurso → Tarea_.
@@ -204,7 +208,23 @@ Puedes pegar este texto en la descripción de la Tarea:
     [Comprueba que el texto empieza por `=== EER-STUDIO BEGIN v1 ===` y termina por `=== EER-STUDIO END ===`.],
     [Pulsa *«Enviar tarea»*. A partir de ese momento ya no podrás cambiarlo.],
   )
+  v(4pt)
+  [Consejos: el botón *Pantalla completa* amplía el editor (Esc para salir), *Ctrl+Z* deshace cualquier cambio (también «Empezar de nuevo») y *F1* abre la ayuda con la sintaxis y un diagrama de referencia con toda la notación.]
 })
+
+== Qué puede dibujar el alumno
+
+El editor del examen tiene la notación completa de Elmasri y Navathe, tanto escribiendo el código como desde los formularios:
+
+- *Atributos:* simple, clave, *clave alternativa* (UK), *clave parcial* de entidad débil (subrayado discontinuo), *compuesto* (en _Pertenece a_ se elige otro atributo; si el compuesto está seleccionado en el diagrama, aparece ya elegido), derivado y multivaluado.
+- *Relaciones:* binarias, *recursivas con roles* y *ternarias o de mayor grado* («+ Añadir entidad»), con cardinalidad y participación total.
+- *Jerarquías:* especialización disjunta o solapada, *total o parcial*, con o sin atributo definidor, y uniones.
+
+Mientras dibuja, la barra inferior le avisa de errores de modelado frecuentes: entidad débil sin relación identificativa o sin clave parcial, relación recursiva sin roles… Los avisos no impiden entregar.
+
+#callout(kind: "warning", title: "Compatibilidad entre versiones")[
+  Un diagrama que usa la notación nueva (`partial_key_att`, `role:`, `partial`, `unique`) no se puede abrir con un paquete de la v1.7.0. Usa *el mismo paquete* para todo el examen y para revisar las entregas (sección 6).
+]
 
 // =============================================================================
 = Aula sin internet y Safe Exam Browser
@@ -217,6 +237,7 @@ Puedes pegar este texto en la descripción de la Tarea:
   - Copiar y pegar dentro de SEB funciona entre páginas del propio SEB, porque usa su propio portapapeles. *No desactives el portapapeles*, o el alumno no podrá pegar el bloque en la Tarea.
   - SEB bloquea las descargas por defecto: *en SEB no se usa «Descargar .eer»*, solo el texto en línea.
   - Al salir de SEB se borran los datos del navegador, autoguardado incluido. Lo entregado ya está en la Tarea.
+  - SEB ya ocupa toda la pantalla, pero los paneles de Moodle siguen ahí: el botón *Pantalla completa* del examen los oculta. Compruébalo en la lista de abajo, porque algunas configuraciones de SEB lo bloquean.
 - *PCs compartidos sin SEB*: el autoguardado caduca a las 12 horas. Con turnos seguidos en el mismo equipo, pide a cada alumno que pulse *«Empezar de nuevo»* al terminar, o genera un paquete distinto por turno (`--id`).
 
 == Lista de comprobación antes del examen real
@@ -226,6 +247,8 @@ En un curso de pruebas, con un usuario de *rol alumno* y *dentro de SEB*:
 #checklist(
   [El SCORM se abre en la ventana actual y muestra el editor con la plantilla.],
   [Al ir a la Tarea y volver al SCORM, el diagrama sigue ahí (aviso «Se ha recuperado el trabajo…»).],
+  [El botón *Pantalla completa* oculta los paneles de Moodle y Esc la cierra (si avisa de que no está permitido, revisa «Espacio para el editor» en la sección 3).],
+  [Ctrl+Z deshace un borrado.],
   [«Copiar para entregar» muestra el aviso verde. Si aparece la ventana «Copia tu entrega», el alumno copia con Ctrl+C.],
   [El bloque se pega en el texto en línea de la Tarea y se envía.],
   [Ya enviada, la Tarea no deja editar la entrega.],
@@ -247,7 +270,7 @@ El `.eer` empieza por las mismas líneas de crédito y metadatos, que son coment
 *Para ver un diagrama:*
 
 + En la Tarea, abre la entrega del alumno y copia el texto. También vale el HTML que guarda Moodle.
-+ Abre el `<nombre>.html` del examen con doble clic y pulsa *«Cargar entrega»*.
++ Abre el `<nombre>.html` del examen con doble clic y pulsa *«Cargar entrega»*. Usa el del mismo examen (o uno de una versión igual o posterior): uno más antiguo no reconoce la notación nueva.
 + Pega y pulsa *Cargar*. El diagrama se reconstruye y la barra superior indica:
   - #text(fill: emerald, weight: "bold")[✓ suma de control correcta]: es exactamente lo que el alumno copió;
   - #text(fill: amber, weight: "bold")[⚠ NO coincide]: el texto se modificó después de copiarlo;
@@ -271,6 +294,9 @@ El `.eer` empieza por las mismas líneas de crédito y metadatos, que son coment
   [La barra dice «No había bloque de entrega»], [Se pegó solo el código, sin las líneas `BEGIN`/`END`. El diagrama se carga igual, pero sin verificar la suma de control.],
   [La barra dice «la suma de control NO coincide»], [El texto se editó en la Tarea después de copiarlo. Revisa la entrega con cuidado.],
   [«El bloque está incompleto»], [Falta la línea `=== EER-STUDIO END ===`: el alumno no copió el bloque entero.],
+  [Al cargar una entrega sale «Comando desconocido: partial_key_att» (o `role:`, `partial`)], [El visor es de una versión anterior a la del examen. Ábrela con el HTML del mismo examen.],
+  [El botón *Pantalla completa* avisa de que no está permitido], [El reproductor o SEB bloquean la pantalla completa. Pliega los paneles laterales de Moodle o, sin SEB, usa _Mostrar paquete = Nueva ventana_.],
+  [El alumno borró algo sin querer], [*Ctrl+Z* (o el botón ↶ de la barra) lo recupera mientras no recargue la página.],
 )
 
 #v(1fr)

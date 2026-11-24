@@ -5,7 +5,7 @@
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 
-import type { NodeData, LinkData } from '../../types';
+import { isAttributeType, type NodeData, type LinkData } from '../../types';
 import type {
   RelationalSchema,
   RelationalTable,
@@ -82,13 +82,13 @@ function getNodeAttributes(nodeId: string, nodes: NodeData[], links: LinkData[])
   const directAttrNodes = nodes.filter(
     n =>
       directNeighborIds.includes(n.id) &&
-      ['attribute', 'key_attribute', 'multivalued_attribute', 'derived_attribute'].includes(n.type)
+      isAttributeType(n.type)
   );
 
   const parentAttrNodes = nodes.filter(
     n =>
       n.parentEntity === nodeId &&
-      ['attribute', 'key_attribute', 'multivalued_attribute', 'derived_attribute'].includes(n.type)
+      isAttributeType(n.type)
   );
 
   return Array.from(new Set([...directAttrNodes, ...parentAttrNodes]));
@@ -108,25 +108,62 @@ function getMappableAttributes(nodeId: string, nodes: NodeData[], links: LinkDat
 }
 
 /**
+ * Primer nombre libre entre `base`, `base_2`, `base_3`… Una relación recursiva (la misma
+ * entidad participa dos veces) generaba dos columnas `EMPLEADO_DNI` y dos restricciones con
+ * el mismo nombre: un DDL que Oracle rechaza (§3.11 E).
+ */
+function uniqueName(base: string, taken: Iterable<string>): string {
+  const used = new Set(taken);
+  let candidate = base;
+  for (let n = 2; used.has(candidate); n++) candidate = `${base}_${n}`;
+  return candidate;
+}
+
+type KeyRole = 'primary' | 'unique' | 'none';
+const KEY_ATTRIBUTE_TYPES = ['key_attribute', 'partial_key_attribute'];
+
+/**
+ * Papel de una columna de entidad según el atributo del que sale (`attr`, el colgado de la
+ * entidad) y su componente simple (`simpleAttr`): parte de la PK (clave o clave parcial),
+ * clave alternativa (`key_att … unique` ⇒ UNIQUE NOT NULL, §3.11 L4) o columna normal.
+ */
+function keyRoleOf(attr: NodeData, simpleAttr: NodeData): KeyRole {
+  const keyNode = KEY_ATTRIBUTE_TYPES.includes(simpleAttr.type)
+    ? simpleAttr
+    : KEY_ATTRIBUTE_TYPES.includes(attr.type)
+      ? attr
+      : undefined;
+  const role: KeyRole = !keyNode ? 'none' : keyNode.isUnique ? 'unique' : 'primary';
+  return role;
+}
+
+/** Prefijo de las columnas FK de un participante: su rol si lo tiene (Elmasri: `Super_ssn`) o `fallback`. */
+function fkPrefix(link: LinkData, fallback: string): string {
+  return link.role ? sanitizeName(link.role) : fallback;
+}
+
+/**
  * Convierte atributos compuestos a sus componentes simples hoja
  */
-function expandSimpleAttributes(attrNode: NodeData, nodes: NodeData[], links: LinkData[]): NodeData[] {
-  const childAttrIds = getNeighborNodeIds(attrNode.id, links).filter(id => {
-    const child = nodes.find(n => n.id === id);
-    return child && ['attribute', 'key_attribute'].includes(child.type) && child.id !== attrNode.id;
-  });
+function expandSimpleAttributes(
+  attrNode: NodeData,
+  nodes: NodeData[],
+  links: LinkData[],
+  visited: ReadonlySet<string> = new Set()
+): NodeData[] {
+  // Los componentes son los DESTINOS de los enlaces que salen del compuesto (`att Calle ->
+  // Direccion` y `link Direccion Calle` producen Direccion → Calle). Recorrer vecinos sin
+  // dirección haría que cada componente volviera a encontrar a su padre (recursión infinita);
+  // `visited` protege además frente a ciclos escritos a mano.
+  const seen = new Set(visited).add(attrNode.id);
+  const children = links
+    .filter(l => l.source === attrNode.id && !seen.has(l.target))
+    .map(l => nodes.find(n => n.id === l.target))
+    .filter((child): child is NodeData => !!child && ['attribute', 'key_attribute', 'partial_key_attribute'].includes(child.type));
 
-  if (childAttrIds.length === 0) {
-    return [attrNode];
-  }
-
-  const result: NodeData[] = [];
-  childAttrIds.forEach(childId => {
-    const childNode = nodes.find(n => n.id === childId);
-    if (childNode) {
-      result.push(...expandSimpleAttributes(childNode, nodes, links));
-    }
-  });
+  const result = children.length === 0
+    ? [attrNode]
+    : children.flatMap(child => expandSimpleAttributes(child, nodes, links, seen));
   return result;
 }
 
@@ -315,11 +352,17 @@ export function eerToRelational(
       sourceEERNodeLabel: entity.label,
     };
 
+    const uniqueGroups: string[][] = [];
+
     attrNodes.forEach(attr => {
       const expanded = expandSimpleAttributes(attr, nodes, links);
+      // Clave alternativa compuesta: lo único es el conjunto de componentes (UNIQUE de tabla).
+      const isCompositeAltKey = expanded.length > 1 && keyRoleOf(attr, attr) === 'unique';
       expanded.forEach(simpleAttr => {
         const colName = sanitizeName(simpleAttr.label);
-        const isKey = simpleAttr.type === 'key_attribute' || attr.type === 'key_attribute';
+        const role = keyRoleOf(attr, simpleAttr);
+        const isKey = role === 'primary';
+        const isAltKey = role === 'unique';
 
         columns.push({
           id: `${tableName}_${colName}`,
@@ -327,17 +370,18 @@ export function eerToRelational(
           dataType: inferSQLType(simpleAttr.label, isKey),
           isPrimaryKey: isKey,
           isForeignKey: false,
-          isNullable: !isKey,
-          isUnique: isKey,
+          isNullable: !isKey && !isAltKey,
+          isUnique: isKey || (isAltKey && !isCompositeAltKey),
           stepTrace: {
             stepNumber: 1,
-            stepKey: isKey ? 'STEP1_ATTR_PK' : 'STEP1_ATTR_COLUMN',
+            stepKey: isKey ? 'STEP1_ATTR_PK' : isAltKey ? 'STEP1_ATTR_UNIQUE' : 'STEP1_ATTR_COLUMN',
             params: { attrLabel: simpleAttr.label },
             sourceEERNodeId: simpleAttr.id,
             sourceEERNodeLabel: simpleAttr.label,
           },
         });
       });
+      if (isCompositeAltKey) uniqueGroups.push(expanded.map(a => sanitizeName(a.label)));
     });
 
     if (!columns.some((c: RelationalColumn) => c.isPrimaryKey)) {
@@ -368,6 +412,7 @@ export function eerToRelational(
       stepTrace,
       sourceNodeType: entity.type,
       lineIndex: entity.lineIndex,
+      ...(uniqueGroups.length > 0 ? { uniqueConstraints: uniqueGroups } : {}),
     });
   });
 
@@ -461,11 +506,17 @@ export function eerToRelational(
     }
 
     const attrNodes = getMappableAttributes(weakEntity.id, nodes, links);
+    const weakUniqueGroups: string[][] = [];
     attrNodes.forEach(attr => {
       const expanded = expandSimpleAttributes(attr, nodes, links);
+      const isCompositeAltKey = expanded.length > 1 && keyRoleOf(attr, attr) === 'unique';
       expanded.forEach(simpleAttr => {
         const colName = sanitizeName(simpleAttr.label);
-        const isPartialKey = simpleAttr.type === 'key_attribute' || attr.type === 'key_attribute';
+        // `partial_key_att` es la notación propia (§3.11 B); `key_att` en una entidad débil se
+        // sigue tratando como clave parcial por compatibilidad (el linter sugiere el cambio).
+        const role = keyRoleOf(attr, simpleAttr);
+        const isPartialKey = role === 'primary';
+        const isAltKey = role === 'unique';
 
         columns.push({
           id: `${tableName}_${colName}`,
@@ -473,15 +524,16 @@ export function eerToRelational(
           dataType: inferSQLType(simpleAttr.label, isPartialKey),
           isPrimaryKey: isPartialKey,
           isForeignKey: false,
-          isNullable: !isPartialKey,
-          isUnique: false,
+          isNullable: !isPartialKey && !isAltKey,
+          isUnique: isAltKey && !isCompositeAltKey,
           stepTrace: {
             stepNumber: 2,
-            stepKey: isPartialKey ? 'STEP2_PARTIAL_KEY' : 'STEP2_ATTRIBUTE',
+            stepKey: isPartialKey ? 'STEP2_PARTIAL_KEY' : isAltKey ? 'STEP2_ATTR_UNIQUE' : 'STEP2_ATTRIBUTE',
             params: { weakEntityLabel: weakEntity.label },
           },
         });
       });
+      if (isCompositeAltKey) weakUniqueGroups.push(expanded.map(a => sanitizeName(a.label)));
     });
 
     tables.push({
@@ -494,6 +546,7 @@ export function eerToRelational(
       stepTrace,
       sourceNodeType: weakEntity.type,
       lineIndex: weakEntity.lineIndex,
+      ...(weakUniqueGroups.length > 0 ? { uniqueConstraints: weakUniqueGroups } : {}),
     });
   });
 
@@ -663,9 +716,13 @@ export function eerToRelational(
 
           const sourcePKs = sourceTable.columns.filter((c: RelationalColumn) => c.isPrimaryKey);
           const fkColNames: string[] = [];
+          // La FK de una 1:1 es única. Si la PK referenciada es compuesta, lo único es el
+          // conjunto de columnas (restricción de tabla), no cada una por separado.
+          const isSingleColumnFK = sourcePKs.length === 1;
+          const prefix = fkPrefix(isATotal ? linkB : linkA, `${rel.label}_${sourceTable.name}`);
 
           sourcePKs.forEach((pkCol: RelationalColumn) => {
-            const fkName = `${rel.label}_${sourceTable.name}_${pkCol.name}`;
+            const fkName = uniqueName(sanitizeName(`${prefix}_${pkCol.name}`), targetTable.columns.map(c => c.name));
             fkColNames.push(fkName);
 
             targetTable.columns.push({
@@ -675,7 +732,7 @@ export function eerToRelational(
               isPrimaryKey: false,
               isForeignKey: true,
               isNullable: isFKNullable,
-              isUnique: true,
+              isUnique: isSingleColumnFK,
               stepTrace: {
                 stepNumber: 3,
                 stepKey: 'STEP3_FK_ONE_TO_ONE',
@@ -692,9 +749,13 @@ export function eerToRelational(
             })
           );
 
+          if (!isSingleColumnFK && fkColNames.length > 0) {
+            targetTable.uniqueConstraints = [...(targetTable.uniqueConstraints ?? []), fkColNames.map(sanitizeName)];
+          }
+
           targetTable.foreignKeys.push({
             id: `FK_${targetTable.name}_${rel.label}_${sourceTable.name}`,
-            constraintName: `FK_${targetTable.name}_${sourceTable.name}`,
+            constraintName: uniqueName(`FK_${targetTable.name}_${sourceTable.name}`, targetTable.foreignKeys.map(f => f.constraintName)),
             sourceColumnNames: fkColNames.map(sanitizeName),
             targetTableName: sourceTable.name,
             targetColumnNames: sourcePKs.map((c: RelationalColumn) => c.name),
@@ -718,9 +779,11 @@ export function eerToRelational(
 
           const onePKs = tableOne.columns.filter((c: RelationalColumn) => c.isPrimaryKey);
           const fkColNames: string[] = [];
+          // En una recursiva 1:N (SUPERVISA) la columna toma el rol del lado 1, el referenciado.
+          const prefix = fkPrefix(isAOne ? linkA : linkB, tableOne.name);
 
           onePKs.forEach((pkCol: RelationalColumn) => {
-            const fkName = `${tableOne.name}_${pkCol.name}`;
+            const fkName = uniqueName(sanitizeName(`${prefix}_${pkCol.name}`), tableMany.columns.map(c => c.name));
             fkColNames.push(fkName);
 
             tableMany.columns.push({
@@ -747,9 +810,10 @@ export function eerToRelational(
             })
           );
 
+          const constraintName = uniqueName(`FK_${tableMany.name}_${tableOne.name}`, tableMany.foreignKeys.map(f => f.constraintName));
           tableMany.foreignKeys.push({
-            id: `FK_${tableMany.name}_${tableOne.name}`,
-            constraintName: `FK_${tableMany.name}_${tableOne.name}`,
+            id: constraintName,
+            constraintName,
             sourceColumnNames: fkColNames.map(sanitizeName),
             targetTableName: tableOne.name,
             targetColumnNames: onePKs.map((c: RelationalColumn) => c.name),
@@ -768,76 +832,50 @@ export function eerToRelational(
           const bridgeColumns: RelationalColumn[] = [];
           const bridgeFKs: ForeignKeyConstraint[] = [];
 
-          const pksA = tableA.columns.filter((c: RelationalColumn) => c.isPrimaryKey);
-          const fkColsA: string[] = [];
-          pksA.forEach((pk: RelationalColumn) => {
-            const colName = sanitizeName(`${tableA.name}_${pk.name}`);
-            fkColsA.push(colName);
-            bridgeColumns.push({
-              id: `${bridgeTableName}_${colName}`,
-              name: colName,
-              dataType: pk.dataType,
-              isPrimaryKey: true,
-              isForeignKey: true,
-              isNullable: false,
-              isUnique: false,
+          // Un bucle por participante (antes, dos bloques copiados). En una recursiva M:N la
+          // misma tabla aparece dos veces: rol como prefijo o, sin rol, numeración (§3.11 E).
+          const sides = [
+            { table: tableA, link: linkA, side: 'A' },
+            { table: tableB, link: linkB, side: 'B' },
+          ];
+          sides.forEach(({ table, link, side }) => {
+            const pks = table.columns.filter((c: RelationalColumn) => c.isPrimaryKey);
+            const prefix = fkPrefix(link, table.name);
+            const fkCols: string[] = [];
+            pks.forEach((pk: RelationalColumn) => {
+              const colName = uniqueName(sanitizeName(`${prefix}_${pk.name}`), bridgeColumns.map(c => c.name));
+              fkCols.push(colName);
+              bridgeColumns.push({
+                id: `${bridgeTableName}_${colName}`,
+                name: colName,
+                dataType: pk.dataType,
+                isPrimaryKey: true,
+                isForeignKey: true,
+                isNullable: false,
+                isUnique: false,
+                stepTrace: {
+                  stepNumber: 5,
+                  stepKey: 'STEP5_PK_FK',
+                  params: { tableName: table.name, side },
+                },
+              });
+            });
+
+            const constraintName = uniqueName(`FK_${bridgeTableName}_${table.name}`, bridgeFKs.map(f => f.constraintName));
+            bridgeFKs.push({
+              id: constraintName,
+              constraintName,
+              sourceColumnNames: fkCols,
+              targetTableName: table.name,
+              targetColumnNames: pks.map((c: RelationalColumn) => c.name),
+              onDelete: 'NO ACTION',
+              onUpdate: 'CASCADE',
               stepTrace: {
                 stepNumber: 5,
-                stepKey: 'STEP5_PK_FK',
-                params: { tableName: tableA.name, side: 'A' },
+                stepKey: 'STEP5_FK_CONSTRAINT',
+                params: { tableName: table.name },
               },
             });
-          });
-
-          bridgeFKs.push({
-            id: `FK_${bridgeTableName}_${tableA.name}`,
-            constraintName: `FK_${bridgeTableName}_${tableA.name}`,
-            sourceColumnNames: fkColsA,
-            targetTableName: tableA.name,
-            targetColumnNames: pksA.map((c: RelationalColumn) => c.name),
-            onDelete: 'NO ACTION',
-            onUpdate: 'CASCADE',
-            stepTrace: {
-              stepNumber: 5,
-              stepKey: 'STEP5_FK_CONSTRAINT',
-              params: { tableName: tableA.name },
-            },
-          });
-
-          const pksB = tableB.columns.filter((c: RelationalColumn) => c.isPrimaryKey);
-          const fkColsB: string[] = [];
-          pksB.forEach((pk: RelationalColumn) => {
-            const colName = sanitizeName(`${tableB.name}_${pk.name}`);
-            fkColsB.push(colName);
-            bridgeColumns.push({
-              id: `${bridgeTableName}_${colName}`,
-              name: colName,
-              dataType: pk.dataType,
-              isPrimaryKey: true,
-              isForeignKey: true,
-              isNullable: false,
-              isUnique: false,
-              stepTrace: {
-                stepNumber: 5,
-                stepKey: 'STEP5_PK_FK',
-                params: { tableName: tableB.name, side: 'B' },
-              },
-            });
-          });
-
-          bridgeFKs.push({
-            id: `FK_${bridgeTableName}_${tableB.name}`,
-            constraintName: `FK_${bridgeTableName}_${tableB.name}`,
-            sourceColumnNames: fkColsB,
-            targetTableName: tableB.name,
-            targetColumnNames: pksB.map((c: RelationalColumn) => c.name),
-            onDelete: 'NO ACTION',
-            onUpdate: 'CASCADE',
-            stepTrace: {
-              stepNumber: 5,
-              stepKey: 'STEP5_FK_CONSTRAINT',
-              params: { tableName: tableB.name },
-            },
           });
 
           bridgeColumns.push(
@@ -877,9 +915,10 @@ export function eerToRelational(
           return {
             table: tables.find(t => t.id === entityId),
             cardinality: (link.label ?? 'N').toUpperCase(),
+            link,
           };
         })
-        .filter((p): p is { table: RelationalTable; cardinality: string } => !!p.table);
+        .filter((p): p is { table: RelationalTable; cardinality: string; link: LinkData } => !!p.table);
 
       if (participants.length === entityLinks.length) {
         const bridgeTableName = sanitizeName(
@@ -888,15 +927,16 @@ export function eerToRelational(
         const bridgeColumns: RelationalColumn[] = [];
         const bridgeFKs: ForeignKeyConstraint[] = [];
 
-        participants.forEach(({ table, cardinality }) => {
+        participants.forEach(({ table, cardinality, link }) => {
           // Regla de excepción del Paso 7: si la entidad tiene restricción de
           // cardinalidad 1, su FK queda fuera de la PK compuesta de la tabla de relación.
           const hasCardinalityOne = cardinality === '1' || cardinality === '0..1' || cardinality === '1..1';
           const pks = table.columns.filter((c: RelationalColumn) => c.isPrimaryKey);
           const fkColNames: string[] = [];
+          const prefix = fkPrefix(link, table.name);
 
           pks.forEach((pk: RelationalColumn) => {
-            const colName = sanitizeName(`${table.name}_${pk.name}`);
+            const colName = uniqueName(sanitizeName(`${prefix}_${pk.name}`), bridgeColumns.map(c => c.name));
             fkColNames.push(colName);
             bridgeColumns.push({
               id: `${bridgeTableName}_${colName}`,
@@ -914,9 +954,10 @@ export function eerToRelational(
             });
           });
 
+          const constraintName = uniqueName(`FK_${bridgeTableName}_${table.name}`, bridgeFKs.map(f => f.constraintName));
           bridgeFKs.push({
-            id: `FK_${bridgeTableName}_${table.name}`,
-            constraintName: `FK_${bridgeTableName}_${table.name}`,
+            id: constraintName,
+            constraintName,
             sourceColumnNames: fkColNames,
             targetTableName: table.name,
             targetColumnNames: pks.map((c: RelationalColumn) => c.name),

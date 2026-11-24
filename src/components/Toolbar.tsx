@@ -1,13 +1,25 @@
 import React, { useMemo } from 'react';
-import { Square, SquareDashed, Diamond, Zap, Circle, GitBranch, Layers } from 'lucide-react';
+import { Square, SquareDashed, Diamond, Zap, Circle, GitBranch, Layers, Undo2, Redo2 } from 'lucide-react';
 import { useLanguage } from '../i18n/language';
+
+/** Deshacer/rehacer del DSL EER (§3.11 H). */
+export interface ToolbarHistory {
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+}
 
 interface ToolbarProps {
   selectedTool: string | null;
   onToolSelect: (tool: string | null) => void;
+  history?: ToolbarHistory;
 }
 
-function ToolbarComponent({ selectedTool, onToolSelect }: ToolbarProps) {
+const historyButtonClass =
+  'flex items-center rounded-md border border-slate-200 p-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40';
+
+function ToolbarComponent({ selectedTool, onToolSelect, history }: ToolbarProps) {
   const { t } = useLanguage();
 
   const toolButtons = useMemo(() => [
@@ -116,14 +128,42 @@ function ToolbarComponent({ selectedTool, onToolSelect }: ToolbarProps) {
       
       {/* Hierarchy */}
       {renderButtonGroup('hierarchy', toolButtons)}
+
+      {history && (
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            onClick={history.onUndo}
+            disabled={!history.canUndo}
+            title={t('toolbar.undo')}
+            aria-label={t('toolbar.undo')}
+            className={historyButtonClass}
+          >
+            <Undo2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={history.onRedo}
+            disabled={!history.canRedo}
+            title={t('toolbar.redo')}
+            aria-label={t('toolbar.redo')}
+            className={historyButtonClass}
+          >
+            <Redo2 className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 export const Toolbar = React.memo(ToolbarComponent, (prevProps, nextProps) => {
-  // Retorna true si NO debería re-renderizar (props son iguales)
+  // Retorna true si NO debería re-renderizar (props son iguales). El comparador es a mano:
+  // cualquier prop nueva que cambie el aspecto debe añadirse aquí o la barra no se actualiza.
   return (
     prevProps.selectedTool === nextProps.selectedTool &&
-    prevProps.onToolSelect === nextProps.onToolSelect
+    prevProps.onToolSelect === nextProps.onToolSelect &&
+    prevProps.history?.canUndo === nextProps.history?.canUndo &&
+    prevProps.history?.canRedo === nextProps.history?.canRedo &&
+    prevProps.history?.onUndo === nextProps.history?.onUndo &&
+    prevProps.history?.onRedo === nextProps.history?.onRedo
   );
 });

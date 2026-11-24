@@ -17,12 +17,14 @@ import { interpolate } from './translate';
 export type StepKey =
   | 'STEP1_STRONG_ENTITY'
   | 'STEP1_ATTR_PK'
+  | 'STEP1_ATTR_UNIQUE'
   | 'STEP1_ATTR_COLUMN'
   | 'STEP1_DEFAULT_PK'
   | 'STEP2_WEAK_ENTITY'
   | 'STEP2_FK_OWNER'
   | 'STEP2_FK_CASCADE'
   | 'STEP2_PARTIAL_KEY'
+  | 'STEP2_ATTR_UNIQUE'
   | 'STEP2_ATTRIBUTE'
   | 'STEP3_FK_ONE_TO_ONE'
   | 'STEP3_FK_CONSTRAINT'
@@ -69,6 +71,10 @@ const stepsEs: Record<StepKey, StepEntry> = {
     title: 'Paso 1: Atributo de Entidad Fuerte',
     description: "Clave Primaria (PK) derivada del atributo clave '{{attrLabel}}'.",
   },
+  STEP1_ATTR_UNIQUE: {
+    title: 'Paso 1: Clave Alternativa',
+    description: "Clave alternativa '{{attrLabel}}': columna obligatoria (NOT NULL) con restricción UNIQUE; no forma parte de la clave primaria.",
+  },
   STEP1_ATTR_COLUMN: {
     title: 'Paso 1: Atributo de Entidad Fuerte',
     description: "Columna derivada del atributo '{{attrLabel}}'.",
@@ -92,6 +98,10 @@ const stepsEs: Record<StepKey, StepEntry> = {
   STEP2_PARTIAL_KEY: {
     title: 'Paso 2: Clave Parcial / Atributo',
     description: "Clave parcial (discriminador) de la entidad débil '{{weakEntityLabel}}'.",
+  },
+  STEP2_ATTR_UNIQUE: {
+    title: 'Paso 2: Clave Alternativa',
+    description: "Clave alternativa de la entidad débil '{{weakEntityLabel}}': columna obligatoria (NOT NULL) con restricción UNIQUE.",
   },
   STEP2_ATTRIBUTE: {
     title: 'Paso 2: Clave Parcial / Atributo',
@@ -228,6 +238,10 @@ const stepsEn: Record<StepKey, StepEntry> = {
     title: 'Step 1: Strong Entity Attribute',
     description: "Primary Key (PK) derived from the key attribute '{{attrLabel}}'.",
   },
+  STEP1_ATTR_UNIQUE: {
+    title: 'Step 1: Alternate Key',
+    description: "Alternate key '{{attrLabel}}': mandatory column (NOT NULL) with a UNIQUE constraint; it is not part of the primary key.",
+  },
   STEP1_ATTR_COLUMN: {
     title: 'Step 1: Strong Entity Attribute',
     description: "Column derived from the attribute '{{attrLabel}}'.",
@@ -251,6 +265,10 @@ const stepsEn: Record<StepKey, StepEntry> = {
   STEP2_PARTIAL_KEY: {
     title: 'Step 2: Partial Key / Attribute',
     description: "Partial key (discriminator) of the weak entity '{{weakEntityLabel}}'.",
+  },
+  STEP2_ATTR_UNIQUE: {
+    title: 'Step 2: Alternate Key',
+    description: "Alternate key of the weak entity '{{weakEntityLabel}}': mandatory column (NOT NULL) with a UNIQUE constraint.",
   },
   STEP2_ATTRIBUTE: {
     title: 'Step 2: Partial Key / Attribute',

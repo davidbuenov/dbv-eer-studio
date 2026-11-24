@@ -1,3 +1,5 @@
+import type { AttributeKind } from '../types';
+
 /**
  * Utilidades para generar código DSL desde la interfaz visual
  */
@@ -14,7 +16,16 @@ interface AttributeCodeProps {
   entity: string;
   x: number;
   y: number;
-  type: 'simple' | 'key' | 'derived' | 'multivalued';
+  type: AttributeKind;
+  /** Clave alternativa (solo con `type: 'key'`). */
+  isUnique?: boolean;
+}
+
+export interface RelationshipParticipant {
+  entity: string;
+  cardinality: string;
+  isTotal?: boolean;
+  role?: string;
 }
 
 interface RelationshipCodeProps {
@@ -22,12 +33,8 @@ interface RelationshipCodeProps {
   x: number;
   y: number;
   isIdentifying?: boolean;
-  entity1: string;
-  entity2: string;
-  cardinality1: string;
-  cardinality2: string;
-  isTotal1?: boolean;
-  isTotal2?: boolean;
+  /** Participantes, en orden: dos para una binaria, tres o más para una n-aria (§3.11 I). */
+  ends: readonly RelationshipParticipant[];
 }
 
 interface SpecializationCodeProps {
@@ -36,6 +43,8 @@ interface SpecializationCodeProps {
   subclasses: string[];
   /** Atributo definidor (especialización definida por atributo). Vacío = definida por el usuario. */
   definingAttribute?: string;
+  /** Participación total (por defecto). `false` escribe `partial`. */
+  isTotal?: boolean;
   x?: number;
   y?: number;
 }
@@ -64,48 +73,43 @@ export function generateEntityCode({ name, x, y, isWeak = false }: EntityCodePro
 /**
  * Genera código para un atributo
  */
-export function generateAttributeCode({ name, entity, x, y, type }: AttributeCodeProps): string {
-  const prefixMap = {
+export function generateAttributeCode({ name, entity, x, y, type, isUnique = false }: AttributeCodeProps): string {
+  const prefixMap: Record<AttributeKind, string> = {
     simple: 'att',
     key: 'key_att',
+    partial_key: 'partial_key_att',
     derived: 'derived_att',
-    multivalued: 'multivalued_att'
+    multivalued: 'multivalued_att',
   };
-  
+
   const prefix = prefixMap[type];
-  return `${prefix} ${name} -> ${entity} (${x}, ${y})`;
+  // `unique` solo tiene sentido en una clave: la convierte en clave alternativa (§3.11 L4).
+  const uniqueSuffix = isUnique && type === 'key' ? ' unique' : '';
+  return `${prefix} ${name} -> ${entity}${uniqueSuffix} (${x}, ${y})`;
 }
 
 /**
  * Genera código para una relación
  */
-export function generateRelationshipCode({
-  name,
-  x,
-  y,
-  isIdentifying = false,
-  entity1,
-  entity2,
-  cardinality1,
-  cardinality2,
-  isTotal1 = false,
-  isTotal2 = false
-}: RelationshipCodeProps): string {
+export function generateRelationshipCode({ name, x, y, isIdentifying = false, ends }: RelationshipCodeProps): string {
   const prefix = isIdentifying ? 'ident_rel' : 'rel';
-  
-  let code = `${prefix} ${name} (${x}, ${y})\n`;
-  code += `link ${entity1} ${name} "${cardinality1}"${isTotal1 ? ' [total]' : ''}\n`;
-  code += `link ${entity2} ${name} "${cardinality2}"${isTotal2 ? ' [total]' : ''}`;
-  
+  const linkLines = ends.map(
+    end =>
+      `link ${end.entity} ${name} "${end.cardinality}"${end.role ? ` role:${end.role}` : ''}${end.isTotal ? ' [total]' : ''}`
+  );
+
+  const code = [`${prefix} ${name} (${x}, ${y})`, ...linkLines].join('\n');
   return code;
 }
 
 /**
  * Genera código para una especialización/generalización
  */
-export function generateSpecializationCode({ type, superclass, subclasses, definingAttribute, x, y }: SpecializationCodeProps): string {
+export function generateSpecializationCode({ type, superclass, subclasses, definingAttribute, isTotal = true, x, y }: SpecializationCodeProps): string {
   const defining = definingAttribute?.trim() ? ` [${definingAttribute.trim()}]` : '';
-  let code = `spec ${type} -> ${superclass}${defining}${coordSuffix(x, y)}\n`;
+  // Solo se escribe `partial`: una especialización total se queda como en la v1.7.0.
+  const participation = isTotal ? '' : ' partial';
+  let code = `spec ${type} -> ${superclass}${defining}${participation}${coordSuffix(x, y)}\n`;
   
   subclasses.forEach((subclass, index) => {
     code += `link ${type} ${subclass}`;

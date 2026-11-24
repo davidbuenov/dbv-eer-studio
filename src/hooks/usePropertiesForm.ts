@@ -7,7 +7,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import type { NodeData, LinkData } from '../types';
-import type { useModalState } from './useModalState';
+import type { ParticipantDraft, useModalState } from './useModalState';
 import {
   applyElementEdit,
   describeNodeForEdit,
@@ -34,6 +34,12 @@ interface UsePropertiesFormProps {
   resetTool: () => void;
   /** Tras guardar una edición: los ids pueden cambiar (renombrado), así que se vacía la selección. */
   onEdited: () => void;
+  /**
+   * Etiqueta del elemento seleccionado que puede tener atributos (entidad, relación o atributo,
+   * este último para crear un componente de un compuesto). Si existe, un atributo nuevo nace
+   * con ese propietario ya elegido en «Pertenece a».
+   */
+  contextOwner?: string;
 }
 
 const ENTITY_TOOLS = ['entity', 'weak_entity'];
@@ -56,6 +62,17 @@ function toFormCardinality(cardinality: string): { option: string; custom: strin
   return STANDARD_CARDINALITIES.includes(upper) ? { option: upper, custom: '' } : { option: 'custom', custom: cardinality };
 }
 
+/** Participante del formulario → extremo del DSL (cardinalidad resuelta, rol normalizado). */
+function toRelationshipEnd(p: ParticipantDraft) {
+  const role = toDslIdentifier(p.role);
+  return {
+    entity: p.entity,
+    cardinality: p.cardinality === 'custom' ? p.customCardinality : p.cardinality,
+    isTotal: p.isTotal,
+    ...(role ? { role } : {}),
+  };
+}
+
 /**
  * Orquesta el formulario de propiedades: abrirlo para crear (desde la toolbar) o editar (doble
  * clic / F2), traducir su estado a un `ElementEdit` y escribir el resultado en el DSL.
@@ -72,6 +89,7 @@ export function usePropertiesForm({
   setClickPosition,
   resetTool,
   onEdited,
+  contextOwner,
 }: UsePropertiesFormProps) {
   // Posiciones de atributos ya añadidos con "crear otro" que aún no han llegado a `nodes`
   // (el parser va con debounce): sin ellas el siguiente caería encima del anterior.
@@ -91,6 +109,7 @@ export function usePropertiesForm({
     } else if (ATTRIBUTE_TOOLS.includes(tool)) {
       modal.setElementName(newAttributeName());
       modal.setElementType2(ATTRIBUTE_KIND_BY_TOOL[tool] ?? 'simple');
+      modal.setSelectedEntity(contextOwner ?? '');
       pendingPositionsRef.current = [];
       setClickPosition(findFreePosition(click, nodes));
     } else if (tool === 'union') {
@@ -98,7 +117,7 @@ export function usePropertiesForm({
     }
 
     modal.setShowPropertiesModal(true);
-  }, [modal, nodes, setClickPosition]);
+  }, [modal, nodes, setClickPosition, contextOwner]);
 
   const openEdit = useCallback((nodeId: string) => {
     const node = nodes.find(n => n.id === nodeId);
@@ -115,23 +134,24 @@ export function usePropertiesForm({
       modal.setElementType('attribute');
       modal.setElementName(element.name);
       modal.setElementType2(element.attrType);
+      modal.setAttrIsUnique(element.isUnique ?? false);
       modal.setSelectedEntity(element.owner);
     } else if (element.kind === 'relationship') {
       modal.setElementType(element.isIdentifying ? 'ident_rel' : 'relationship');
       modal.setElementName(element.name);
-      modal.setIsNaryRelationship(!element.ends);
-      if (element.ends) {
-        const [first, second] = element.ends;
-        const card1 = toFormCardinality(first.cardinality);
-        const card2 = toFormCardinality(second.cardinality);
-        modal.setSelectedEntity1(first.entity);
-        modal.setCardinalityE1(card1.option);
-        modal.setCustomCard1(card1.custom);
-        modal.setTotalE1(first.isTotal);
-        modal.setSelectedEntity2(second.entity);
-        modal.setCardinalityE2(card2.option);
-        modal.setCustomCard2(card2.custom);
-        modal.setTotalE2(second.isTotal);
+      if (element.ends.length > 0) {
+        modal.setParticipants(
+          element.ends.map(end => {
+            const card = toFormCardinality(end.cardinality);
+            return {
+              entity: end.entity,
+              cardinality: card.option,
+              customCardinality: card.custom,
+              isTotal: end.isTotal,
+              role: end.role ?? '',
+            };
+          })
+        );
       }
     } else if (element.kind === 'specialization') {
       modal.setElementType('specialization');
@@ -139,6 +159,7 @@ export function usePropertiesForm({
       modal.setSpecSuperclass(element.superclass);
       modal.setSpecSubclasses(element.subclasses);
       modal.setSpecDefiningAttribute(element.definingAttribute);
+      modal.setSpecIsTotal(element.isTotal);
     } else {
       modal.setElementType('union');
       modal.setUnionName(element.name);
@@ -153,26 +174,23 @@ export function usePropertiesForm({
   const buildFormElement = useCallback((): ElementEdit | null => {
     const type = modal.elementType ?? '';
     const name = toDslIdentifier(modal.elementName);
-    const card1 = modal.cardinalityE1 === 'custom' ? modal.customCard1 : modal.cardinalityE1;
-    const card2 = modal.cardinalityE2 === 'custom' ? modal.customCard2 : modal.cardinalityE2;
+    const attrType = modal.elementType2 as AttributeKind;
+    // Participantes con entidad elegida; una relación necesita al menos dos (§3.11 I).
+    const ends = modal.participants.filter(p => p.entity).map(toRelationshipEnd);
     let element: ElementEdit | null = null;
 
     if (ENTITY_TOOLS.includes(type) && name) {
       element = { kind: 'entity', name, isWeak: type === 'weak_entity' };
     } else if (ATTRIBUTE_TOOLS.includes(type) && name && modal.selectedEntity) {
-      element = { kind: 'attribute', name, attrType: modal.elementType2 as AttributeKind, owner: modal.selectedEntity };
-    } else if (RELATIONSHIP_TOOLS.includes(type) && name && modal.isNaryRelationship) {
-      element = { kind: 'relationship', name, isIdentifying: type === 'ident_rel' };
-    } else if (RELATIONSHIP_TOOLS.includes(type) && name && modal.selectedEntity1 && modal.selectedEntity2) {
       element = {
-        kind: 'relationship',
+        kind: 'attribute',
         name,
-        isIdentifying: type === 'ident_rel',
-        ends: [
-          { entity: modal.selectedEntity1, cardinality: card1, isTotal: modal.totalE1 },
-          { entity: modal.selectedEntity2, cardinality: card2, isTotal: modal.totalE2 },
-        ],
+        attrType,
+        owner: modal.selectedEntity,
+        isUnique: attrType === 'key' && modal.attrIsUnique,
       };
+    } else if (RELATIONSHIP_TOOLS.includes(type) && name && ends.length >= 2) {
+      element = { kind: 'relationship', name, isIdentifying: type === 'ident_rel', ends };
     } else if (type === 'specialization' && modal.specSuperclass && modal.specSubclasses.length > 0) {
       element = {
         kind: 'specialization',
@@ -180,6 +198,7 @@ export function usePropertiesForm({
         superclass: modal.specSuperclass,
         subclasses: modal.specSubclasses,
         definingAttribute: toDslIdentifier(modal.specDefiningAttribute),
+        isTotal: modal.specIsTotal,
       };
     } else if (type === 'union' && modal.unionName && modal.unionSuperclasses.length > 0 && modal.unionCategory) {
       element = {

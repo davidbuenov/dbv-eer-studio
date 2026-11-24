@@ -5,11 +5,12 @@
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 
-import { useEffect, useRef, useState } from 'react';
-import { Code, Trash2, AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { Code, Trash2, AlertCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { useLanguage } from '../i18n/language';
 import type { TranslationKey } from '../i18n/es';
 import type { Diagnostic } from '../types/compiler';
+import { historyShortcut } from '../utils/codeHistory';
 
 interface CodePanelProps {
   code: string;
@@ -24,6 +25,14 @@ interface CodePanelProps {
   highlightedLines?: readonly number[];
   /** Línea (base 0) que debe quedar visible; el editor se desplaza hasta ella. */
   focusLine?: number | null;
+  /** Aviso informativo fijo bajo la cabecera (p. ej. qué ediciones se conservan). */
+  notice?: string;
+  /**
+   * Deshacer/rehacer comunes con el lienzo (§3.11 H). Si se dan, Ctrl+Z/Y en el editor usan este
+   * historial y no el nativo del textarea, que se rompería con los cambios hechos desde el lienzo.
+   */
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 // Debe coincidir con el padding `p-4` del textarea para que las bandas caigan sobre sus líneas.
@@ -41,6 +50,9 @@ export function CodePanel({
   countSummary,
   highlightedLines = NO_HIGHLIGHTS,
   focusLine = null,
+  notice,
+  onUndo,
+  onRedo,
 }: CodePanelProps) {
   const { t } = useLanguage();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -73,6 +85,17 @@ export function CodePanel({
 
   const handleCodeChange = (newCode: string) => {
     onCodeChange(newCode);
+  };
+
+  const handleTextareaKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    const action = onUndo && onRedo ? historyShortcut(e) : null;
+    if (action) {
+      e.preventDefault();
+      // Evita que el atajo global de la app lo procese otra vez.
+      e.stopPropagation();
+      if (action === 'undo') onUndo?.();
+      else onRedo?.();
+    }
   };
 
   const handleTextareaFocus = () => {
@@ -121,6 +144,13 @@ export function CodePanel({
         </div>
       </div>
 
+      {notice && (
+        <div className="flex items-start gap-1.5 border-b border-indigo-100 bg-indigo-50 px-4 py-1.5 text-[11px] text-indigo-800">
+          <Info className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>{notice}</span>
+        </div>
+      )}
+
       <div className="relative flex-1 overflow-hidden bg-slate-50">
         {/* Capa de resaltado detrás del texto: sin ajuste de línea, línea N = banda N */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
@@ -138,6 +168,7 @@ export function CodePanel({
           wrap="off"
           onChange={(e) => handleCodeChange(e.target.value)}
           onFocus={handleTextareaFocus}
+          onKeyDown={handleTextareaKeyDown}
           onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
           className="relative h-full w-full resize-none bg-transparent p-4 font-mono text-xs md:text-sm leading-relaxed text-slate-700 focus:outline-none selection:bg-indigo-200 whitespace-pre overflow-auto"
           spellCheck={false}

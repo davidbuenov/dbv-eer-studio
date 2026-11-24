@@ -40,6 +40,9 @@ export const EER_SYNTAX: SyntaxSection[] = [
     examples: [
       { code: 'att Nombre -> EMPLEADO', descKey: 'modalHelp.eer.attrSimple.desc' },
       { code: 'key_att DNI -> EMPLEADO', descKey: 'modalHelp.eer.attrKey.desc' },
+      { code: 'key_att Email -> EMPLEADO unique', descKey: 'modalHelp.eer.attrAlternateKey.desc' },
+      { code: 'partial_key_att NombreDep -> DEPENDIENTE', descKey: 'modalHelp.eer.attrPartialKey.desc' },
+      { code: 'att Calle -> Direccion', descKey: 'modalHelp.eer.attrComposite.desc' },
       { code: 'derived_att Edad -> EMPLEADO', descKey: 'modalHelp.eer.attrDerived.desc' },
       { code: 'multivalued_att Telefono -> EMPLEADO', descKey: 'modalHelp.eer.attrMultivalued.desc' },
       { code: 'key_att Vuelta -> CIRCULA', descKey: 'modalHelp.eer.attrRelationship.desc' },
@@ -50,6 +53,7 @@ export const EER_SYNTAX: SyntaxSection[] = [
     examples: [
       { code: 'link EMPLEADO TRABAJA_EN "N"', descKey: 'modalHelp.eer.link.desc' },
       { code: 'link DEPARTAMENTO TRABAJA_EN "1" [total]', descKey: 'modalHelp.eer.linkTotal.desc' },
+      { code: 'link EMPLEADO SUPERVISA "1" role:Supervisor', descKey: 'modalHelp.eer.linkRole.desc' },
     ],
   },
   {
@@ -57,6 +61,7 @@ export const EER_SYNTAX: SyntaxSection[] = [
     examples: [
       { code: 'spec d -> EMPLEADO', descKey: 'modalHelp.eer.spec.desc' },
       { code: 'spec d -> EMPLEADO [TipoTrabajo]', descKey: 'modalHelp.eer.specDefining.desc' },
+      { code: 'spec o -> EMPLEADO partial', descKey: 'modalHelp.eer.specPartial.desc' },
       { code: 'link d INGENIERO', descKey: 'modalHelp.eer.specLink.desc' },
       { code: 'union u', descKey: 'modalHelp.eer.union.desc' },
       { code: 'link PERSONA u', descKey: 'modalHelp.eer.unionSuper.desc' },
@@ -79,6 +84,8 @@ export const RELATIONAL_SYNTAX: SyntaxSection[] = [
       { code: 'DNI NUMBER(10) PK', descKey: 'modalHelp.rel.colPK.desc' },
       { code: 'NOMBRE VARCHAR2(100) NOT NULL', descKey: 'modalHelp.rel.colNotNull.desc' },
       { code: 'FECHA_INGRESO DATE', descKey: 'modalHelp.rel.colNullable.desc' },
+      { code: 'EMAIL VARCHAR2(100) NOT NULL UNIQUE', descKey: 'modalHelp.rel.colUnique.desc' },
+      { code: 'UNIQUE (NOMBRE, APELLIDOS)', descKey: 'modalHelp.rel.tableUnique.desc' },
     ],
   },
   {
@@ -86,6 +93,8 @@ export const RELATIONAL_SYNTAX: SyntaxSection[] = [
     examples: [
       { code: 'DEPT_ID NUMBER(10) FK -> DEPARTAMENTO(NUMERO)', descKey: 'modalHelp.rel.fkRegular.desc' },
       { code: 'EMP_ID NUMBER(10) PK FK -> EMPLEADO(ID) ON DELETE CASCADE', descKey: 'modalHelp.rel.fkPk.desc' },
+      { code: 'DEPT_ID FK -> DEPARTAMENTO(NUMERO)', descKey: 'modalHelp.rel.fkInheritedType.desc' },
+      { code: 'FK (VUELO_NUM, VUELO_FECHA) -> VUELO(NUM, FECHA)', descKey: 'modalHelp.rel.fkComposite.desc' },
     ],
   },
   {

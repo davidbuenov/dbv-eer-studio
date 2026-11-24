@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { NodeData, LinkData } from '../types';
+import { computeParallelOffsets } from '../utils/parallelLinks';
 import type { Rect } from '../utils/layout';
 import { NodeRenderer } from './NodeRenderer';
 import { LinkRenderer } from './LinkRenderer';
@@ -68,6 +69,8 @@ export function Canvas({
   onResetZoom,
   onFitToContent
 }: CanvasProps) {
+  const parallelOffsets = useMemo(() => computeParallelOffsets(links), [links]);
+
   // React registra `onWheel` como pasivo y no permite `preventDefault`: sin él, Ctrl + rueda
   // ampliaría toda la ventana en lugar del diagrama. Se usa un listener nativo no pasivo, que se
   // vuelve a registrar si el SVG se remonta (al volver de otra pestaña).
@@ -103,8 +106,15 @@ export function Canvas({
         {/* Aplicar transformación de zoom y pan */}
         <g transform={`translate(${offset.x}, ${offset.y}) scale(${scale})`}>
           {/* Renderizar todos los enlaces primero (detrás de los nodos) */}
-          {links.map((link) => (
-            <LinkRenderer key={`${link.source}-${link.target}`} link={link} nodes={nodes} />
+          {/* La clave incluye la línea del DSL: en una relación recursiva hay dos enlaces con
+              los mismos extremos (antes colisionaban las claves de React). */}
+          {links.map((link, i) => (
+            <LinkRenderer
+              key={`${link.source}-${link.target}-${link.lineIndex ?? i}`}
+              link={link}
+              nodes={nodes}
+              offset={parallelOffsets[i] ?? 0}
+            />
           ))}
 
           {/* Renderizar todos los nodos */}

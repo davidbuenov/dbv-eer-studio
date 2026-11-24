@@ -7,9 +7,10 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { deleteNodesFromCode } from '../utils/deleteNode';
-import { getOwnedLineIndices } from '../utils/dslEditing';
+import { getOwnedLineIndices, suggestedAttributeOwner } from '../utils/dslEditing';
 import { downloadTextFile } from '../utils/download';
 import { useEERParser } from '../hooks/useEERParser';
+import { historyShortcut } from '../utils/codeHistory';
 import { useCanvasInteraction } from '../hooks/useCanvasInteraction';
 import { useToolbar } from '../hooks/useToolbar';
 import { useModalState } from '../hooks/useModalState';
@@ -29,6 +30,7 @@ import { useExamSession, type ExamStatus } from './useExamSession';
 import { decodeSubmission, encodeSubmission, submissionHeader, toPlainText } from './submission';
 import { copyText } from './clipboard';
 import { ExamActionsBar } from './components/ExamActionsBar';
+import { useFullscreen } from '../hooks/useFullscreen';
 import { ConfirmModal, CopyFallbackModal, LoadSubmissionModal } from './components/SubmissionModals';
 
 const fileSlug = (title: string) =>
@@ -41,7 +43,9 @@ const fileSlug = (title: string) =>
  */
 export function MoodleExamApp({ config }: { config: ExamConfig }) {
   const { t } = useLanguage();
-  const { code, setCode, status, setStatus, reset, markSubmitted } = useExamSession(config);
+  const { code, setCode, setCodeFromTyping, undo, redo, canUndo, canRedo, status, setStatus, reset, markSubmitted } =
+    useExamSession(config);
+  const toolbarHistory = useMemo(() => ({ onUndo: undo, onRedo: redo, canUndo, canRedo }), [undo, redo, canUndo, canRedo]);
 
   const [codePanelWidth, setCodePanelWidth] = useState(400);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -81,7 +85,10 @@ export function MoodleExamApp({ config }: { config: ExamConfig }) {
   const help = useHelpCenter();
 
   const { openCreate, openEdit, confirm: handleConfirmProperties, confirmAndContinue: handleConfirmAndContinue, formKey, isEditBlocked } =
-    usePropertiesForm({ modal, nodes, links, code, setCode, isValid, clickX, clickY, setClickPosition, resetTool, onEdited: clearSelection });
+    usePropertiesForm({
+      modal, nodes, links, code, setCode, isValid, clickX, clickY, setClickPosition, resetTool, onEdited: clearSelection,
+      contextOwner: suggestedAttributeOwner(nodes.find(n => n.id === primaryNodeId), nodes),
+    });
 
   const openEditRef = useRef(openEdit);
   useEffect(() => {
@@ -101,7 +108,12 @@ export function MoodleExamApp({ config }: { config: ExamConfig }) {
         return;
       }
       if (isTyping || showPropertiesModal || showDeleteConfirm || help.isOpen || anyExamModalOpen) return;
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0 && isValid) {
+      const historyAction = historyShortcut(e);
+      if (historyAction) {
+        e.preventDefault();
+        if (historyAction === 'undo') undo();
+        else redo();
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0 && isValid) {
         e.preventDefault();
         setShowDeleteConfirm(true);
       } else if ((e.key === 'F2' || e.key === 'Enter') && primaryNodeId) {
@@ -113,7 +125,7 @@ export function MoodleExamApp({ config }: { config: ExamConfig }) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeIds, primaryNodeId, showPropertiesModal, showDeleteConfirm, anyExamModalOpen, isValid, openEdit, selectOnly, help]);
+  }, [selectedNodeIds, primaryNodeId, showPropertiesModal, showDeleteConfirm, anyExamModalOpen, isValid, openEdit, selectOnly, help, undo, redo]);
 
   const handleCanvasClickInternal = useCallback((e: React.MouseEvent) => {
     if (draggedNodeId || !selectedTool || e.button !== 0) return;
@@ -144,6 +156,16 @@ export function MoodleExamApp({ config }: { config: ExamConfig }) {
     setCode(deleteNodesFromCode(code, selectedNodes, nodes));
     selectOnly(null);
   }, [selectedNodes, isValid, code, nodes, selectOnly, setCode]);
+
+  // ---------- Pantalla completa (§3.11 F) ----------
+  const fullscreen = useFullscreen();
+  const handleToggleFullscreen = () => {
+    void fullscreen.toggle().then(result => {
+      if (result === 'unsupported' || result === 'failed') {
+        setStatus({ key: 'moodle.fullscreen.unavailable', tone: 'warning' });
+      }
+    });
+  };
 
   // ---------- Entrega ----------
   const submissionMeta = () => ({ appVersion: __APP_VERSION__, examId: config.examId, date: new Date().toISOString() });
@@ -196,14 +218,18 @@ export function MoodleExamApp({ config }: { config: ExamConfig }) {
         onLoad={() => setShowLoad(true)}
         onReset={() => setShowReset(true)}
         onHelp={() => help.openHelp()}
+        isFullscreen={fullscreen.isActive}
+        onToggleFullscreen={handleToggleFullscreen}
       />
 
-      <Toolbar selectedTool={selectedTool} onToolSelect={setSelectedTool} />
+      <Toolbar selectedTool={selectedTool} onToolSelect={setSelectedTool} history={toolbarHistory} />
       <div className="flex flex-1 overflow-hidden">
         <div style={{ width: `${codePanelWidth}px`, flexShrink: 0 }}>
           <CodePanel
             code={code}
-            onCodeChange={setCode}
+            onCodeChange={setCodeFromTyping}
+            onUndo={undo}
+            onRedo={redo}
             onClear={() => setShowClearConfirm(true)}
             onEditStart={clearSelection}
             diagnostics={diagnostics}
@@ -274,6 +300,7 @@ export function MoodleExamApp({ config }: { config: ExamConfig }) {
         isOpen={showPropertiesModal}
         onClose={() => setShowPropertiesModal(false)}
         nodes={nodes}
+        links={links}
         modalState={modal}
         isEditBlocked={isEditBlocked}
         setters={modal}

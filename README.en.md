@@ -128,20 +128,25 @@ It implements the **9 formal steps** algorithm presented in *"Fundamentals of Da
 
 - **Bidirectional DSL ↔ Canvas editor:** write the code and the diagram is drawn instantly; drag a node on the canvas and the coordinates update themselves in the code.
 - **Visual toolbar:** insert entities, relationships, and attributes with a click on the canvas and configure them through forms, without writing a line of DSL.
-- **Full Chen notation:** strong and weak entities, regular and identifying relationships, simple/key/derived/multivalued attributes, cardinalities (1, N, M), total participation, specialization hierarchies (disjoint and overlapping), and union types/categories.
+- **Full Elmasri & Navathe notation:** strong and weak entities, regular and identifying relationships (binary, recursive with **roles**, and of any degree), simple, key, **partial key** (dashed underline), **alternate key** (UK), **composite**, derived and multivalued attributes, cardinalities (1, N, M), total participation, specialization hierarchies (disjoint and overlapping, **total and partial**), and union types/categories. The help includes a reference diagram with the whole notation.
+- **Undo and redo** (`Ctrl+Z` / `Ctrl+Y` or the ↶ ↷ buttons): moving, creating, editing, deleting, *Clear*, or what you typed in the code.
+- **Teaching warnings** while you draw: weak entity without an identifying relationship or partial key, recursive relationship without roles, misplaced keys…
 - **Edit directly on the diagram:** double-click (or `F2`) any element to open its form and rename it, change a relationship's cardinalities and participation, turn an entity into a weak one, change an attribute's owner, etc. Renaming updates every reference in the DSL.
 - **Locate every element in the code:** selecting a node highlights its DSL lines and scrolls the editor to them.
 - **Multi-selection:** drag on the background to draw a **selection rectangle** (it selects what is fully inside) or use `Ctrl` + click to add or remove nodes; dragging moves the whole group and `Delete` removes it.
 - **Attributes follow their entity or relationship** when you drag it (`Alt` + drag moves only the node).
 - **Attributes in a row:** "Add and create another" keeps the form open for the next attribute and places it 100 px to the right; attributes are never created on top of another node.
 - **Relationship attributes** from the visual form (key ones too, which join the PK in M:N and n-ary relationships).
+- **Composite attributes from the form:** in “Belongs to” you can choose another attribute, and the new one becomes its component (`Calle` of `Direccion`). If an entity, relationship or attribute is selected when you press *Attribute*, the form comes with it already chosen.
+- **Ternary and higher-degree relationships from the form:** “+ Add entity”, with cardinality, total participation and role for each participant.
 - **draw.io-style navigation:** right (or middle) button + drag pans the canvas, so does the wheel (`Shift` = horizontal), and `Ctrl` + wheel (or touchpad pinch) zooms towards the cursor. Plus +/− controls, reset, and fit-to-content.
 
 ### Relational Model conversion
 
 - **9 formal steps engine** with full traceability: every table, column, and foreign key records which step generated it.
 - **Teaching inspector:** the "9-Step Guide" tab in Help summarises the algorithm, and the 📖 icon on every table opens the specific explanation of the rule that created it.
-- **Dedicated relational editor:** the Relational Model has its own text DSL, also bidirectional and with persistent coordinates.
+- **Dedicated relational editor:** the Relational Model has its own text DSL, also bidirectional and with persistent coordinates, with composite foreign keys and `UNIQUE` constraints.
+- **Column types are kept:** the EER has no types; if you change one in the relational DSL, it survives later EER edits, is saved in the `.eer` file, and the foreign keys referencing it inherit it.
 - **Interactive highlighting:** hovering a table highlights its referential integrity connections.
 
 ### Export
@@ -154,6 +159,7 @@ It implements the **9 formal steps** algorithm presented in *"Fundamentals of Da
 
 - **Unified Help Center** (**Help** button or `F1`), with tabs: *Using the editor* (gestures, keyboard shortcuts and workflow), *Syntax* of both DSLs, *9-Step Guide*, *AI Prompt* (so ChatGPT, Claude, or Gemini can generate the DSL from a problem statement) and *About*.
 - **Spanish and English** across the whole interface, help and AI prompt, switchable from the header; the chosen language is remembered.
+- **Full screen** (in the browser, in the desktop app with `F11`, and in the Moodle edition, where it hides the course side panels).
 - **Always on top** (desktop only) to keep the diagram visible next to another application.
 
 ---
@@ -189,7 +195,10 @@ weak_ent DEPENDIENTE (100, 300)
 
 // Attributes
 key_att DNI -> EMPLEADO (350, 220)
+key_att Email -> EMPLEADO unique       // alternate key (UNIQUE NOT NULL)
 att Nombre -> EMPLEADO (450, 220)
+att Direccion -> EMPLEADO             // composite attribute…
+att Calle -> Direccion                //   …and its components
 derived_att Edad -> EMPLEADO (400, 180)
 multivalued_att Telefono -> EMPLEADO (300, 180)
 key_att Vuelta -> CIRCULA (700, 120)   // key attribute of an M:N relationship
@@ -198,15 +207,20 @@ key_att Vuelta -> CIRCULA (700, 120)   // key attribute of an M:N relationship
 rel TRABAJA_PARA (550, 300)
 link EMPLEADO TRABAJA_PARA "N"
 link DEPARTAMENTO TRABAJA_PARA "1"
+rel SUPERVISA                          // recursive: roles name each participation
+link EMPLEADO SUPERVISA "1" role:Supervisor
+link EMPLEADO SUPERVISA "N" role:Supervisado
 
-// Weak entity and identifying relationship
+// Weak entity, partial key and identifying relationship
+partial_key_att NombreDep -> DEPENDIENTE
 ident_rel TIENE_DEP (250, 300)
 link EMPLEADO TIENE_DEP "1"
 link DEPENDIENTE TIENE_DEP "N" [total]
 
 // Hierarchies
-spec d -> EMPLEADO                  // 'd' disjoint, 'o' overlapping; user-defined
+spec d -> EMPLEADO                  // 'd' disjoint, 'o' overlapping; total (double line)
 spec d -> EMPLEADO [TipoTrabajo]    // attribute-defined (defining attribute)
+spec o -> EMPLEADO partial          // partial (single line)
 link d INGENIERO
 
 // Categories
@@ -232,7 +246,7 @@ The [`ejemplos/`](ejemplos/) folder contains files ready to open from the app (*
 
 ## 🎓 Moodle edition for exams
 
-An exam variant that plugs into **Moodle** as a **SCORM 1.2** package: a single HTML file that works **offline** and inside **Safe Exam Browser**. It includes only the EER editor (with its help), an optional starting template and autosave. Students submit by pasting their diagram into the online text of an **Assignment**, which is what prevents changes once it has been submitted or closed.
+An exam variant that plugs into **Moodle** as a **SCORM 1.2** package: a single HTML file that works **offline** and inside **Safe Exam Browser**. It includes only the EER editor (with its help), an optional starting template, autosave, undo/redo, and a **full screen** button so the Moodle side panels do not take up space. Students submit by pasting their diagram into the online text of an **Assignment**, which is what prevents changes once it has been submitted or closed.
 
 ```bash
 npm run build:moodle -- --template exam.eer --title "DB exam · June"

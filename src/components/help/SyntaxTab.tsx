@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Layers, Database } from 'lucide-react';
 import { useLanguage } from '../../i18n/language';
 import { EER_SYNTAX, RELATIONAL_SYNTAX, type SyntaxSection } from './syntaxExamples';
+import { ELMASRI_REFERENCE } from './elmasriReference';
 
 /**
  * Pestaña "Sintaxis": referencia del DSL EER y del DSL relacional.
@@ -54,6 +55,16 @@ export function SyntaxTab({ eerOnly = false }: { eerOnly?: boolean }) {
           </div>
         ))}
       </div>
+
+      {(eerOnly || dsl === 'eer') && (
+        <details className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <summary className="cursor-pointer text-sm font-bold text-indigo-600">{t('modalHelp.eer.referenceTitle')}</summary>
+          <p className="mt-2 text-xs text-slate-500">{t('modalHelp.eer.referenceDesc')}</p>
+          <pre className="mt-2 max-h-80 overflow-auto rounded bg-white p-3 font-mono text-[11px] leading-relaxed text-indigo-950 select-all">
+            {ELMASRI_REFERENCE}
+          </pre>
+        </details>
+      )}
     </div>
   );
 }

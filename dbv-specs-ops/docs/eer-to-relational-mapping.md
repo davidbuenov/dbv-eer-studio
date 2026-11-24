@@ -267,6 +267,26 @@ Cuando las superclases de la categoría ya comparten el mismo atributo de clave 
 
 ---
 
+## Implementación en eer-studio: claves, compuestos y roles (v1.8.0)
+
+Cómo se expresan en el DSL EER las construcciones de los Pasos 1-7 y qué genera el motor:
+
+| Construcción (Elmasri) | DSL EER | Modelo relacional |
+| --- | --- | --- |
+| Clave (subrayada) | `key_att Dni -> EMPLEADO` | Columna de la PK. |
+| Clave compuesta | `key_att Clave -> CIRCUITO` con `att Nombre -> Clave` y `att Fecha -> Clave` | PK = componentes simples (`NOMBRE`, `FECHA`). |
+| Varios atributos clave | `key_att Nombre -> CIRCUITO` y `key_att Fecha -> CIRCUITO` | **Una PK compuesta** (`NOMBRE`, `FECHA`). Elmasri lee cada atributo subrayado como clave candidata independiente; eer-studio mantiene la interpretación de las versiones anteriores para no cambiar el significado de diagramas existentes. |
+| Clave candidata secundaria | `key_att Email -> CLIENTE unique` | Columna `NOT NULL` + `UNIQUE` (restricción `UNIQUE (A, B)` de tabla si es compuesta). No forma parte de la PK. |
+| Clave parcial (subrayado discontinuo) | `partial_key_att Numero -> AULA` | Paso 2: PK = FK del propietario + clave parcial. `key_att` en una entidad débil produce lo mismo (el linter sugiere `partial_key_att`). |
+| Atributo compuesto | `att Direccion -> CLIENTE` con `att Calle -> Direccion` | Paso 1: solo los componentes simples (`CALLE`, `NUMERO`), recursivamente. |
+| Rol del participante | `link EMPLEADO SUPERVISA "1" role:Supervisor` | La FK de ese participante toma el rol como prefijo (`SUPERVISOR_DNI`, como `Super_ssn`). |
+| Relación recursiva sin roles | — | Las FK se numeran (`EMPLEADO_DNI`, `EMPLEADO_DNI_2`) para que el DDL sea válido; el linter pide roles. |
+| Especialización total / parcial | `spec d -> X` / `spec d -> X partial` | Sin efecto en 8A (válida para ambas); determina si 8B/8C/8D serían aplicables. |
+
+**Unicidad en la 1:1 (Paso 3, opción 3.1):** la FK se emite con `UNIQUE` (de tabla si la PK referenciada es compuesta). Sin ella la 1:1 sería en la práctica una 1:N.
+
+**FK compuestas:** una FK que referencia una PK de varias columnas es **una sola** restricción `FOREIGN KEY (A, B) REFERENCES T (X, Y)`; partirla en una FK por columna referenciaría media clave, que Oracle rechaza (ORA-02270). En el DSL relacional se escribe a nivel de tabla: `FK (A, B) -> T(X, Y)`.
+
 ## Política de Acciones Referenciales (`ON DELETE`)
 
 `ON DELETE CASCADE` solo se justifica cuando la fila hija **no tiene existencia propia** sin la padre. En los demás casos, borrar en cascada hace desaparecer datos independientes como efecto colateral.

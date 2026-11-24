@@ -5,7 +5,7 @@
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 
-import { BookOpen, ClipboardCopy, Download, FileInput, HelpCircle, RotateCcw } from 'lucide-react';
+import { BookOpen, ClipboardCopy, Download, FileInput, HelpCircle, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../i18n/language';
 import type { ExamStatus } from '../useExamSession';
 
@@ -17,7 +17,13 @@ interface ExamActionsBarProps {
   onLoad: () => void;
   onReset: () => void;
   onHelp: () => void;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
 }
+
+// Por debajo de `xl` (1280 px: el SCORM dentro de Moodle con sus paneles laterales) los botones
+// secundarios muestran solo el icono, para que el título no se reduzca a "E.." (§3.11 F).
+const compactLabel = 'hidden xl:inline';
 
 const STATUS_STYLE: Record<ExamStatus['tone'], string> = {
   info: 'border-indigo-200 bg-indigo-50 text-indigo-800',
@@ -29,29 +35,52 @@ const secondaryButton =
   'flex items-center gap-1.5 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100';
 
 /** Cabecera del examen: título, acciones de entrega, ayuda, idioma, versión y avisos. */
-export function ExamActionsBar({ title, status, onCopy, onDownload, onLoad, onReset, onHelp }: ExamActionsBarProps) {
+export function ExamActionsBar({
+  title,
+  status,
+  onCopy,
+  onDownload,
+  onLoad,
+  onReset,
+  onHelp,
+  isFullscreen,
+  onToggleFullscreen,
+}: ExamActionsBarProps) {
   const { t, lang, setLang } = useLanguage();
+  const fullscreenLabel = isFullscreen ? t('moodle.fullscreen.exit') : t('moodle.fullscreen');
 
   return (
     <header className="z-30 border-b border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between gap-4 px-6 py-2.5">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 lg:px-6">
+        <div className="flex min-w-[8rem] items-center gap-2 lg:gap-3">
           <BookOpen className="h-6 w-6 shrink-0 text-indigo-600" />
-          <h1 className="truncate text-lg font-bold text-slate-800">{title || t('moodle.title.default')}</h1>
-          <span className="shrink-0 text-[10px] font-semibold text-slate-400">
+          <h1 className="truncate text-base font-bold text-slate-800 lg:text-lg" title={title || t('moodle.title.default')}>
+            {title || t('moodle.title.default')}
+          </h1>
+          <span className="hidden shrink-0 text-[10px] font-semibold text-slate-400 lg:inline">
             EER Studio {t('moodle.version', { version: __APP_VERSION__ })}
           </span>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <button onClick={onReset} title={t('moodle.reset.tooltip')} className={secondaryButton}>
-            <RotateCcw className="h-4 w-4" /> {t('moodle.reset')}
+        <div className="flex shrink-0 items-center gap-1.5 lg:gap-2">
+          <button onClick={onReset} title={t('moodle.reset.tooltip')} aria-label={t('moodle.reset')} className={secondaryButton}>
+            <RotateCcw className="h-4 w-4" /> <span className={compactLabel}>{t('moodle.reset')}</span>
           </button>
-          <button onClick={onLoad} title={t('moodle.load.tooltip')} className={secondaryButton}>
-            <FileInput className="h-4 w-4" /> {t('moodle.load')}
+          <button onClick={onLoad} title={t('moodle.load.tooltip')} aria-label={t('moodle.load')} className={secondaryButton}>
+            <FileInput className="h-4 w-4" /> <span className={compactLabel}>{t('moodle.load')}</span>
           </button>
-          <button onClick={onDownload} title={t('moodle.download.tooltip')} className={secondaryButton}>
-            <Download className="h-4 w-4" /> {t('moodle.download')}
+          <button onClick={onDownload} title={t('moodle.download.tooltip')} aria-label={t('moodle.download')} className={secondaryButton}>
+            <Download className="h-4 w-4" /> <span className={compactLabel}>{t('moodle.download')}</span>
+          </button>
+          <button
+            onClick={onToggleFullscreen}
+            title={`${fullscreenLabel} — ${t('moodle.fullscreen.tooltip')}`}
+            aria-label={fullscreenLabel}
+            aria-pressed={isFullscreen}
+            className={secondaryButton}
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            <span className={compactLabel}>{fullscreenLabel}</span>
           </button>
 
           <div className="mx-1 flex items-center gap-0.5 rounded-md border border-slate-200 p-0.5">
@@ -72,9 +101,10 @@ export function ExamActionsBar({ title, status, onCopy, onDownload, onLoad, onRe
           <button
             onClick={onHelp}
             title={t('header.helpTooltip')}
+            aria-label={t('header.help')}
             className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100"
           >
-            <HelpCircle className="h-4 w-4" /> {t('header.help')}
+            <HelpCircle className="h-4 w-4" /> <span className={compactLabel}>{t('header.help')}</span>
           </button>
           <button
             onClick={onCopy}

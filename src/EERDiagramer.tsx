@@ -6,13 +6,16 @@
 // =============================================================================
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
-import { BookOpen, Share2, HelpCircle, Database, Layers, FileText, Pin, PinOff } from 'lucide-react';
+import { BookOpen, Share2, HelpCircle, Database, Layers, FileText, Pin, PinOff, Maximize2, Minimize2 } from 'lucide-react';
 import type { EERDiagramerHandle } from './types';
 import { runningInTauri } from './utils/platform';
 import { SAMPLE_CODE } from './constants';
 import { deleteNodesFromCode } from './utils/deleteNode';
-import { getOwnedLineIndices } from './utils/dslEditing';
+import { getOwnedLineIndices, suggestedAttributeOwner } from './utils/dslEditing';
 import { useEERParser } from './hooks/useEERParser';
+import { useCodeHistory } from './hooks/useCodeHistory';
+import { useFullscreen } from './hooks/useFullscreen';
+import { historyShortcut } from './utils/codeHistory';
 import { useFileOperations } from './hooks/useFileOperations';
 import { useCanvasInteraction } from './hooks/useCanvasInteraction';
 import { useToolbar } from './hooks/useToolbar';
@@ -31,6 +34,13 @@ import { eerToRelational } from './utils/relational/eerToRelational';
 import { exportRelationalToSVG } from './utils/relational/exportRelationalSVG';
 import { generateRelationalDSL } from './utils/relational/relationalCodeGenerator';
 import { compileRelationalDSL } from './utils/relational/relationalCompiler';
+import {
+  applyTypeOverrides,
+  extractTypeOverrides,
+  parseTypeOverrideLine,
+  serializeTypeOverrides,
+  type TypeOverrides,
+} from './utils/relational/typeOverrides';
 import { RelationalViewer } from './components/relational/RelationalViewer';
 import { SQLPreviewModal } from './components/sql/SQLPreviewModal';
 import type { RelationalSchema } from './types/relational';
@@ -63,12 +73,18 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   const [activeTab, setActiveTab] = useState<ActiveViewTab>('eer');
 
   // Estado del código EER DSL
-  const [code, setCode] = useState(SAMPLE_CODE);
+  // Con historial de deshacer/rehacer (§3.11 H): `setCode` = un paso; el tecleo se agrupa.
+  const { code, setCode, setCodeFromTyping, undo, redo, canUndo, canRedo } = useCodeHistory(SAMPLE_CODE);
+  const toolbarHistory = useMemo(() => ({ onUndo: undo, onRedo: redo, canUndo, canRedo }), [undo, redo, canUndo, canRedo]);
   const codeRef = useRef(code);
 
   // Estado del código Relacional DSL y Coordenadas Relacionales Persistidas
   const [relationalCode, setRelationalCode] = useState('');
   const [relationalPositions, setRelationalPositions] = useState<Record<string, { x: number; y: number }>>({});
+  // Tipos elegidos por el alumno en el DSL relacional (§3.11 L3) y el esquema tal como lo infiere
+  // el motor, contra el que se comparan. Refs: no deben provocar una regeneración por sí mismos.
+  const typeOverridesRef = useRef<TypeOverrides>({});
+  const inferredSchemaRef = useRef<RelationalSchema>({ tables: [], config: { inheritanceOptions: {}, oneToOneOptions: {} } });
 
   // Estado del esquema relacional y modales educativos
   const [relationalSchema, setRelationalSchema] = useState<RelationalSchema>({ tables: [], config: { inheritanceOptions: {}, oneToOneOptions: {} } });
@@ -90,7 +106,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   }, [code]);
 
   // Parser hook - compila el código EER y genera nodos y enlaces con tolerancia a fallos
-  const { nodes, links, setNodes, diagnostics, isValid } = useEERParser(code);
+  const { nodes, links, setNodes, diagnostics, isValid, compiledCode } = useEERParser(code);
 
   const elementCount = useMemo(() => ({
     entities: nodes.filter(n => n.type === 'entity' || n.type === 'weak_entity').length,
@@ -108,13 +124,18 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
   // Ref para controlar la regeneración reactiva solo cuando cambia el diagrama EER
   const lastEERCodeRef = useRef<string>('');
 
-  // Actualización reactiva del Esquema Relacional solo cuando cambia el diagrama EER y el código es válido
+  // Actualización reactiva del Esquema Relacional cuando cambia el diagrama EER y el código es válido.
+  // La clave es `compiledCode` (el texto del que salen `nodes`), no `code`: el parser compila con
+  // retardo y, con `code`, el efecto se disparaba con los nodos anteriores y daba el texto por
+  // procesado, así que el relacional iba siempre un cambio por detrás (al borrar una entidad su
+  // tabla seguía ahí). Un EER vacío (Limpiar) también vacía el relacional (§3.11 L1).
   useEffect(() => {
-    if (isValid && nodes.length > 0 && code !== lastEERCodeRef.current) {
-      lastEERCodeRef.current = code;
+    if (isValid && compiledCode !== null && compiledCode !== lastEERCodeRef.current) {
+      lastEERCodeRef.current = compiledCode;
       try {
-        const derived = eerToRelational(nodes, links, undefined, relationalPositions);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+        const inferred = eerToRelational(nodes, links, undefined, relationalPositions);
+        inferredSchemaRef.current = inferred;
+        const derived = applyTypeOverrides(inferred, typeOverridesRef.current);
         setRelationalSchema(derived);
         setRelationalCode(generateRelationalDSL(derived));
         lastValidRelationalSchemaRef.current = derived;
@@ -125,7 +146,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         console.error('[EERDiagramer] Error al convertir EER a Relacional:', err);
       }
     }
-  }, [code, nodes, links, relationalPositions, isValid]);
+  }, [compiledCode, nodes, links, relationalPositions, isValid]);
 
   // File operations hook
   const {
@@ -149,6 +170,10 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         }
       });
     }
+    const typeLines = serializeTypeOverrides(typeOverridesRef.current);
+    if (typeLines.length > 0) {
+      fullText += `${posKeys.length > 0 ? '' : '\n\n'}// RELATIONAL TYPES\n${typeLines.join('\n')}\n`;
+    }
     return fullText;
   }, [relationalPositions]);
 
@@ -157,10 +182,16 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     const lines = text.split('\n');
     const eerLines: string[] = [];
     const newPositions: Record<string, { x: number; y: number }> = {};
+    const newOverrides: TypeOverrides = {};
 
     lines.forEach(line => {
-      const relMatch = line.match(/^relational\s+([A-Za-z0-9_]+)\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/);
-      if (relMatch && relMatch[1] && relMatch[2] && relMatch[3]) {
+      // Coordenadas negativas incluidas: una tabla arrastrada a la izquierda del origen se guardaba
+      // como `(-40, 120)` pero no se leía, y volvía a su posición automática.
+      const relMatch = line.match(/^relational\s+([A-Za-z0-9_]+)\s*\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)/);
+      const typeOverride = parseTypeOverrideLine(line);
+      if (typeOverride) {
+        newOverrides[typeOverride.key] = typeOverride.type;
+      } else if (relMatch && relMatch[1] && relMatch[2] && relMatch[3]) {
         newPositions[relMatch[1]] = {
           x: parseInt(relMatch[2], 10),
           y: parseInt(relMatch[3], 10)
@@ -170,6 +201,9 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
       }
     });
 
+    typeOverridesRef.current = newOverrides;
+    // Forzar la regeneración del relacional aunque el EER cargado sea idéntico al actual.
+    lastEERCodeRef.current = '';
     setRelationalPositions(newPositions);
     setCode(eerLines.join('\n').trim());
   }, [setCode]);
@@ -248,6 +282,8 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     isRelationalValidRef.current = result.isValid;
 
     if (result.isValid) {
+      // Recordar los tipos que el alumno ha cambiado respecto a los inferidos (§3.11 L3).
+      typeOverridesRef.current = extractTypeOverrides(result.schema, inferredSchemaRef.current);
       lastValidRelationalSchemaRef.current = result.schema;
       setRelationalSchema(result.schema);
       const newPositions: Record<string, { x: number; y: number }> = {};
@@ -295,6 +331,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     setClickPosition,
     resetTool,
     onEdited: clearSelection,
+    contextOwner: suggestedAttributeOwner(nodes.find(n => n.id === primaryNodeId), nodes),
   });
 
   // `NodeRenderer` está memoizado sin comparar callbacks: el doble clic debe ser estable.
@@ -324,7 +361,13 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
       }
       if (isTyping || showPropertiesModal || showDeleteConfirm || help.isOpen || activeTab !== 'eer') return;
 
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0 && isValid) {
+      // Deshacer/rehacer con el foco en el lienzo (en el panel de código lo gestiona CodePanel).
+      const historyAction = historyShortcut(e);
+      if (historyAction) {
+        e.preventDefault();
+        if (historyAction === 'undo') undo();
+        else redo();
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0 && isValid) {
         e.preventDefault();
         setShowDeleteConfirm(true);
       } else if ((e.key === 'F2' || e.key === 'Enter') && primaryNodeId) {
@@ -337,7 +380,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeIds, primaryNodeId, showPropertiesModal, showDeleteConfirm, activeTab, isValid, openEdit, selectOnly, help]);
+  }, [selectedNodeIds, primaryNodeId, showPropertiesModal, showDeleteConfirm, activeTab, isValid, openEdit, selectOnly, help, undo, redo]);
 
   // Puente entre el menú nativo de macOS (Abrir/Guardar/Guardar como, ver
   // src-tauri/src/lib.rs `macos_menu`) y el mismo flujo que ya usan los
@@ -372,6 +415,24 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     });
     return () => unlistenFns.forEach(fn => fn());
   }, []);
+
+  // Pantalla completa (§3.11 F): Fullscreen API en el navegador, ventana nativa en escritorio.
+  const fullscreen = useFullscreen(runningInTauri);
+  const toggleFullscreen = fullscreen.toggle;
+  const isFullscreen = fullscreen.isActive;
+
+  // En escritorio la pantalla completa es de la ventana nativa: el navegador no aporta F11 ni Esc.
+  useEffect(() => {
+    if (!runningInTauri) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F11' || (e.key === 'Escape' && isFullscreen)) {
+        e.preventDefault();
+        void toggleFullscreen();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen, toggleFullscreen]);
 
   // Chincheta "Fijar ventana encima" (Always on Top) — API multiplataforma de
   // Tauri, sin código condicional por SO. Por ventana, sin persistir.
@@ -423,7 +484,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
     if (selectedNodes.length === 0 || !isValid) return;
     setCode(deleteNodesFromCode(code, selectedNodes, nodes));
     selectOnly(null);
-  }, [selectedNodes, isValid, code, nodes, selectOnly]);
+  }, [selectedNodes, isValid, code, nodes, selectOnly, setCode]);
 
   const handleFitToContent = useCallback(() => {
     if (!nodes || nodes.length === 0 || !svgRef.current) return;
@@ -529,6 +590,20 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
             ))}
           </div>
 
+          {fullscreen.isSupported && (
+            <button
+              onClick={() => void toggleFullscreen()}
+              title={`${fullscreen.isActive ? t('header.fullscreen.exit') : t('header.fullscreen')} — ${t(runningInTauri ? 'header.fullscreen.tooltipDesktop' : 'header.fullscreen.tooltipWeb')}`}
+              aria-label={fullscreen.isActive ? t('header.fullscreen.exit') : t('header.fullscreen')}
+              aria-pressed={fullscreen.isActive}
+              className={`flex items-center justify-center rounded-md p-1.5 text-xs font-medium transition-colors ${
+                fullscreen.isActive ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {fullscreen.isActive ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+          )}
+
           {runningInTauri && (
             <button
               onClick={handleToggleAlwaysOnTop}
@@ -567,12 +642,14 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
       {/* Contenido según la pestaña activa */}
       {activeTab === 'eer' && (
         <>
-          <Toolbar selectedTool={selectedTool} onToolSelect={setSelectedTool} />
+          <Toolbar selectedTool={selectedTool} onToolSelect={setSelectedTool} history={toolbarHistory} />
           <div className="flex flex-1 overflow-hidden">
             <div style={{ width: `${codePanelWidth}px`, flexShrink: 0 }}>
               <CodePanel
                 code={code}
-                onCodeChange={setCode}
+                onCodeChange={setCodeFromTyping}
+                onUndo={undo}
+                onRedo={redo}
                 onClear={() => setShowClearConfirm(true)}
                 onEditStart={clearSelection}
                 diagnostics={diagnostics}
@@ -633,6 +710,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
               diagnostics={relationalDiagnostics}
               isValid={isRelationalValid}
               countSummary={relationalCountSummary}
+              notice={t('codePanel.relationalNotice')}
             />
           </div>
 
@@ -685,6 +763,7 @@ function EERDiagrammer(_: unknown, ref: React.Ref<EERDiagramerHandle>) {
         isOpen={showPropertiesModal}
         onClose={() => setShowPropertiesModal(false)}
         nodes={nodes}
+        links={links}
         modalState={modal}
         isEditBlocked={isEditBlocked}
         setters={modal}
