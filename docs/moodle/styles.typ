@@ -22,7 +22,7 @@
 
 #let repo = "https://github.com/davidbuenov/dbv-eer-studio"
 // Versión de EER Studio documentada: cabecera de página y portada (main.typ). Subirla en cada /ship.
-#let version-app = "1.7.0"
+#let version-app = "1.8.0"
 #let afiliacion = "Universidad de Málaga"
 // Paquetes ya generados (carpeta dist-moodle/ del repositorio) y documentación (docs/moodle/).
 // Los paquetes tienen nombres fijos para que estos enlaces no cambien entre versiones.

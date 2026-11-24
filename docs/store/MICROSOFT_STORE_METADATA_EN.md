@@ -1,6 +1,6 @@
 # 🏬 Microsoft Store — Listing Metadata (English)
 
-> **Application:** dbv-eer-studio · **Store ID:** `9NFHVXW7ZRJC` · **Listing version:** v1.6.0
+> **Application:** dbv-eer-studio · **Store ID:** `9NFHVXW7ZRJC` · **Listing version:** v1.8.0
 > **Category:** Developer Tools / Education
 > **Subcategory:** Database Tools / Educational Software
 > **Pricing:** Free (Open Source - MIT License)
@@ -31,11 +31,12 @@ Design Extended Entity-Relationship (EER) diagrams visually or with a lightweigh
 ### 🌟 Key Features
 
 1. **Complete EER modeling**:
-   - Strong and weak entities with partial keys.
-   - Simple, key, derived and multivalued attributes, on relationships too.
-   - Binary (1:1, 1:N, M:N), identifying and n-ary relationships, with total participation.
-   - Disjoint and overlapping specialization/generalization hierarchies, user-defined or attribute-defined.
+   - Full Elmasri & Navathe notation: strong and weak entities with partial keys (dashed underline).
+   - Simple, key, alternate key (UNIQUE), composite, derived and multivalued attributes, on relationships too.
+   - Binary (1:1, 1:N, M:N), identifying, recursive with roles and higher-degree (ternary…) relationships, with total participation.
+   - Disjoint and overlapping, total or partial specialization/generalization hierarchies, user-defined or attribute-defined.
    - Union types (categories).
+   - Teaching warnings: weak entity without a partial key or identifying relationship, recursive relationship without roles…
 
 2. **Comfortable visual editing, like other apps**:
    - Double-click (or F2) any element to edit it; renaming updates every reference.
@@ -43,11 +44,13 @@ Design Extended Entity-Relationship (EER) diagrams visually or with a lightweigh
    - Right button to pan the canvas and Ctrl + wheel (or touchpad pinch) to zoom.
    - Selecting an element highlights its lines in the code.
    - "Add and create another" to enter attributes in a row without overlaps.
+   - Undo and redo (Ctrl + Z / Ctrl + Y) for every action, and full screen (F11).
 
 3. **Transparent EER ➔ Relational conversion (9 steps)**:
    - Automatic mapping based on Ramez Elmasri & Shamkant B. Navathe's formal algorithm (*Fundamentals of Database Systems*).
    - Educational 9-step guide: every table explains which rule created it.
    - Rigorous referential integrity: ON DELETE CASCADE only for existential dependency; SET NULL or NO ACTION otherwise.
+   - Composite foreign keys, UNIQUE constraints (1:1 relationships are truly 1:1) and editable column types that survive diagram changes.
 
 4. **Multi-DBMS SQL DDL generator**:
    - Oracle SQL by default (`VARCHAR2`, `NUMBER`, `CONSTRAINT`), plus PostgreSQL, MySQL, SQLite and ANSI SQL.
@@ -63,7 +66,9 @@ Design Extended Entity-Relationship (EER) diagrams visually or with a lightweigh
 
 ## 🚀 Product Features (one per line)
 * Interactive EER diagram and Relational Model editor
+* Full EER notation: partial keys, roles, composite attributes, alternate keys and partial specialization
 * Visual editing with double-click, rectangle selection and group moves
+* Undo / redo (Ctrl + Z / Ctrl + Y) and full screen
 * Automatic conversion with Elmasri & Navathe's 9 formal steps
 * Educational guide explaining the rule applied to every table
 * Rigorous ON DELETE policy: CASCADE, SET NULL or NO ACTION as each case requires
@@ -94,7 +99,7 @@ Upload in this order from `docs/store/screenshots/` (`_en` version):
 | # | File | Caption (≤ 200 characters) |
 | --- | --- | --- |
 | 1 | `screenshot_01_eer_diagram_en.png` | Design EER diagrams visually or with code: selecting elements highlights their lines in the editor. |
-| 2 | `screenshot_05_edit_element_en.png` | Edit any element with a double-click: name, cardinalities, participation, subclasses or defining attribute. |
+| 2 | `screenshot_05_edit_element_en.png` | Edit any element with a double-click: relationships of any degree with each entity's cardinality, participation and role. |
 | 3 | `screenshot_02_relational_model_en.png` | Automatic conversion to the Relational Model with Elmasri & Navathe's 9 formal steps. |
 | 4 | `screenshot_04_step_inspector_en.png` | Educational guide: every table explains which step of the algorithm created it. |
 | 5 | `screenshot_03_sql_ddl_export_en.png` | Export commented SQL DDL scripts for Oracle, PostgreSQL, MySQL, SQLite or ANSI SQL. |
@@ -109,16 +114,16 @@ Upload in this order from `docs/store/screenshots/` (`_en` version):
 * **Architecture:** x64
 * **RAM:** 2 GB (Minimum) / 4 GB (Recommended)
 * **Storage:** 50 MB available space
-* **Input:** mouse and keyboard, or touchpad (touch support for tablets is planned for v1.7.0)
+* **Input:** mouse and keyboard, or touchpad (touch support for tablets is planned for v1.9.0)
 
 ---
 
-## 📜 Version v1.6.0 Release Notes ("What's new in this version")
-- **Edit directly on the diagram**: double-click (or F2) any element to rename it, change cardinalities and participation, turn an entity into a weak one, or change an attribute's owner. Renaming updates every reference in the code.
-- **Selection like other apps**: drag a selection rectangle on the background, Ctrl + click for multi-selection and group moves; attributes follow their entity when dragged.
-- **draw.io-style navigation**: right button to pan, wheel to scroll and Ctrl + wheel (or touchpad pinch) to zoom the diagram.
-- **Locate every element in the code**: selecting it highlights its lines in the editor.
-- **Faster attributes**: "Add and create another", relationship attributes from the form and automatic overlap-free placement.
-- **More rigorous mapping**: key attributes of an M:N relationship join the PK, and the ON DELETE policy is chosen per step (CASCADE, SET NULL or NO ACTION) instead of a blanket CASCADE.
-- **Specialization defining attribute**: `spec d -> EMPLOYEE [JobType]`.
-- **Unified Help Center** (F1): editor usage, syntax, 9-step guide, AI prompt and credits, all in Spanish and English.
+## 📜 Version v1.8.0 Release Notes ("What's new in this version")
+- **Full EER notation**: weak-entity partial keys (dashed underline), partial specialization (single line), roles in recursive relationships and alternate keys (UNIQUE).
+- **Composite attributes** drawn with their components and mapped to columns; create them from the form ("Belongs to").
+- **Ternary and higher-degree relationships** from the form, with each entity's cardinality, participation and role.
+- **Undo and redo** (Ctrl + Z / Ctrl + Y) for every action: move, create, edit, delete or clear.
+- **More faithful relational model**: composite foreign keys, UNIQUE constraints in the SQL (a 1:1 no longer behaves as 1:N) and column types that survive diagram changes and are saved in the file.
+- **Teaching warnings** for weak entities, partial keys and recursive relationships without roles.
+- **Full screen** (F11) and extended help with a reference diagram of the whole Elmasri notation.
+- Fixes: the relational model no longer lags one change behind the diagram; recursive relationships no longer draw overlapping lines or duplicate constraints.

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Sin publicar]
 
+## [1.8.0] — 2026-11-24
+
 > Notación EER completa, claves y modelo relacional, deshacer y pantalla completa en Moodle (`SPECIFICATIONS.md §3.11`). Origen: comentarios de usuarios del editor, el segundo correo de **Enrique Soler Castillo** y el uso real de la edición Moodle en el Campus Virtual de la UMA. Compatible con la v1.7.0: los diagramas existentes compilan igual y solo cambian las salidas que eran erróneas.
 
 ### Added
@@ -40,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - El ejemplo inicial incluye la clave parcial de `DEPENDIENTE`.
 - Las confirmaciones de *Limpiar*, *Eliminar* y *Empezar de nuevo* indican que se pueden deshacer.
+- En el SQL de Oracle, los nombres de restricción `UNIQUE` de más de 30 caracteres (habituales en las FK de una 1:1) se abrevian a `UQ_<TABLA>_<n>` para evitar ORA-00972 en Oracle anterior a 12.2.
+- Se admite un comentario `// …` al final de una línea `spec`, como en el resto de líneas del DSL.
 
 ## [1.7.0] — 2026-11-13
 

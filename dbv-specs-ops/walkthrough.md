@@ -1,31 +1,35 @@
-# Walkthrough — eer-studio v1.7.0
+# Walkthrough — eer-studio v1.8.0
 
-> Fecha: 2026-11-13 · Origen: petición del autor para usar EER Studio en exámenes de Bases de Datos en el Campus Virtual de la UMA (Moodle 5), en aulas sin internet y con Safe Exam Browser.
-> Especificación: `docs/SPECIFICATIONS.md` §3.9 y §3.10 · Arquitectura: `docs/ARCHITECTURE.md` §8 · Plan: `implementation_plan.md` · Guía de uso: `docs/moodle/`.
+> Fecha: 2026-11-24 · Origen: comentarios de usuarios del editor (segundo correo de Enrique Soler Castillo) y uso real de la edición Moodle en el Campus Virtual de la UMA.
+> Especificación: `docs/SPECIFICATIONS.md` §3.11 (A–L) · Arquitectura: `docs/ARCHITECTURE.md` §9 · Plan: `implementation_plan.md` (bloques B0–B8) · Detalle: `CHANGELOG.md` `[1.8.0]`.
 
 ## Qué se entrega
 
 | Área | Cambio | Dónde |
 | --- | --- | --- |
-| Edición Moodle | Variante de examen independiente, solo con el editor EER, la ayuda reducida (*Uso del editor* y *Sintaxis*) y ES/EN | `moodle.html`, `src/moodle/MoodleExamApp.tsx`, `components/` |
-| Empaquetado | HTML único sin peticiones de red dentro de un SCORM 1.2; plantilla y título opcionales (`--template`, `--title`); verificación automática de que no quedan referencias externas | `vite.config.moodle.ts`, `scripts/build-moodle.mjs` |
-| Persistencia | Autoguardado por examen en `localStorage` (caduca a las 12 h) con volcado al salir de la página | `src/moodle/autosave.ts`, `useExamSession.ts` |
-| Entrega | «Copiar para entregar»: bloque con crédito de autoría, metadatos y suma de control para el texto en línea de una Tarea; respaldo si el portapapeles está bloqueado; aviso si el código tiene errores | `src/moodle/submission.ts`, `clipboard.ts` |
-| Corrección | «Cargar entrega» reconstruye el diagrama desde el texto o el HTML de Moodle y avisa si se manipuló | `submission.ts`, `components/SubmissionModals.tsx` |
-| SCORM | `incomplete` al abrir, `completed` al copiar; sin API funciona igual | `src/moodle/scorm12.ts` |
-| Distribución | Paquetes oficiales versionados con nombres fijos (vacío, ejemplo «Hoteles Royal UMA» y visor HTML) | `dist-moodle/`, `scripts/build-moodle-release.mjs` |
-| Documentación | Guía del profesor en Markdown y PDF (Typst; diseño del autor), con enlaces a `dist-moodle/` y `docs/moodle/` en GitHub | `docs/moodle/` |
-| Ayuda compartida | `HelpCenter` con `variant="exam"` (aditivo; la edición completa no cambia) | `components/help/` |
-| Escritorio | Sin botón «Buscar actualizaciones» ni plugins de actualización (§3.9): Windows se actualiza desde Microsoft Store | `src-tauri/` |
+| Compatibilidad | Instantáneas de la v1.7.0 (ejemplo inicial, ejemplos de la ayuda, plantilla del hotel): los diagramas existentes compilan igual | `src/compat/` |
+| Notación EER | Clave parcial (`partial_key_att`, subrayado discontinuo), especialización parcial (`spec d -> X partial`), roles (`role:Nombre`), claves alternativas (`key_att … unique`, «UK») | `utils/compiler.ts`, `NodeRenderer`, `LinkRenderer`, `codeGenerator.ts` |
+| Correcciones del EER | Compuestos dibujados y mapeados a columnas; recursivas con líneas paralelas y nombres de FK únicos | `compiler.ts`, `parallelLinks.ts`, `eerToRelational.ts` |
+| Modelo relacional | Ya no va un cambio por detrás del EER; FK compuestas, `UNIQUE` y FK sin tipo en el DSL relacional; tipos editados conservados, propagados a las FK y guardados en el `.eer` | `useEERParser`, `relationalCompiler.ts`, `typeOverrides.ts`, `relationalToSQL.ts` |
+| Formularios | Relaciones de cualquier grado con lista de participantes y roles; «Pertenece a» con atributos (compuestos) y propietario preseleccionado; clave parcial y clave alternativa | `ModalProperties`, `usePropertiesForm`, `dslEditing.ts` |
+| Deshacer | `Ctrl+Z`/`Ctrl+Y` y botones ↶ ↷ en la edición completa y en Moodle; tecleo agrupado por pausas | `codeHistory.ts`, `useCodeHistory` |
+| Linter | Avisos de entidades débiles (sin identificativa, sin clave parcial, `key_att` en débil), clave parcial en fuerte, recursiva sin roles, `FK_NOT_REFERENCING_KEY`, `FK_TYPE_MISMATCH` | `compiler.ts`, `relationalCompiler.ts` |
+| Pantalla completa | Moodle (con aviso si el reproductor la bloquea y barra adaptable), web y escritorio (ventana Tauri, `F11`/`Esc`) | `fullscreen.ts`, `useFullscreen` |
+| Documentación | Ayuda (ejemplos, atajos, diagrama de referencia de Elmasri que además es test), prompt IA ES/EN con toda la notación, README ES/EN, guía del profesor (MD + PDF) | `components/help/`, `i18n/aiPrompt.ts`, `docs/moodle/` |
+
+### Revisión de código antes de la entrega (2026-11-24)
+
+Una revisión de la rama encontró 10 problemas, corregidos antes del commit de versión: borrar una clave parcial no hacía nada; borrar un compuesto homónimo pasaba sus componentes al otro; una relación escrita a mano con menos de dos participantes no se podía guardar desde el formulario; un comentario `//` al final de un `spec` bloqueaba el diagrama; los tipos relacionales sobrevivían a *Limpiar*; la cabecera `// RELATIONAL TYPES` se acumulaba en cada guardar/abrir; nombres `UQ_…` de más de 30 caracteres en Oracle; error sin capturar de la pantalla completa nativa; claves de React repetidas en «Pertenece a»; roles que empiezan por dígito.
 
 ## Verificación
-- **166 tests** (28 nuevos de la edición Moodle: bloque de entrega con HTML de TinyMCE, suma de control, crédito de autoría, autoguardado, SCORM, portapapeles y configuración).
-- `tsc -b`, `npm run lint` y `npm run build` limpios; `dist/` mantiene la misma estructura de ficheros.
-- Smoke test Playwright `scripts/smoke-moodle.mjs`: **26/26** con toda la red bloqueada (plantilla, autoguardado tras recargar, copiar, cargar desde HTML, manipulación, bloque incompleto, errores, empezar de nuevo, ayuda reducida, inglés, respaldo del portapapeles y reproductor SCORM simulado).
-- **Validación del autor en el Campus Virtual de la UMA** con el navegador normal: el SCORM se carga y «Copiar para entregar» funciona dentro del reproductor. **Pendiente: prueba con Safe Exam Browser.**
+
+- **266 tests** (Vitest), `tsc -b`, `eslint`, `npm run build` y `npm run build:moodle:release` limpios.
+- Smoke Playwright del editor (`scripts/smoke-editor.mjs`): **26/26**.
+- Smoke Playwright de Moodle (`scripts/smoke-moodle.mjs dist-moodle/examen-bd-hotel-prueba.html`): **36/36**, con la red bloqueada y reproductor SCORM simulado (pantalla completa permitida y bloqueada).
 
 ## Decisiones registradas (memory.md)
-- La edición Moodle es otro punto de entrada que no importa `EERDiagramer`. La entrega válida es la Tarea de Moodle, que es la que garantiza el bloqueo; el SCORM es solo contenedor.
-- Riesgo aceptado: autoguardado visible para el siguiente alumno en un PC compartido sin SEB (mitigado con la caducidad de 12 h y «Empezar de nuevo»).
-- Deuda técnica aceptada: `MoodleExamApp` repite el cableado del editor EER.
-- Lecciones: escapes Unicode convertidos en literales por las herramientas de escritura, `^` de `npm run` en Windows y retardo de `useEERParser` en los tests de extremo a extremo.
+
+- `spec … partial` sin marca = total (compatible con la v1.7.0); `role:Nombre`; varios `key_att` siguen formando la PK compuesta y `unique` marca las alternativas.
+- Los tipos editados en el relacional se guardan como líneas `relational TABLA.COLUMNA : TIPO`, que la v1.7.0 ignora sin error.
+- En un iframe del mismo origen (reproductor SCORM de Moodle) la pantalla completa se permite sin `allowfullscreen`.
+- La restricción de igualdad de roles en uniones se descarta; el soporte táctil pasa a la v1.9.0.

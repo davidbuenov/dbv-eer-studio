@@ -2,8 +2,8 @@
 
 ## Contexto del Proyecto (Context Snapshot)
 * **Objetivo**: Editor EER ↔ Modelo Relacional ↔ Oracle SQL DDL con compiladores interactivos, linter de 2 niveles y tolerancia a fallos Stale-while-error.
-* **Estado actual**: **v1.8.0 implementada, documentada y en commit en la rama `feature/v1.8.0`** (2026-11-24), lista para `/ship`. Publicadas: v1.7.0 (edición Moodle, sin Store) y v1.6.0 (Store pendiente de envío). 263 tests, smoke editor 26/26, smoke Moodle 36/36.
-* **Próximo paso**: `/ship` de la v1.8.0 (ver Snapshot de Contexto al final). El soporte táctil pasa a la v1.9.0.
+* **Estado actual**: **`/ship` v1.8.0 en curso** (2026-11-24): versión, CHANGELOG, walkthrough, paquetes Moodle, MSIX y documentación de la Store hechos en local en `feature/v1.8.0`; falta fusionar en `main`, tag, push y release. 266 tests, smoke editor 26/26, smoke Moodle 36/36.
+* **Próximo paso**: confirmar la validación del autor → `main` + tag `v1.8.0` + push + publicar la release; luego el autor envía la v1.8.0 a la Store (`docs/store/SUBMISSION_GUIDE_v1.8.0.md`). El soporte táctil pasa a la v1.9.0.
 
 ## Checklist de Tareas
 
@@ -18,6 +18,7 @@
 - [x] **Fase `/code-simplify` — Edición Moodle**: tipo `ScormWindow` exportado en lugar de casts; secuencias de escape restauradas; security review sin hallazgos (sin dependencias nuevas ni secretos; plantilla con `<` escapado, manifiesto escapado en XML, nombres de fichero saneados, texto pegado renderizado solo por React).
 - [x] **Validación del autor en el Campus Virtual de la UMA** (navegador normal: SCORM, copiar y pegar en la Tarea). Pendiente: prueba con SEB.
 - [x] **Mejoras tras la validación**: guía ampliada (dos actividades, ocultar la navegación SCORM, instrucciones para el alumnado, lista de comprobación SEB, problemas frecuentes); PDF con Typst (diseño del autor: `main.typ` + `styles.typ` + `guia-profesor.typ`); crédito de autoría con la Universidad de Málaga; adjuntos de release con nombres fijos (`build:moodle:release`).
+- [ ] **`/ship` v1.8.0** (2026-11-24): revisión de código de la rama (10 problemas corregidos, 3 tests nuevos); versión 1.8.0 en package.json/lock, Cargo.toml/lock, tauri.conf y `styles.typ`; CHANGELOG `[1.8.0]`; walkthrough; PDF de la guía y `build:moodle:release`; MSIX `1.8.0.0` verificado; fichas ES/EN, capturas y `SUBMISSION_GUIDE_v1.8.0.md`. Uptodown se abandona (decisión del autor). Pendiente: `main` + tag + push + release.
 - [x] **`/ship` v1.7.0** (2026-11-13): versión 1.7.0 en package.json/lock, Cargo y tauri.conf; CHANGELOG `[1.7.0]`; walkthrough; commit + tag + push; paquetes oficiales en `dist-moodle/`. **Sin MSIX ni envío a la Store** por decisión del autor (el escritorio no cambia de forma relevante).
 
 - [x] **Fase `/spec` v1.6.0: Usabilidad del editor EER y rigor del mapeo**
@@ -232,7 +233,7 @@
 
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
-> **Last update / Última actualización:** 2026-11-24 (cierre de sesión, listo para `/ship` v1.8.0)
+> **Last update / Última actualización:** 2026-11-24 (`/ship` v1.8.0: todo lo local hecho; los pasos b y d de abajo están completos)
 > **Punto exacto:** v1.8.0 completa (§3.11 A–L + ampliaciones del autor: pantalla completa en todas las ediciones, compuestos y propietario preseleccionado en el formulario, ejemplo completo del prompt IA, líneas paralelas en recursivas). Commit en la rama `feature/v1.8.0` (sin push, sin tag, versión aún 1.7.0 en `package.json`).
 > **Estado:** 263 tests, `tsc -b`, `eslint .`, `npm run build`, `npm run build:moodle`, `cargo check`, `node scripts/smoke-editor.mjs` (26/26) y `node scripts/smoke-moodle.mjs dist-moodle/examen-bd-hotel-prueba.html` (36/36) en verde.
 >

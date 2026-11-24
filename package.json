@@ -1,7 +1,7 @@
 {
   "name": "dbv-eer-studio",
   "private": true,
-  "version": "1.7.0",
+  "version": "1.8.0",
   "type": "module",
   "homepage": "https://davidbuenov.github.io/dbv-eer-studio/",
   "scripts": {
